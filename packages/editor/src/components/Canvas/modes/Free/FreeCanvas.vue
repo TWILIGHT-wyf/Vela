@@ -225,8 +225,28 @@ function hideContextMenu() {
 
 function onMenuAction(action: string) {
   console.log('[FreeCanvas] Menu action:', action)
-  // TODO: Implement menu actions (delete, copy, paste, etc.)
   hideContextMenu()
+
+  switch (action) {
+    case 'copy':
+      compStore.copySelectedNodes()
+      break
+    case 'cut':
+      compStore.cutSelectedNodes()
+      break
+    case 'paste':
+      compStore.pasteNodes()
+      break
+    case 'delete':
+      if (selectedId.value) {
+        compStore.deleteComponent(selectedId.value)
+      } else if (selectedIds.value.length > 0) {
+        compStore.deleteComponents([...selectedIds.value])
+      }
+      break
+    default:
+      console.log('[FreeCanvas] Unhandled menu action:', action)
+  }
 }
 
 function handleGlobalClick(e: MouseEvent) {
@@ -237,14 +257,85 @@ function handleGlobalClick(e: MouseEvent) {
   }
 }
 
+// ========== Keyboard Shortcuts ==========
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Ignore if user is typing in an input
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  const isMac = navigator.platform.toUpperCase().includes('MAC')
+  const ctrlKey = isMac ? e.metaKey : e.ctrlKey
+
+  // Delete - 删除选中组件
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId.value) {
+      e.preventDefault()
+      compStore.deleteComponent(selectedId.value)
+    } else if (selectedIds.value.length > 0) {
+      e.preventDefault()
+      compStore.deleteComponents([...selectedIds.value])
+    }
+    return
+  }
+
+  // Ctrl+C - 复制
+  if (ctrlKey && e.key === 'c') {
+    if (selectedId.value || selectedIds.value.length > 0) {
+      e.preventDefault()
+      compStore.copySelectedNodes()
+    }
+    return
+  }
+
+  // Ctrl+X - 剪切
+  if (ctrlKey && e.key === 'x') {
+    if (selectedId.value || selectedIds.value.length > 0) {
+      e.preventDefault()
+      compStore.cutSelectedNodes()
+    }
+    return
+  }
+
+  // Ctrl+V - 粘贴
+  if (ctrlKey && e.key === 'v') {
+    e.preventDefault()
+    compStore.pasteNodes()
+    return
+  }
+
+  // Ctrl+A - 全选 (选中所有顶层组件)
+  if (ctrlKey && e.key === 'a') {
+    if (currentTree.value?.children && currentTree.value.children.length > 0) {
+      e.preventDefault()
+      const allIds = currentTree.value.children.map((n) => n.id)
+      compStore.selectComponents(allIds)
+    }
+    return
+  }
+
+  // Escape - 取消选中 / 关闭菜单
+  if (e.key === 'Escape') {
+    if (menuState.value.visible) {
+      hideContextMenu()
+    } else {
+      clearSelection()
+    }
+    return
+  }
+}
+
 onMounted(() => {
   window.addEventListener('mousedown', handleGlobalClick)
   window.addEventListener('scroll', hideContextMenu, true)
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousedown', handleGlobalClick)
   window.removeEventListener('scroll', hideContextMenu, true)
+  window.removeEventListener('keydown', handleKeyDown)
 })
 
 // ========== Styles ==========

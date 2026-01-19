@@ -11,6 +11,7 @@
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     @dblclick="handleDoubleClick"
+    @update:modelValue="handleUpdateModelValue"
   >
     <!-- Text组件特殊处理 -->
     <template v-if="component.type === 'Text'">
@@ -25,15 +26,17 @@
         :component="child"
         :allComponents="allComponents"
         @trigger-event="$emit('trigger-event', $event)"
+        @update-prop="$emit('update-prop', $event)"
       />
     </template>
   </component>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
 import { componentRegistry } from '@vela/materials/registry'
 import type { Component, EventAction } from '@vela/core/types/components'
+import { useComponentDataSource } from './useComponentDataSource'
 
 const props = defineProps<{
   component: Component
@@ -42,7 +45,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'trigger-event': [payload: { componentId: string; eventType: string; actions: EventAction[] }]
+  'update-prop': [payload: { componentId: string; path: string; value: unknown }]
 }>()
+
+// Data Source Integration
+// @ts-ignore - Component type mismatch with NodeSchema
+const { dataSourceProps } = useComponentDataSource(toRef(props, 'component'))
 
 const componentRef = ref<HTMLElement | { $el: HTMLElement } | null>(null)
 const animationPlaying = ref(false)
@@ -160,8 +168,17 @@ const componentProps = computed(() => {
       compProps[key] = value
     }
   }
-  return compProps
+  // Merge data source props
+  return { ...compProps, ...dataSourceProps.value }
 })
+
+function handleUpdateModelValue(val: unknown) {
+  emit('update-prop', {
+    componentId: props.component.id,
+    path: 'props.modelValue',
+    value: val,
+  })
+}
 
 // 页面加载时触发动画
 onMounted(() => {

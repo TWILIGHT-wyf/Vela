@@ -1,9 +1,9 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'Image',
   title: '图片',
-  category: '媒体',
+  category: '基础组件',
   props: {
     src: {
       title: '图片地址',

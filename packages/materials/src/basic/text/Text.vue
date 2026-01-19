@@ -1,13 +1,13 @@
 <template>
-  <div class="tabs-wrapper">
-    <vTabs v-bind="$attrs">
+  <div class="text-wrapper">
+    <vText v-bind="$attrs">
       <slot />
-    </vTabs>
+    </vText>
   </div>
 </template>
 
 <script setup lang="ts">
-import { vTabs } from '@vela/ui'
+import { vText } from '@vela/ui'
 
 defineOptions({
   inheritAttrs: false,
@@ -15,8 +15,10 @@ defineOptions({
 </script>
 
 <style scoped>
-.tabs-wrapper {
+.text-wrapper {
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
 }
 </style>

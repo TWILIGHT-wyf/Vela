@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div ref="stageRef" class="runtime-renderer">
     <!-- 空状态 -->
     <div v-if="topLevelComponents.length === 0" class="empty-state">
@@ -14,6 +14,7 @@
       :component="comp"
       :allComponents="components"
       @trigger-event="handleComponentEvent"
+      @update-prop="handleUpdateProp"
     />
   </div>
 </template>
@@ -21,6 +22,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { set } from 'lodash-es'
 import RuntimeComponent from './RuntimeComponent.vue'
 import { useDataBindingEngine } from './useDataBindingEngine'
 import { useEventExecutor } from './useEventExecutor'
@@ -119,6 +121,17 @@ watch(
 onBeforeUnmount(() => {
   bindingEngine.stop()
 })
+
+// 处理属性更新
+function handleUpdateProp(payload: { componentId: string; path: string; value: unknown }) {
+  // 只有在非编辑模式下才更新本地状态，或者是模拟模式
+  if (props.mode === 'edit') return
+
+  const comp = localComponents.value.find((c) => c.id === payload.componentId)
+  if (comp) {
+    set(comp, payload.path, payload.value)
+  }
+}
 </script>
 
 <style scoped>

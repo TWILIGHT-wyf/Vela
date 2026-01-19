@@ -1,83 +1,22 @@
 <template>
-  <BaseRow v-bind="rowProps">
-    <template v-if="hasChildren">
-      <template v-if="comp?.layout?.mode === 'absolute'">
-        <Shape v-for="childId in comp?.children" :key="childId" :id="childId">
-          <component
-            :is="getComponentByType(getChildComponent(childId)?.type || '')"
-            :id="childId"
-            :style="{ width: '100%', height: '100%' }"
-          />
-        </Shape>
-      </template>
-      <template v-else>
-        <div
-          v-for="childId in comp?.children"
-          :key="childId"
-          class="child-item"
-          :style="getChildItemStyle(childId)"
-        >
-          <component
-            :is="getComponentByType(getChildComponent(childId)?.type || '')"
-            :id="childId"
-            :style="getChildComponentStyle(childId)"
-          />
-        </div>
-      </template>
-    </template>
-  </BaseRow>
+  <div class="row-wrapper">
+    <vRow v-bind="$attrs">
+      <slot />
+    </vRow>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
-import { vRow as BaseRow } from '@vela/ui'
-import { useLayoutHelpers } from '@vela/materials/layout/layoutUtils'
-import Shape from '@vela/editor/components/Canvas/modes/Free/Shape/Shape.vue'
+import { vRow } from '@vela/ui'
 
-const props = defineProps<{ id: string }>()
-const { componentStore } = storeToRefs(useComponent())
-
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 聚合所有 Props 传递给 Base 组件
-const rowProps = computed((): Record<string, unknown> => {
-  const s = comp.value?.style || {}
-  const p = comp.value?.props || {}
-  return {
-    // Row 属性
-    gutter: Number(p.gutter || 0),
-    justify: String(p.justify || 'start'),
-    align: String(p.align || 'top'),
-    tag: String(p.tag || 'div'),
-    content: String(p.content || ''),
-    // 容器样式
-    padding: s.padding ?? 0,
-    backgroundColor: s.backgroundColor ?? 'transparent',
-    borderRadius: s.borderRadius ?? 0,
-    borderWidth: s.borderWidth ?? 0,
-    borderColor: s.borderColor ?? '#dcdfe6',
-    minHeight: s.minHeight ?? 'auto',
-    textColor: s.textColor ?? '#909399',
-    fontSize: s.fontSize ?? 14,
-    // 子组件状态
-    hasChildren: hasChildren.value,
-  }
+defineOptions({
+  inheritAttrs: false,
 })
-
-// 子组件相关（使用共享 composable）
-const {
-  hasChildren,
-  getChildComponent,
-  getComponentByType,
-  getChildItemStyle,
-  getChildComponentStyle,
-} = useLayoutHelpers(comp)
 </script>
 
 <style scoped>
-.child-item {
-  box-sizing: border-box;
+.row-wrapper {
+  width: 100%;
+  height: 100%;
 }
 </style>

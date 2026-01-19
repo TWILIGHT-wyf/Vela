@@ -74,6 +74,12 @@ export const useUIStore = defineStore('ui', () => {
    */
   const canvasMode = ref<'free' | 'flow'>('free')
 
+  /**
+   * 模拟运行模式
+   * 在模拟运行模式下，组件可以交互，但不能编辑
+   */
+  const isSimulationMode = ref<boolean>(false)
+
   // ========== Watchers ==========
 
   /**
@@ -160,6 +166,20 @@ export const useUIStore = defineStore('ui', () => {
     canvasMode.value = canvasMode.value === 'free' ? 'flow' : 'free'
   }
 
+  /**
+   * 切换模拟运行模式
+   */
+  function toggleSimulationMode() {
+    isSimulationMode.value = !isSimulationMode.value
+  }
+
+  /**
+   * 设置模拟运行模式
+   */
+  function setSimulationMode(mode: boolean) {
+    isSimulationMode.value = mode
+  }
+
   return {
     // Canvas State
     canvasWidth,
@@ -169,6 +189,7 @@ export const useUIStore = defineStore('ui', () => {
     canvasArea,
     canvasSettings,
     canvasMode,
+    isSimulationMode,
 
     // Panel State
     rightPanelTab,
@@ -185,5 +206,7 @@ export const useUIStore = defineStore('ui', () => {
     toggleRightPanel,
     setCanvasMode,
     toggleCanvasMode,
+    toggleSimulationMode,
+    setSimulationMode,
   }
 })

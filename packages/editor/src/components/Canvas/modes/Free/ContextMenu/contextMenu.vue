@@ -42,10 +42,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const compStore = useComponent()
-const { selectedIds, rootNode } = storeToRefs(compStore)
-
-// TODO: Implement clipboard support in new store
-const canPaste = computed(() => false)
+const { selectedIds, rootNode, canPaste } = storeToRefs(compStore)
 
 const selectedCount = computed(() => selectedIds.value.length)
 

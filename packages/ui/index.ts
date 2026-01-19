@@ -116,18 +116,6 @@ export const vTrigger = componentRegistry.vTrigger
 // Group 组件
 export const vGroup = componentRegistry.vGroup
 
-// Map 组件
-export const vMap = componentRegistry.vMap
-export const vMarker = componentRegistry.vMarker
-export const vHeatLayer = componentRegistry.vHeatLayer
-export const vGeoJsonLayer = componentRegistry.vGeoJsonLayer
-export const vClusterLayer = componentRegistry.vClusterLayer
-export const vTileLayer = componentRegistry.vTileLayer
-export const vVectorLayer = componentRegistry.vVectorLayer
-export const vLegend = componentRegistry.vLegend
-export const vScale = componentRegistry.vScale
-export const vLayers = componentRegistry.vLayers
-
 // 导出组件注册表，供外部使用
 export { componentRegistry }
 
@@ -140,16 +128,6 @@ export * from './src/utils/dataUtils'
 // 导出类型
 export type { TriggerLog } from './src/components/advanced/trigger/Trigger.vue'
 export type { GroupProps } from './src/components/group/Group.vue'
-export type { MapProps } from './src/components/map/Map.vue'
-export type { MarkerProps } from './src/components/map/Marker.vue'
-export type { HeatLayerProps } from './src/components/map/HeatLayer.vue'
-export type { GeoJsonLayerProps } from './src/components/map/GeoJsonLayer.vue'
-export type { ClusterLayerProps } from './src/components/map/ClusterLayer.vue'
-export type { TileLayerProps } from './src/components/map/TileLayer.vue'
-export type { VectorFeature, VectorLayerProps } from './src/components/map/VectorLayer.vue'
-export type { LegendItem, LegendProps } from './src/components/map/Legend.vue'
-export type { ScaleProps } from './src/components/map/Scale.vue'
-export type { LayerItem, LayersProps } from './src/components/map/Layers.vue'
 
 // 导出 GIS 类型
 export * from './src/types/gis'

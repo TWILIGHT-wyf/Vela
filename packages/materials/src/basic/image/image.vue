@@ -1,11 +1,11 @@
 <template>
-  <div class="chart-wrapper">
-    <FunnelChartBase v-bind="$attrs" />
+  <div class="image-wrapper">
+    <vImage v-bind="$attrs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { funnelChart as FunnelChartBase } from '@vela/ui'
+import { vImage } from '@vela/ui'
 
 defineOptions({
   inheritAttrs: false,
@@ -13,7 +13,7 @@ defineOptions({
 </script>
 
 <style scoped>
-.chart-wrapper {
+.image-wrapper {
   width: 100%;
   height: 100%;
 }

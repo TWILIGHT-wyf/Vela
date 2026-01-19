@@ -1,4 +1,4 @@
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, type Ref } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { useComponent } from '@/stores/component'
 import type { DropIndicatorState, DropPosition } from './types'
@@ -35,8 +35,9 @@ function isContainerNode(node: NodeSchema): boolean {
  * 1. 计算拖拽时的插入位置 (before/after/inside)
  * 2. 提供拖拽指示器的状态
  * 3. 处理拖放完成后的组件移动/添加
+ * 4. 自动滚动视口
  */
-export function useFlowDrop() {
+export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   const componentStore = useComponent()
   const { rootNode } = componentStore
 
@@ -53,6 +54,26 @@ export function useFlowDrop() {
     targetId: null,
     targetParentId: null,
   })
+
+  // ========== Auto Scroll ==========
+  const SCROLL_ZONE = 60
+  const SCROLL_SPEED = 15
+
+  function handleAutoScroll(mouseY: number) {
+    if (!viewportRef || !viewportRef.value) return
+
+    const viewport = viewportRef.value
+    const rect = viewport.getBoundingClientRect()
+
+    // Check top edge
+    if (mouseY - rect.top < SCROLL_ZONE) {
+      viewport.scrollTop -= SCROLL_SPEED
+    }
+    // Check bottom edge
+    else if (rect.bottom - mouseY < SCROLL_ZONE) {
+      viewport.scrollTop += SCROLL_SPEED
+    }
+  }
 
   // ========== Computed ==========
 
@@ -144,6 +165,9 @@ export function useFlowDrop() {
     const rect = element.getBoundingClientRect()
     const mouseY = e.clientY
     const isAltPressed = e.altKey
+
+    // Auto scroll
+    handleAutoScroll(mouseY)
 
     const position = calculateDropPosition(mouseY, rect, node, isAltPressed)
 

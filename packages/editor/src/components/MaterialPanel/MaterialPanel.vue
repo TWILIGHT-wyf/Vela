@@ -89,15 +89,16 @@ import {
 } from '@element-plus/icons-vue'
 import { generateId } from '@vela/core'
 import type { PropValue } from '@vela/core/types/expression'
-import { getMaterialsByCategory, extractDefaultProps } from '@vela/materials'
 import {
+  getMaterialsByCategory,
+  extractDefaultProps,
   getCategoryConfig,
   getComponentIcon,
   getMaterialsWithUI,
   sortCategoriesByOrder,
   type CategoryConfig,
   type MaterialItem,
-} from '@vela/materials/materialsMeta'
+} from '@vela/materials'
 
 // --- 类型定义 ---
 type Category = {
@@ -113,6 +114,7 @@ type Item = {
   width?: number
   height?: number
   icon?: Component
+  categoryConfig: CategoryConfig
 }
 
 // --- 状态管理 ---
@@ -121,9 +123,9 @@ const activeNames = ref<string[]>([])
 const searchQuery = ref('')
 
 // --- 从物料包生成组件分类 ---
-const categories = computed<CategoryConfig[]>(() => {
+const categories = computed<Category[]>(() => {
   const materialsByCategory = getMaterialsByCategory()
-  const result: CategoryConfig[] = []
+  const result: Category[] = []
 
   Object.entries(materialsByCategory).forEach(([categoryName, materials]) => {
     const config = getCategoryConfig(categoryName)

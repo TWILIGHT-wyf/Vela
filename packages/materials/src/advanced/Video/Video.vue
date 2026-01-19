@@ -1,11 +1,11 @@
 <template>
-  <div class="chart-wrapper">
-    <FunnelChartBase v-bind="$attrs" />
+  <div class="video-wrapper">
+    <vVideo v-bind="$attrs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { funnelChart as FunnelChartBase } from '@vela/ui'
+import { vVideo } from '@vela/ui'
 
 defineOptions({
   inheritAttrs: false,
@@ -13,7 +13,7 @@ defineOptions({
 </script>
 
 <style scoped>
-.chart-wrapper {
+.video-wrapper {
   width: 100%;
   height: 100%;
 }

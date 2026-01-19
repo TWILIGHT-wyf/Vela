@@ -78,6 +78,20 @@
 
       <el-divider direction="vertical" class="header-divider" />
 
+      <!-- 模拟运行开关 -->
+      <el-tooltip :content="isSimulationMode ? '退出模拟运行' : '进入模拟运行'" placement="bottom">
+        <el-button
+          :type="isSimulationMode ? 'warning' : 'default'"
+          :class="{ 'simulation-active': isSimulationMode }"
+          @click="toggleSimulationMode"
+        >
+          <el-icon class="icon-left"
+            ><VideoPlay v-if="!isSimulationMode" /><VideoPause v-else
+          /></el-icon>
+          {{ isSimulationMode ? '停止运行' : '模拟运行' }}
+        </el-button>
+      </el-tooltip>
+
       <!-- 预览下拉菜单 -->
       <el-dropdown
         split-button
@@ -144,6 +158,8 @@ import {
   Moon,
   Sunny,
   MapLocation,
+  VideoPlay,
+  VideoPause,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -155,7 +171,8 @@ const suggestionStore = useSuggestion()
 
 const { canUndo, canRedo } = storeToRefs(historyStore)
 const { undo, redo, clear: resetHistory } = historyStore
-const { canvasMode } = storeToRefs(uiStore)
+const { canvasMode, isSimulationMode } = storeToRefs(uiStore)
+const { toggleSimulationMode } = uiStore
 const { activePageId } = storeToRefs(projectStore)
 
 const pendingCount = computed(() => suggestionStore.pendingSuggestions.length)
@@ -389,5 +406,20 @@ onMounted(() => {
 
 .icon-left {
   margin-right: 4px;
+}
+
+/* 模拟运行按钮 */
+.simulation-active {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 162, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(230, 162, 60, 0);
+  }
 }
 </style>

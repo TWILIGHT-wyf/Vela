@@ -1,15 +1,10 @@
 <template>
-  <div class="flow-viewport" @click="handleBackgroundClick">
-    <!-- Zoom Controls -->
-    <div class="flow-zoom-controls">
-      <div class="zoom-level">{{ Math.round(canvasScale * 100) }}%</div>
-      <el-button-group>
-        <el-button size="small" :icon="Minus" @click="handleZoomOut" />
-        <el-button size="small" :icon="Plus" @click="handleZoomIn" />
-        <el-button size="small" :icon="FullScreen" @click="handleResetZoom" />
-      </el-button-group>
-    </div>
-
+  <div
+    class="flow-viewport"
+    ref="viewportRef"
+    @click="handleBackgroundClick"
+    @contextmenu.prevent="handleContextMenu"
+  >
     <div class="flow-workspace" :style="workspaceStyle">
       <div
         class="simulation-page"
@@ -53,6 +48,15 @@
       :rect="flowDrop.indicator.value.rect"
       :position="flowDrop.indicator.value.position"
     />
+
+    <!-- Context Menu -->
+    <ContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :target-id="contextMenu.targetId"
+      @action="handleMenuAction"
+    />
   </div>
 </template>
 
@@ -61,9 +65,9 @@ import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
-import { Plus, Minus, FullScreen } from '@element-plus/icons-vue'
 import FlowRenderer from './FlowRenderer.vue'
 import DropIndicator from './DropIndicator.vue'
+import ContextMenu from '../Free/ContextMenu/ContextMenu.vue'
 import { useFlowDrop } from './useFlowDrop'
 
 const componentStore = useComponent()
@@ -74,8 +78,10 @@ const uiStore = useUIStore()
 const { canvasWidth, canvasHeight, canvasScale } = storeToRefs(uiStore)
 const { setCanvasScale } = uiStore
 
+const viewportRef = ref<HTMLElement | null>(null)
+
 // ========== Flow Drop Logic ==========
-const flowDrop = useFlowDrop()
+const flowDrop = useFlowDrop(viewportRef)
 
 // Provide flowDrop to child components (NodeWrapper)
 provide('flowDrop', flowDrop)
@@ -100,38 +106,153 @@ const workspaceStyle = computed(() => ({
 }))
 
 /**
- * Zoom Handlers
+ * Ctrl+Wheel Zoom (统一由 UI Store 管理)
  */
-const handleZoomIn = () => {
-  setCanvasScale(canvasScale.value + 0.1)
-}
-
-const handleZoomOut = () => {
-  setCanvasScale(canvasScale.value - 0.1)
-}
-
-const handleResetZoom = () => {
-  setCanvasScale(1)
-}
-
 const handleWheel = (e: WheelEvent) => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault()
-    if (e.deltaY < 0) {
-      handleZoomIn()
-    } else {
-      handleZoomOut()
+    const delta = e.deltaY < 0 ? 0.1 : -0.1
+    setCanvasScale(canvasScale.value + delta)
+  }
+}
+
+// ========== Keyboard Shortcuts ==========
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Ignore if user is typing in an input
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  const isMac = navigator.platform.toUpperCase().includes('MAC')
+  const ctrlKey = isMac ? e.metaKey : e.ctrlKey
+
+  // Delete - 删除选中组件
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId.value) {
+      e.preventDefault()
+      componentStore.deleteComponent(selectedId.value)
     }
+    return
+  }
+
+  // Ctrl+C - 复制
+  if (ctrlKey && e.key === 'c') {
+    if (selectedId.value) {
+      e.preventDefault()
+      componentStore.copySelectedNodes()
+    }
+    return
+  }
+
+  // Ctrl+X - 剪切
+  if (ctrlKey && e.key === 'x') {
+    if (selectedId.value) {
+      e.preventDefault()
+      componentStore.cutSelectedNodes()
+    }
+    return
+  }
+
+  // Ctrl+V - 粘贴
+  if (ctrlKey && e.key === 'v') {
+    e.preventDefault()
+    componentStore.pasteNodes()
+    return
+  }
+
+  // Ctrl+A - 全选 (选中所有顶层组件)
+  if (ctrlKey && e.key === 'a') {
+    if (rootNode.value?.children && rootNode.value.children.length > 0) {
+      e.preventDefault()
+      const allIds = rootNode.value.children.map((n) => n.id)
+      componentStore.selectComponents(allIds)
+    }
+    return
+  }
+
+  // Escape - 取消选中 / 关闭菜单
+  if (e.key === 'Escape') {
+    if (contextMenu.value.visible) {
+      closeContextMenu()
+    } else {
+      clearSelection()
+    }
+    return
   }
 }
 
 onMounted(() => {
   window.addEventListener('wheel', handleWheel, { passive: false })
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('wheel', handleWheel)
+  window.removeEventListener('keydown', handleKeyDown)
 })
+
+// ========== Context Menu ==========
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  targetId: undefined as string | undefined,
+})
+
+function handleContextMenu(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  const nodeEl = target.closest('[data-id]')
+
+  if (nodeEl) {
+    const id = nodeEl.getAttribute('data-id')
+    if (id) {
+      selectComponent(id)
+      contextMenu.value = {
+        visible: true,
+        x: e.clientX,
+        y: e.clientY,
+        targetId: id,
+      }
+      return
+    }
+  }
+
+  // 点击空白处显示粘贴菜单
+  contextMenu.value = {
+    visible: true,
+    x: e.clientX,
+    y: e.clientY,
+    targetId: undefined,
+  }
+}
+
+function handleMenuAction(action: string) {
+  contextMenu.value.visible = false
+
+  switch (action) {
+    case 'copy':
+      componentStore.copySelectedNodes()
+      break
+    case 'cut':
+      componentStore.cutSelectedNodes()
+      break
+    case 'paste':
+      componentStore.pasteNodes()
+      break
+    case 'delete':
+      if (selectedId.value) {
+        componentStore.deleteComponent(selectedId.value)
+      }
+      break
+    default:
+      console.log('[FlowCanvas] Unhandled menu action:', action)
+  }
+}
+
+function closeContextMenu() {
+  contextMenu.value.visible = false
+}
 
 /**
  * 处理背景点击 - 取消选中
@@ -198,28 +319,6 @@ const handleRootDrop = (e: DragEvent) => {
   flex-direction: column;
   align-items: center;
   position: relative;
-}
-
-/* 缩放控制 */
-.flow-zoom-controls {
-  position: fixed;
-  bottom: 20px;
-  right: 280px; /* Avoid overlapping with right panel */
-  background: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 100;
-}
-
-.zoom-level {
-  font-size: 12px;
-  color: #606266;
-  min-width: 40px;
-  text-align: center;
 }
 
 /* 工作区 - 提供页面周围的边距 */
@@ -289,40 +388,57 @@ const handleRootDrop = (e: DragEvent) => {
   color: #9ca3af;
 }
 
-/* ========== 组件交互样式 ========== */
+/* ========== 组件交互样式 (Figma-like) ========== */
 
 /* 为文档流模式提供默认样式 */
 .simulation-page :deep([data-id]) {
   position: relative;
   transition:
-    outline 0.15s ease,
-    box-shadow 0.15s ease;
+    outline 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
   cursor: pointer;
+  border-radius: 2px;
 }
 
-/* 悬停状态 */
+/* 悬停状态 - 蓝色虚线边框 */
 .simulation-page :deep([data-id]:hover) {
-  outline: 1px dashed #60a5fa;
-  outline-offset: 2px;
+  outline: 1px dashed #0d99ff;
+  outline-offset: 1px;
+  background: rgba(13, 153, 255, 0.02);
 }
 
-/* 选中状态 */
+/* 选中状态 - Figma 风格蓝色实线 + 控制点效果 */
 .simulation-page :deep([data-id].selected) {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  outline: 2px solid #0d99ff !important;
+  outline-offset: 0px;
+  box-shadow:
+    0 0 0 1px rgba(13, 153, 255, 0.3),
+    inset 0 0 0 1px rgba(13, 153, 255, 0.1);
+}
+
+/* 选中状态悬停 */
+.simulation-page :deep([data-id].selected:hover) {
+  box-shadow:
+    0 0 0 2px rgba(13, 153, 255, 0.2),
+    inset 0 0 0 1px rgba(13, 153, 255, 0.1);
 }
 
 /* 拖放指示器 */
 .simulation-page.drag-over {
-  outline: 2px dashed #3b82f6;
+  outline: 2px dashed #0d99ff;
   outline-offset: -2px;
-  background: rgba(59, 130, 246, 0.02);
+  background: rgba(13, 153, 255, 0.03);
 }
 
 /* 容器组件特殊样式 */
 .simulation-page :deep([data-component='Container']) {
   min-height: 60px;
+}
+
+/* 容器组件悬停 - 显示可放置区域 */
+.simulation-page :deep([data-component='Container']:hover) {
+  background: rgba(13, 153, 255, 0.03);
 }
 
 .simulation-page :deep([data-component='Container']:empty)::before {

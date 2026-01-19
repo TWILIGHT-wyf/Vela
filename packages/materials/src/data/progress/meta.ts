@@ -1,9 +1,9 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'Progress',
   title: '进度条',
-  category: 'KPI',
+  category: '数据',
   props: {
     percentage: {
       title: '进度百分比',

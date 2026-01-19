@@ -1,9 +1,9 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'Stat',
   title: '统计指标',
-  category: 'KPI',
+  category: '数据',
   props: {
     title: {
       title: '标题',

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { defineAsyncComponent, type Component } from 'vue'
 import type { MaterialMeta } from '@vela/core/types'
 import { componentRegistry as uiComponentRegistry } from '@vela/ui'
@@ -85,16 +86,6 @@ console.log(
  */
 export function getComponent(name: string): Component | string {
   console.log(`[Registry] getComponent called with: ${name}`)
-
-  // 特殊处理：Button 和 Container 直接返回 @vela/ui 的组件，避免循环引用
-  if (name === 'Button') {
-    console.log(`[Registry] Returning vButton from @vela/ui`)
-    return (uiComponentRegistry as any)['vButton'] || 'div'
-  }
-  if (name === 'Container') {
-    console.log(`[Registry] Returning vContainer from @vela/ui`)
-    return (uiComponentRegistry as any)['vContainer'] || 'div'
-  }
 
   // 1. 优先使用 materials 中的包装组件
   if (componentMap[name]) {
