@@ -24,19 +24,16 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
 import RuntimeComponent from './RuntimeComponent.vue'
-import { useDataBindingEngine } from './useDataBindingEngine'
-import { useEventExecutor } from './useEventExecutor'
 import type { Component } from '@vela/core/types/components'
-import type { Page } from '../types'
+import type { Page, RuntimePlugin, RuntimeContext } from '../types'
 
 /**
  * 运行时渲染器
  *
  * 职责：
  * 1. 管理组件树的渲染
- * 2. 初始化并维护数据联动引擎
- * 3. 处理组件事件并分发给事件执行器
- *
+ * 2. 初始化并维护插件系统 (数据联动/事件执行)
+ * 3. 处理组件事件并分发给插件
  */
 
 const props = withDefaults(
@@ -44,87 +41,65 @@ const props = withDefaults(
     components: Component[]
     pages: Page[]
     isProjectMode: boolean
-    mode?: 'edit' | 'simulation' | 'runtime' // 运行模式
+    mode?: 'edit' | 'simulation' | 'runtime'
+    plugins?: RuntimePlugin[]
   }>(),
   {
     mode: 'runtime',
+    plugins: () => [],
   },
 )
 
 const emit = defineEmits<{
   'navigate-page': [pageId: string]
-  'select-component': [componentId: string] // 编辑模式下的选中事件
+  'select-component': [componentId: string]
 }>()
 
 const router = useRouter()
 const stageRef = ref<HTMLDivElement | null>(null)
 
-// 本地响应式组件数组（用于数据联动引擎）
+// 本地响应式组件数组
 const localComponents = ref<Component[]>([])
 
-// 数据联动引擎
-const bindingEngine = useDataBindingEngine(localComponents)
+// 插件事件订阅者
+const componentEventSubscribers = new Set<(payload: any) => void>()
 
-// 事件执行器
-const localPages = computed(() => props.pages)
-const localIsProjectMode = computed(() => props.isProjectMode)
-
-const { handleComponentEvent } = useEventExecutor({
+// 上下文构建
+const context: RuntimeContext = {
   components: localComponents,
-  pages: localPages,
-  isProjectMode: localIsProjectMode,
+  pages: computed(() => props.pages),
+  isProjectMode: computed(() => props.isProjectMode),
   router,
-  onNavigate: (pageId: string) => {
-    emit('navigate-page', pageId)
+  subscribeComponentEvent: (handler) => {
+    componentEventSubscribers.add(handler)
   },
-})
+}
 
-// 只渲染顶层组件（非嵌套组件）
+// 初始化插件
+props.plugins?.forEach((plugin) => plugin(context))
+
+// 处理组件事件分发
+function handleComponentEvent(payload: { componentId: string; eventType: string; actions: any[] }) {
+  componentEventSubscribers.forEach((handler) => handler(payload))
+}
+
+// 只渲染顶层组件
 const topLevelComponents = computed(() => {
   return localComponents.value.filter((c) => !c.groupId)
 })
 
 // 监听 props.components 变化并同步到本地
-// 注意：不使用深拷贝，而是直接引用，确保响应式系统正常工作
 watch(
   () => props.components,
   (newComponents) => {
-    // 直接引用，不要深拷贝，否则会断开响应式连接
     localComponents.value = newComponents
-    console.log('[RuntimeRenderer] components synced, count:', newComponents.length)
+    // console.log('[RuntimeRenderer] components synced, count:', newComponents.length)
   },
   { immediate: true },
 )
 
-// 生命周期：启动引擎
-onMounted(() => {
-  bindingEngine.start()
-  // 编辑模式下默认禁用数据联动
-  if (props.mode === 'edit') {
-    bindingEngine.setEnabled(false)
-  }
-})
-
-// 监听模式变化
-watch(
-  () => props.mode,
-  (newMode) => {
-    if (newMode === 'edit') {
-      bindingEngine.setEnabled(false)
-    } else {
-      bindingEngine.setEnabled(true)
-    }
-  },
-)
-
-// 生命周期：清理引擎
-onBeforeUnmount(() => {
-  bindingEngine.stop()
-})
-
 // 处理属性更新
 function handleUpdateProp(payload: { componentId: string; path: string; value: unknown }) {
-  // 只有在非编辑模式下才更新本地状态，或者是模拟模式
   if (props.mode === 'edit') return
 
   const comp = localComponents.value.find((c) => c.id === payload.componentId)

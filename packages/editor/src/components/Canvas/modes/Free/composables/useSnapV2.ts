@@ -41,12 +41,23 @@ export function useSnap() {
   }
 
   /**
+   * 安全解析数值（支持 number 和 string 类型）
+   */
+  function parseNumericValue(value: unknown, defaultValue: number): number {
+    if (typeof value === 'number') return value
+    if (typeof value === 'string') return parseFloat(value) || defaultValue
+    return defaultValue
+  }
+
+  /**
    * 从 NodeSchema 的 style 中提取位置信息
+   * 支持新格式 (x/y 数值) 和旧格式 (left/top 字符串)
    */
   function extractPosition(node: NodeSchema): Position {
+    const style = node.style
     return {
-      x: parseFloat(node.style?.left || '0') || 0,
-      y: parseFloat(node.style?.top || '0') || 0,
+      x: style?.x !== undefined ? parseNumericValue(style.x, 0) : parseNumericValue(style?.left, 0),
+      y: style?.y !== undefined ? parseNumericValue(style.y, 0) : parseNumericValue(style?.top, 0),
     }
   }
 
@@ -54,9 +65,10 @@ export function useSnap() {
    * 从 NodeSchema 的 style 中提取尺寸信息
    */
   function extractSize(node: NodeSchema): Size {
+    const style = node.style
     return {
-      width: parseFloat(node.style?.width || '100') || 100,
-      height: parseFloat(node.style?.height || '100') || 100,
+      width: parseNumericValue(style?.width, 100),
+      height: parseNumericValue(style?.height, 100),
     }
   }
 
@@ -107,8 +119,8 @@ export function useSnap() {
    * 当前选中组件
    */
   const selectedNode = computed(() => {
-    if (!selectedId.value || !rootNode.value) return null
-    return store.findNodeById(rootNode.value, selectedId.value)
+    if (!selectedId.value) return null
+    return store.getComponentById(selectedId.value)
   })
 
   /**

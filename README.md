@@ -1,4 +1,4 @@
-# WebGIS LowCode Editor
+# Vela LowCode Editor
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-brightgreen" alt="Vue 3">
@@ -7,14 +7,14 @@
   <img src="https://img.shields.io/badge/ElementPlus-2.11-409eff" alt="Element Plus">
   <img src="https://img.shields.io/badge/Node-≥20.19-339933" alt="Node">
   <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
-  <img src="https://github.com/TWILIGHT-wyf/webgis-lowcode-editor/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://github.com/TWILIGHT-wyf/vela-lowcode-editor/actions/workflows/ci.yml/badge.svg" alt="CI">
 </p>
 
 一款基于 Vue 3 + TypeScript 的**数据可视化大屏低代码搭建平台**，支持拖拽式组件编排、实时预览、完整项目代码导出、AI 智能助手、事件联动、数据绑定等企业级功能。
 
-### 预览地址：https://webgis-lowcode-editor.vercel.app/ （需科学上网）
+### 预览地址：https://vela-lowcode-editor.vercel.app/ （需科学上网）
 
-### 后端地址：https://webgis-lowcode-editor.onrender.com （需科学上网）
+### 后端地址：https://vela-lowcode-editor.onrender.com （需科学上网）
 
 ### 组件库文档地址：https://visual-lib-docs.vercel.app/ （需科学上网）
 
@@ -52,7 +52,7 @@
 - **循环保护** - 智能防止循环绑定导致的无限更新
 - **性能优化** - 使用 Map 索引和精确路径监听，避免不必要的重渲染
 
-### 🗺️ WebGIS 能力
+### 🗺️ Vela 能力
 
 - **地图组件** - 基于 Leaflet 的地图容器
 - **多种图层** - 瓦片图层、矢量图层、热力图等
@@ -93,8 +93,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/TWILIGHT-wyf/webgis-lowcode-editor.git
-cd webgis-lowcode-editor
+git clone https://github.com/TWILIGHT-wyf/vela-lowcode-editor.git
+cd vela-lowcode-editor
 
 # 安装依赖 (推荐使用 pnpm)
 pnpm install
@@ -134,7 +134,7 @@ mongod --dbpath /path/to/data
 环境变量配置（`server/.env`）：
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/webgis
+MONGODB_URI=mongodb://localhost:27017/vela
 PORT=3001
 ```
 
@@ -251,7 +251,7 @@ pnpm preview
 | `qwen`     | 阿里通义千问     | 国内直连 | 待测试    |
 | `deepseek` | DeepSeek         | 国内直连 | 待测试    |
 
-> 💡 **提示**：预览地址 (https://webgis-lowcode-editor.vercel.app/) 目前使用的是 Gemini 免费 API
+> 💡 **提示**：预览地址 (https://vela-lowcode-editor.vercel.app/) 目前使用的是 Gemini 免费 API
 
 ### 启动 AI 代理服务
 
@@ -334,7 +334,7 @@ pnpm type-check
 ## 📁 项目结构
 
 ```
-webgis-lowcode-editor/
+vela-lowcode-editor/
 ├── src/                          # 前端源代码
 │   ├── components/              # 编辑器 UI 组件
 │   │   ├── Editor/             # 编辑器核心（画布、Shape等）
@@ -683,7 +683,7 @@ VITE_ENABLE_AI=true
 
 ```env
 # MongoDB
-MONGODB_URI=mongodb://localhost:27017/webgis
+MONGODB_URI=mongodb://localhost:27017/vela
 PORT=3001
 
 # AI Providers
@@ -731,11 +731,11 @@ ALLOWED_ORIGINS=https://your-frontend.vercel.app
 
 ## 🔗 相关链接
 
-- **在线预览**：https://webgis-lowcode-editor.vercel.app/
-- **后端服务**：https://webgis-lowcode-editor.onrender.com
+- **在线预览**：https://vela-lowcode-editor.vercel.app/
+- **后端服务**：https://vela-lowcode-editor.onrender.com
 - **组件库文档**：https://visual-lib-docs.vercel.app/
-- **GitHub 仓库**：https://github.com/TWILIGHT-wyf/webgis-lowcode-editor
-- **问题反馈**：https://github.com/TWILIGHT-wyf/webgis-lowcode-editor/issues
+- **GitHub 仓库**：https://github.com/TWILIGHT-wyf/vela-lowcode-editor
+- **问题反馈**：https://github.com/TWILIGHT-wyf/vela-lowcode-editor/issues
 
 ## ❓ 常见问题
 
@@ -858,7 +858,7 @@ MONGODB_URI=mongodb://your-host:27017/your-database
 ---
 
 <p align="center">
-  <b>WebGIS LowCode Editor</b>
+  <b>Vela LowCode Editor</b>
 </p>
 <p align="center">
   让数据可视化大屏搭建变得简单而高效
@@ -867,10 +867,10 @@ MONGODB_URI=mongodb://your-host:27017/your-database
   如果这个项目对你有帮助，请给个 ⭐️ Star 支持一下！
 </p>
 <p align="center">
-  <a href="https://github.com/TWILIGHT-wyf/webgis-lowcode-editor/stargazers">
-    <img src="https://img.shields.io/github/stars/TWILIGHT-wyf/webgis-lowcode-editor?style=social" alt="GitHub stars">
+  <a href="https://github.com/TWILIGHT-wyf/vela-lowcode-editor/stargazers">
+    <img src="https://img.shields.io/github/stars/TWILIGHT-wyf/vela-lowcode-editor?style=social" alt="GitHub stars">
   </a>
-  <a href="https://github.com/TWILIGHT-wyf/webgis-lowcode-editor/network/members">
-    <img src="https://img.shields.io/github/forks/TWILIGHT-wyf/webgis-lowcode-editor?style=social" alt="GitHub forks">
+  <a href="https://github.com/TWILIGHT-wyf/vela-lowcode-editor/network/members">
+    <img src="https://img.shields.io/github/forks/TWILIGHT-wyf/vela-lowcode-editor?style=social" alt="GitHub forks">
   </a>
 </p>

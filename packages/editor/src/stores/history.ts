@@ -135,12 +135,22 @@ export const useHistoryStore = defineStore('history', () => {
     console.log(`[History] Redo to: ${pointer.value}`)
   }
 
+  /**
+   * 手动提交当前状态到历史 (由 Command 系统调用)
+   */
+  function commit() {
+    if (componentStore.rootNode) {
+      pushState(componentStore.rootNode)
+    }
+  }
+
   return {
     stack,
     pointer,
     canUndo,
     canRedo,
     init,
+    commit,
     undo,
     redo,
   }

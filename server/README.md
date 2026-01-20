@@ -1,4 +1,4 @@
-# WebGIS 后端服务
+# Vela 后端服务
 
 集成了 MongoDB 项目存储、AI 代理和测试数据源接口的轻量级后端服务。
 
@@ -29,7 +29,7 @@ cp .env.example .env
 
 ```env
 # MongoDB 连接（本地或远程）
-MONGO_URI=mongodb://127.0.0.1:27017/webgis
+MONGO_URI=mongodb://127.0.0.1:27017/vela
 
 # AI API Key（可选，如果需要使用 AI 功能）
 AI_API_KEY=your_api_key_here
@@ -105,7 +105,7 @@ GET  /api/ai/models            # 获取支持的模型列表
 POST /api/ai/generate
 {
   "messages": [
-    { "role": "user", "content": "介绍一下 WebGIS" }
+    { "role": "user", "content": "介绍一下 Vela" }
   ],
   "temperature": 0.7,
   "max_tokens": 4096,
@@ -149,14 +149,14 @@ server/
 
 ## 环境变量说明
 
-| 变量名        | 说明               | 默认值                             | 必需           |
-| ------------- | ------------------ | ---------------------------------- | -------------- |
-| `PORT`        | 服务器端口         | `3001`                             | 否             |
-| `MONGO_URI`   | MongoDB 连接字符串 | `mongodb://127.0.0.1:27017/webgis` | 是             |
-| `AI_API_KEY`  | AI API 密钥        | -                                  | 使用 AI 时必需 |
-| `AI_PROVIDER` | AI 提供商          | `gemini`                           | 否             |
-| `AI_MODEL`    | AI 模型            | 使用默认模型                       | 否             |
-| `HTTPS_PROXY` | 代理服务器         | `http://127.0.0.1:7897`            | 否             |
+| 变量名        | 说明               | 默认值                           | 必需           |
+| ------------- | ------------------ | -------------------------------- | -------------- |
+| `PORT`        | 服务器端口         | `3001`                           | 否             |
+| `MONGO_URI`   | MongoDB 连接字符串 | `mongodb://127.0.0.1:27017/vela` | 是             |
+| `AI_API_KEY`  | AI API 密钥        | -                                | 使用 AI 时必需 |
+| `AI_PROVIDER` | AI 提供商          | `gemini`                         | 否             |
+| `AI_MODEL`    | AI 模型            | 使用默认模型                     | 否             |
+| `HTTPS_PROXY` | 代理服务器         | `http://127.0.0.1:7897`          | 否             |
 
 ## 开发指南
 

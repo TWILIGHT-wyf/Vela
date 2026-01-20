@@ -22,7 +22,7 @@ jobs:
           --health-retries 5
 
     env:
-      MONGODB_URI: mongodb://localhost:27017/webgis_test
+      MONGODB_URI: mongodb://localhost:27017/vela_test
 
     steps:
       - name: Checkout source

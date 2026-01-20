@@ -13,7 +13,7 @@ const componentSelector = '[data-component-id="text_1"]'
 async function gotoDashboard(page: Page) {
   await bootstrapProjects(page)
   await page.goto('/')
-  await expect(page).toHaveTitle(/WebGIS|Studio|项目工作台/i)
+  await expect(page).toHaveTitle(/Vela|Studio|项目工作台/i)
 }
 
 async function gotoEditor(page: Page) {

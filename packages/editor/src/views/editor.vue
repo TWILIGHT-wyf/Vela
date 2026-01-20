@@ -55,9 +55,16 @@ onMounted(async () => {
 
   try {
     // 从服务器加载项目数据
-    await projectService.getProject(projectId)
-    // 初始化项目数据（这里需要根据实际API调整）
-    ElMessage.success('项目加载成功')
+    const project = await projectService.getProject(projectId)
+
+    if (project && project.schema) {
+      // 初始化项目数据
+      projectStore.initProject(project.schema)
+      ElMessage.success('项目加载成功')
+    } else {
+      console.warn('项目数据格式不正确:', project)
+      throw new Error('项目数据格式不正确')
+    }
   } catch (error) {
     console.warn('从服务器加载失败:', error)
     ElMessage.error('项目加载失败')

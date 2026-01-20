@@ -5,7 +5,7 @@
 
 ## OVERVIEW
 
-WebGIS LowCode Editor - A Vue 3 + TypeScript visual platform for building data visualization dashboards. Features drag-and-drop orchestration, event/data linkage engines, and multiple renderer implementations.
+Vela LowCode Editor - A Vue 3 + TypeScript visual platform for building data visualization dashboards. Features drag-and-drop orchestration, event/data linkage engines, and multiple renderer implementations.
 
 ## STRUCTURE
 

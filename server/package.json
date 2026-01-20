@@ -1,7 +1,7 @@
 {
-  "name": "webgis-server",
+  "name": "@vela/server",
   "version": "1.0.0",
-  "description": "WebGIS 低代码平台后端服务 - 集成 MongoDB、AI 代理和测试数据源",
+  "description": "Vela 低代码平台后端服务 - 集成 MongoDB、AI 代理和测试数据源",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

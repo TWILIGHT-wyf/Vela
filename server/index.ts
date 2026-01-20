@@ -100,7 +100,7 @@ async function startServer() {
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log('═'.repeat(60))
-    console.log(' WebGIS 后端服务已启动')
+    console.log(' Vela 后端服务已启动')
     console.log('═'.repeat(60))
     console.log(` 地址: http://localhost:${PORT}`)
     console.log(` AI Provider: ${process.env.AI_PROVIDER || 'gemini'}`)

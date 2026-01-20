@@ -44,7 +44,7 @@
         <el-form-item v-for="prop in metaProps" :key="prop.name" :label="prop.title || prop.name">
           <component
             :is="getSetterComponent(prop.setter)"
-            v-model="(node.props as any)[prop.name]"
+            v-model="propValues[prop.name]"
             v-bind="prop.setterProps || {}"
           />
           <div v-if="prop.description" class="prop-description">
@@ -63,7 +63,7 @@ import type { NodeSchema } from '@vela/core'
 import type { PropConfig } from '@vela/core/types/material'
 import { materialList } from '@vela/materials'
 import { Select } from '@element-plus/icons-vue'
-import { useCommands, type UpdatePropCommand } from '@/stores/commands'
+import { useComponent } from '@/stores/component'
 
 // 导入所有 Setters
 import StringSetter from '../setters/StringSetter.vue'
@@ -72,7 +72,6 @@ import SelectSetter from '../setters/SelectSetter.vue'
 import ColorSetter from '../setters/ColorSetter.vue'
 import BooleanSetter from '../setters/BooleanSetter.vue'
 import JsonSetter from '../setters/JsonSetter.vue'
-import { ElMessage } from 'element-plus'
 
 // Extended prop config with name field for iteration
 interface NamedPropConfig extends PropConfig {
@@ -97,7 +96,8 @@ const setterMap: Record<string, Component> = {
   JsonSetter,
 }
 
-const { executeCommand } = useCommands()
+// 使用 Component Store 直接更新
+const componentStore = useComponent()
 
 // 获取当前组件的 Meta 定义（只取 props）
 const metaProps = computed<NamedPropConfig[]>(() => {
@@ -134,50 +134,58 @@ const groupedProps = computed(() => {
 const propValues = ref<Record<string, unknown>>({})
 
 // 初始化属性值
-if (props.node?.props) {
-  propValues.value = { ...props.node.props }
+function initPropValues() {
+  if (props.node?.props) {
+    propValues.value = { ...props.node.props }
+  } else {
+    propValues.value = {}
+  }
 }
 
-// 监听属性值变化，通过 Command Pattern 更新
+// 初始化
+initPropValues()
+
+// 监听属性值变化，直接通过 Component Store 更新
 watch(
   propValues,
   (newValues, oldValues) => {
+    if (!props.node) return
+
     Object.entries(newValues).forEach(([propName, newValue]) => {
-      const oldValue = oldValues[propName]
+      const oldValue = oldValues?.[propName]
       if (newValue !== oldValue) {
-        updateProp(propName, newValue)
+        // 直接使用 updateProps 更新单个属性
+        componentStore.updateProps(props.node!.id, { [propName]: newValue })
+        console.log(`[PropsPane] Updated ${propName}:`, newValue)
       }
     })
   },
   { deep: true },
 )
 
-// 属性更新函数 - 使用 Command Pattern
-function updateProp(propName: string, value: unknown): void {
-  if (!props.node) return
-
-  try {
-    executeCommand({
-      type: 'update-prop',
-      id: props.node.id,
-      path: propName,
-      value,
-    } as UpdatePropCommand)
-  } catch (error) {
-    console.error('[PropsPane] Failed to update prop:', error)
-    ElMessage.error('属性更新失败')
-  }
-}
-
 // 监听节点变化，重置属性值
 watch(
   () => props.node?.id,
   () => {
-    if (props.node?.props) {
-      propValues.value = { ...props.node.props }
-    }
+    initPropValues()
   },
   { immediate: true },
+)
+
+// 监听节点 props 变化（外部更新时同步）
+watch(
+  () => props.node?.props,
+  (newProps) => {
+    if (newProps) {
+      // 只更新有变化的属性，避免触发循环
+      Object.entries(newProps).forEach(([key, value]) => {
+        if (propValues.value[key] !== value) {
+          propValues.value[key] = value
+        }
+      })
+    }
+  },
+  { deep: true },
 )
 
 // 映射 Setter 字符串到组件

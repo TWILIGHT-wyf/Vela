@@ -200,13 +200,15 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
   const defaultProps = extractDefaultProps(meta.props || {})
 
   // 构建完整的 NodeSchema 结构
+  // 注意：FreeCanvas 期望 width/height 为数值类型
   const nodeSchema: Partial<NodeSchema> = {
     id: generateId(componentName),
     componentName,
     props: defaultProps as Record<string, PropValue>,
     style: {
-      width: categoryConfig.defaultWidth ? `${categoryConfig.defaultWidth}px` : undefined,
-      height: categoryConfig.defaultHeight ? `${categoryConfig.defaultHeight}px` : undefined,
+      // 数值类型，由 ShapeWrapper 转换为 px
+      width: categoryConfig.defaultWidth || 120,
+      height: categoryConfig.defaultHeight || 80,
     },
     children: [], // V1.5 必须包含 children 字段
   }

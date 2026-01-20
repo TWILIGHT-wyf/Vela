@@ -27,7 +27,7 @@ const serverProjects: ServerProject[] = [
             rotation: 0,
             zindex: 2,
             style: { ...baseStyle, fontSize: 24, fontColor: '#1f2933' },
-            props: { text: 'WebGIS Studio 演示项目' },
+            props: { text: 'Vela Studio 演示项目' },
             dataSource: undefined,
           },
           {
@@ -112,7 +112,7 @@ export async function mockProjectApis(page: Page) {
 
 export async function seedLocalProjects(page: Page) {
   await page.addInitScript((projects) => {
-    window.localStorage.setItem('webgis_projects', JSON.stringify(projects))
+    window.localStorage.setItem('vela_projects', JSON.stringify(projects))
   }, localProjects)
 }
 

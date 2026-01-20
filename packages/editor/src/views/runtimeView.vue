@@ -154,6 +154,7 @@
                 :components="previewComponents"
                 :pages="allPages"
                 :is-project-mode="isProjectMode"
+                :plugins="[DataBindingPlugin, EventExecutorPlugin]"
                 @navigate-page="navigateToPage"
               />
             </div>
@@ -292,7 +293,7 @@ import { ref, reactive, computed, onMounted, watch, onBeforeUnmount, shallowRef 
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { ElMessage } from 'element-plus'
-import { RuntimeRenderer } from '@vela/renderer'
+import { RuntimeRenderer, DataBindingPlugin, EventExecutorPlugin } from '@vela/renderer'
 import * as projectService from '@/services/projects'
 import ExportConfigDialog from '@/components/dialogs/ExportConfigDialog.vue'
 import { useComponent } from '@/stores/component'

@@ -60,7 +60,7 @@ import {
   type Project,
 } from '@vela/generator/projectGenerator'
 
-const STORAGE_KEY = 'webgis-export-preferences'
+const STORAGE_KEY = 'vela-export-preferences'
 
 const props = defineProps<{
   modelValue: boolean

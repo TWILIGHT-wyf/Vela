@@ -695,9 +695,16 @@ export const useComponent = defineStore('component', () => {
     selectedNodes,
     hoveredNode,
 
+    // Utilities
+    findNodeById,
+    findParentNode,
+    getComponentById,
+    traverse,
+
     // Actions
     loadTree,
     setTree,
+    flattenTree,
     addComponent,
     updateProps,
     updateStyle,
@@ -718,5 +725,13 @@ export const useComponent = defineStore('component', () => {
     copySelectedNodes,
     cutSelectedNodes,
     pasteNodes,
+
+    // Compatibility (deprecated)
+    componentStore,
+    selectedComponent,
+    isSelected,
+    updateComponentPosition,
+    updateComponentSize,
+    updateComponentRotation,
   }
 })

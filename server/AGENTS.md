@@ -46,7 +46,7 @@ Abstracts multiple LLM APIs into a unified internal format via `routes/ai.ts`:
 
 ```env
 PORT=3001
-MONGODB_URI=mongodb://127.0.0.1:27017/webgis
+MONGODB_URI=mongodb://127.0.0.1:27017/vela
 AI_PROVIDER=gemini # choices: gemini, openai, claude, qwen, deepseek
 AI_API_KEY=xxx
 HTTPS_PROXY=http://127.0.0.1:7897 # required for global models in some regions

@@ -298,7 +298,7 @@ function checkRateLimit(): { allowed: boolean; waitTime?: number } {
 function buildSystemPrompt(canvasWidth: number, canvasHeight: number): string {
   const capabilityDoc = buildComponentCapabilityDoc()
 
-  return `你是一个专业的 WebGIS 可视化大屏设计助手。用户会描述他们想要的组件或布局需求，你需要根据需求生成对应的组件配置。
+  return `你是一个专业的 Vela 可视化大屏设计助手。用户会描述他们想要的组件或布局需求，你需要根据需求生成对应的组件配置。
 
 ## 【组件能力文档】
 以下是系统中所有可用组件及其核心属性，请严格参考此文档生成配置：

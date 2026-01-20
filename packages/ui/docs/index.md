@@ -14,7 +14,7 @@ hero:
       link: /components/chart/line-chart
     - theme: alt
       text: GitHub
-      link: https://github.com/TWILIGHT-wyf/webgis
+      link: https://github.com/TWILIGHT-wyf/vela-lowcode-editor
 
 features:
   - icon: 📊

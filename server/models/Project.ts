@@ -1,8 +1,13 @@
 import mongoose from 'mongoose'
+import { nanoid } from 'nanoid'
 
 // Project Schema - 存储低代码项目完整数据
 const ProjectSchema = new mongoose.Schema(
   {
+    _id: {
+      type: String,
+      default: () => nanoid(10), // 使用短 ID
+    },
     name: {
       type: String,
       required: true,
@@ -16,21 +21,14 @@ const ProjectSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // V1.5 完整项目结构存储
+    schema: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    // 兼容旧版结构 (可选，后续可移除)
     pages: {
-      type: [
-        {
-          id: String,
-          name: String,
-          route: String,
-          thumbnail: String,
-          components: [mongoose.Schema.Types.Mixed],
-          canvasSettings: {
-            width: Number,
-            height: Number,
-            backgroundColor: String,
-          },
-        },
-      ],
+      type: mongoose.Schema.Types.Mixed,
       default: [],
     },
   },

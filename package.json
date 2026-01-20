@@ -2,7 +2,7 @@
   "name": "lowcode-monorepo",
   "private": true,
   "scripts": {
-    "dev": "pnpm -F @vela/editor dev",
+    "dev": "docker-compose up -d && concurrently --kill-others -n \"SERVER,EDITOR\" -c \"blue,magenta\" \"pnpm -F @vela/server dev\" \"pnpm -F @vela/editor dev\"",
     "build": "pnpm -F @vela/editor build",
     "lint": "eslint .",
     "type-check": "vue-tsc --noEmit -p packages/editor/tsconfig.app.json"
@@ -13,6 +13,7 @@
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/test-utils": "^2.4.6",
+    "concurrently": "^9.2.1",
     "element-plus": "^2.13.1",
     "eslint": "^9.0.0",
     "eslint-plugin-playwright": "^2.5.0",

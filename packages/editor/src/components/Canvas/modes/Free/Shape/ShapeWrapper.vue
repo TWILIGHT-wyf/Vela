@@ -71,7 +71,27 @@ const canvasPanX = inject<Ref<number>>('canvasPanX', ref(0))
 const canvasPanY = inject<Ref<number>>('canvasPanY', ref(0))
 
 // ========== Snap Integration ==========
-const { snapToNeighbors, snapToGrid } = useSnap()
+// 使用 try-catch 包装以防止初始化错误
+let snapToNeighbors:
+  | ((
+      threshold: number,
+      pos?: { x: number; y: number },
+    ) => { position: { x: number; y: number }; lines: { x?: number; y?: number }[] } | null)
+  | null = null
+let snapToGrid:
+  | ((
+      pos: { x: number; y: number },
+      gridSize?: number,
+    ) => { position: { x: number; y: number }; lines: { x?: number; y?: number }[] })
+  | null = null
+
+try {
+  const snap = useSnap()
+  snapToNeighbors = snap.snapToNeighbors
+  snapToGrid = snap.snapToGrid
+} catch (e) {
+  console.warn('[ShapeWrapper] Snap initialization failed:', e)
+}
 
 // ========== Constants ==========
 const MIN_SIZE = 20
@@ -241,23 +261,28 @@ const onDragMove = throttle((e: MouseEvent) => {
   let newX = dragStartPos.x + dx
   let newY = dragStartPos.y + dy
 
-  // Snap logic
-  if (e.ctrlKey) {
-    // Grid snapping with Ctrl
-    const gridSnap = snapToGrid({ x: newX, y: newY }, GRID_SIZE)
-    newX = gridSnap.position.x
-    newY = gridSnap.position.y
-    emit('snap-lines', gridSnap.lines)
-  } else {
-    // Component snapping
-    const componentSnap = snapToNeighbors(SNAP_THRESHOLD, { x: newX, y: newY })
-    if (componentSnap) {
-      newX = componentSnap.position.x
-      newY = componentSnap.position.y
-      emit('snap-lines', componentSnap.lines)
-    } else {
-      emit('snap-lines', [])
+  // Snap logic (with null checks)
+  try {
+    if (e.ctrlKey && snapToGrid) {
+      // Grid snapping with Ctrl
+      const gridSnap = snapToGrid({ x: newX, y: newY }, GRID_SIZE)
+      newX = gridSnap.position.x
+      newY = gridSnap.position.y
+      emit('snap-lines', gridSnap.lines)
+    } else if (snapToNeighbors) {
+      // Component snapping
+      const componentSnap = snapToNeighbors(SNAP_THRESHOLD, { x: newX, y: newY })
+      if (componentSnap) {
+        newX = componentSnap.position.x
+        newY = componentSnap.position.y
+        emit('snap-lines', componentSnap.lines)
+      } else {
+        emit('snap-lines', [])
+      }
     }
+  } catch (e) {
+    console.warn('[ShapeWrapper] Snap calculation failed:', e)
+    emit('snap-lines', [])
   }
 
   // 使用新的统一样式格式：x/y 为数值类型

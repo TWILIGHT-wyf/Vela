@@ -150,6 +150,10 @@ const handleDrop = (e: DragEvent) => {
 
     // 创建新组件（自由画布模式使用 position: absolute）
     // 使用新的统一样式格式：x/y/width/height 为数值类型
+    // 注意：MaterialPanel 传递的尺寸在 data.style 中
+    const dropWidth = data.style?.width || data.width || 120
+    const dropHeight = data.style?.height || data.height || 80
+
     const newId = addComponent(null, {
       id: `comp_${Date.now()}`,
       componentName: data.componentName,
@@ -158,12 +162,11 @@ const handleDrop = (e: DragEvent) => {
         position: 'absolute',
         x: Math.round(stageX),
         y: Math.round(stageY),
-        width: data.width || 120,
-        height: data.height || 80,
+        width: dropWidth,
+        height: dropHeight,
         zIndex: 0,
-        ...(data.style || {}),
       },
-      children: [],
+      children: data.children || [],
     })
 
     if (newId) {

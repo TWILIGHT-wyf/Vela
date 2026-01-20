@@ -7,7 +7,7 @@
           <div class="logo-bg">
             <el-icon class="logo-icon" :size="20"><MapLocation /></el-icon>
           </div>
-          <span class="logo-text">WebGIS Studio</span>
+          <span class="logo-text">Vela Studio</span>
         </div>
       </div>
 
@@ -208,6 +208,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '@/stores/project'
 import * as projectService from '@/services/projects'
+import { generateId } from '@vela/core'
 
 const router = useRouter()
 const projectStore = useProjectStore()
@@ -368,7 +369,27 @@ const submitCreate = async () => {
           layout: 'pc',
           theme: 'light',
         },
-        pages: [],
+        pages: [
+          {
+            id: generateId('page'),
+            name: 'Home',
+            path: '/',
+            config: {
+              layout: 'free',
+            },
+            children: {
+              id: generateId('root'),
+              componentName: 'Page',
+              props: {},
+              style: {
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+              },
+              children: [],
+            },
+          },
+        ],
       },
     })
 

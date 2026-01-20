@@ -86,7 +86,7 @@ export async function exportProjectToZip(project: Project, options: ExportOption
     throw new Error('需要有效的项目实例才能导出代码。')
   }
 
-  const normalizedName = sanitizeProjectName(project.name || 'webgis-project')
+  const normalizedName = sanitizeProjectName(project.name || 'vela-project')
   const zip = new JSZip()
   const root = zip.folder(normalizedName)
 
@@ -364,7 +364,7 @@ function createPackageJson(
   }
 
   const packageJson = {
-    name: sanitizeProjectName(project.name || 'webgis-project'),
+    name: sanitizeProjectName(project.name || 'vela-project'),
     version: '0.1.0',
     private: true,
     type: 'module',
@@ -609,7 +609,7 @@ function sanitizeProjectName(name: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .toLowerCase()
-  return normalized || 'webgis-project'
+  return normalized || 'vela-project'
 }
 
 /**

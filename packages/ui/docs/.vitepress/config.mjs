@@ -13,7 +13,7 @@ export default defineConfig({
     nav: [
       { text: '指南', link: '/guide/getting-started' },
       { text: '组件', link: '/components/chart/line-chart' },
-      { text: 'GitHub', link: 'https://github.com/TWILIGHT-wyf/webgis' },
+      { text: 'GitHub', link: 'https://github.com/TWILIGHT-wyf/vela-lowcode-editor' },
     ],
 
     sidebar: {
@@ -113,7 +113,7 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [{ icon: 'github', link: 'https://github.com/TWILIGHT-wyf/webgis' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/TWILIGHT-wyf/vela-lowcode-editor' }],
 
     footer: {
       message: 'Released under the MIT License.',
