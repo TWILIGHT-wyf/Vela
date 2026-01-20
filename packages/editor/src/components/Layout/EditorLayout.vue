@@ -12,7 +12,7 @@
         <div class="vela-layout__panel-content">
           <slot name="left" />
         </div>
-        <ResizeHandle position="left" @mousedown.prevent="startResizeLeft" />
+        <ResizeHandle ref="leftHandle" position="left" @resize-start="onLeftResizeStart" />
       </aside>
 
       <main class="vela-layout__main">
@@ -23,7 +23,7 @@
         class="vela-layout__panel vela-layout__panel--right"
         :style="{ width: rightWidth + 'px' }"
       >
-        <ResizeHandle position="right" @mousedown.prevent="startResizeRight" />
+        <ResizeHandle ref="rightHandle" position="right" @resize-start="onRightResizeStart" />
         <div class="vela-layout__panel-content">
           <slot name="right" />
         </div>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, useTemplateRef } from 'vue'
 import ResizeHandle from './ResizeHandle.vue'
 
 // 侧边栏宽度限制
@@ -47,6 +47,10 @@ const MAX_WIDTH = 600
 // 状态
 const leftWidth = ref(300)
 const rightWidth = ref(340)
+
+// 引用
+const leftHandleRef = useTemplateRef<InstanceType<typeof ResizeHandle>>('leftHandle')
+const rightHandleRef = useTemplateRef<InstanceType<typeof ResizeHandle>>('rightHandle')
 
 // 拖拽状态
 let isResizing = false
@@ -58,17 +62,20 @@ let currentSide: 'left' | 'right' | null = null
 function startResizeLeft(e: MouseEvent) {
   startResize(e, 'left', leftWidth.value)
 }
-
-// 右侧面板拖拽
-function startResizeRight(e: MouseEvent) {
-  startResize(e, 'right', rightWidth.value)
+// 适配子组件事件
+function handleResizeStartLeft() {
+  // 模拟 MouseEvent，因为 ResizeHandle 已经在 handleMouseDown 中处理了 preventDefault
+  // 我们主要需要初始坐标。但因为 startResize 需要 MouseEvent，这里从 window.event 或重新获取可能不准确
+  // 更好的方式是 ResizeHandle 传递事件对象，或者 startResize 改为不依赖 event
+  // 简化方案：监听 window 的 mousemove 来初始化 startX
 }
 
-// 开始拖拽
-function startResize(e: MouseEvent, side: 'left' | 'right', initialWidth: number) {
+// 实际上，ResizeHandle 应该传递 MouseEvent 出来，或者我们在父组件监听 mousedown
+// 为了保持重构的连贯性，我们让 startResize 接收坐标而不是事件对象
+function startResize(clientX: number, side: 'left' | 'right', initialWidth: number) {
   isResizing = true
   currentSide = side
-  startX = e.clientX
+  startX = clientX
   startWidth = initialWidth
 
   // 设置全局样式防止鼠标跳动
@@ -78,6 +85,18 @@ function startResize(e: MouseEvent, side: 'left' | 'right', initialWidth: number
   // 添加事件监听
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('mouseup', handleMouseUp)
+}
+
+function onLeftResizeStart() {
+  // 获取当前鼠标位置 (hacky but works for sync event)
+  // 更优雅的方式是 ResizeHandle emit event
+  const e = window.event as MouseEvent
+  if (e) startResize(e.clientX, 'left', leftWidth.value)
+}
+
+function onRightResizeStart() {
+  const e = window.event as MouseEvent
+  if (e) startResize(e.clientX, 'right', rightWidth.value)
 }
 
 // 处理鼠标移动
@@ -114,6 +133,10 @@ function handleMouseUp() {
 
   isResizing = false
   currentSide = null
+
+  // 重置子组件状态
+  leftHandleRef.value?.reset()
+  rightHandleRef.value?.reset()
 
   // 恢复全局样式
   document.body.style.cursor = ''

@@ -13,8 +13,15 @@
         @dragleave="handleRootDragLeave"
         @drop="handleRootDrop"
       >
-        <!-- 使用 FlowRenderer 递归渲染组件树 -->
-        <FlowRenderer v-if="rootNode && rootNode.children?.length" :nodes="rootNode.children" />
+        <!-- 使用 UniversalRenderer 递归渲染组件树 -->
+        <template v-if="rootNode && rootNode.children?.length">
+          <UniversalRenderer
+            v-for="child in rootNode.children"
+            :key="child.id"
+            :node="child"
+            :wrapper="NodeWrapper"
+          />
+        </template>
 
         <!-- 空状态提示 -->
         <div
@@ -65,13 +72,16 @@ import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
-import FlowRenderer from './FlowRenderer.vue'
+import UniversalRenderer from '../../UniversalRenderer.vue'
+import NodeWrapper from './NodeWrapper.vue'
 import DropIndicator from './DropIndicator.vue'
 import ContextMenu from '../Free/ContextMenu/ContextMenu.vue'
 import { useFlowDrop } from './useFlowDrop'
+import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
+import { useContextMenu } from '@/composables/useContextMenu'
 
 const componentStore = useComponent()
-const { rootNode, selectedId } = storeToRefs(componentStore)
+const { rootNode } = storeToRefs(componentStore)
 const { selectComponent, clearSelection } = componentStore
 
 const uiStore = useUIStore()
@@ -79,6 +89,13 @@ const { canvasWidth, canvasHeight, canvasScale } = storeToRefs(uiStore)
 const { setCanvasScale } = uiStore
 
 const viewportRef = ref<HTMLElement | null>(null)
+
+// ========== Shared Logic ==========
+const { menuState: contextMenu, openContextMenu, closeContextMenu } = useContextMenu()
+
+useEditorShortcuts({
+  closeMenu: closeContextMenu,
+})
 
 // ========== Flow Drop Logic ==========
 const flowDrop = useFlowDrop(viewportRef)
@@ -117,89 +134,17 @@ const handleWheel = (e: WheelEvent) => {
 }
 
 // ========== Keyboard Shortcuts ==========
-const handleKeyDown = (e: KeyboardEvent) => {
-  // Ignore if user is typing in an input
-  const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    return
-  }
-
-  const isMac = navigator.platform.toUpperCase().includes('MAC')
-  const ctrlKey = isMac ? e.metaKey : e.ctrlKey
-
-  // Delete - 删除选中组件
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (selectedId.value) {
-      e.preventDefault()
-      componentStore.deleteComponent(selectedId.value)
-    }
-    return
-  }
-
-  // Ctrl+C - 复制
-  if (ctrlKey && e.key === 'c') {
-    if (selectedId.value) {
-      e.preventDefault()
-      componentStore.copySelectedNodes()
-    }
-    return
-  }
-
-  // Ctrl+X - 剪切
-  if (ctrlKey && e.key === 'x') {
-    if (selectedId.value) {
-      e.preventDefault()
-      componentStore.cutSelectedNodes()
-    }
-    return
-  }
-
-  // Ctrl+V - 粘贴
-  if (ctrlKey && e.key === 'v') {
-    e.preventDefault()
-    componentStore.pasteNodes()
-    return
-  }
-
-  // Ctrl+A - 全选 (选中所有顶层组件)
-  if (ctrlKey && e.key === 'a') {
-    if (rootNode.value?.children && rootNode.value.children.length > 0) {
-      e.preventDefault()
-      const allIds = rootNode.value.children.map((n) => n.id)
-      componentStore.selectComponents(allIds)
-    }
-    return
-  }
-
-  // Escape - 取消选中 / 关闭菜单
-  if (e.key === 'Escape') {
-    if (contextMenu.value.visible) {
-      closeContextMenu()
-    } else {
-      clearSelection()
-    }
-    return
-  }
-}
+// (Refactored to useEditorShortcuts)
 
 onMounted(() => {
   window.addEventListener('wheel', handleWheel, { passive: false })
-  window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('wheel', handleWheel)
-  window.removeEventListener('keydown', handleKeyDown)
 })
 
 // ========== Context Menu ==========
-const contextMenu = ref({
-  visible: false,
-  x: 0,
-  y: 0,
-  targetId: undefined as string | undefined,
-})
-
 function handleContextMenu(e: MouseEvent) {
   const target = e.target as HTMLElement
   const nodeEl = target.closest('[data-id]')
@@ -208,27 +153,17 @@ function handleContextMenu(e: MouseEvent) {
     const id = nodeEl.getAttribute('data-id')
     if (id) {
       selectComponent(id)
-      contextMenu.value = {
-        visible: true,
-        x: e.clientX,
-        y: e.clientY,
-        targetId: id,
-      }
+      openContextMenu(e, id)
       return
     }
   }
 
   // 点击空白处显示粘贴菜单
-  contextMenu.value = {
-    visible: true,
-    x: e.clientX,
-    y: e.clientY,
-    targetId: undefined,
-  }
+  openContextMenu(e)
 }
 
 function handleMenuAction(action: string) {
-  contextMenu.value.visible = false
+  closeContextMenu()
 
   switch (action) {
     case 'copy':
@@ -241,17 +176,13 @@ function handleMenuAction(action: string) {
       componentStore.pasteNodes()
       break
     case 'delete':
-      if (selectedId.value) {
-        componentStore.deleteComponent(selectedId.value)
+      if (componentStore.selectedId) {
+        componentStore.deleteComponent(componentStore.selectedId)
       }
       break
     default:
       console.log('[FlowCanvas] Unhandled menu action:', action)
   }
-}
-
-function closeContextMenu() {
-  contextMenu.value.visible = false
 }
 
 /**

@@ -1,4 +1,5 @@
 import { ref, computed, readonly, type Ref } from 'vue'
+import { useThrottleFn } from '@vueuse/core'
 import type { NodeSchema } from '@vela/core'
 import { useComponent } from '@/stores/component'
 import type { DropIndicatorState, DropPosition } from './types'
@@ -138,13 +139,46 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   }
 
   /**
+   * 计算并更新指示器状态 (Throttled)
+   */
+  const updateIndicatorState = useThrottleFn(
+    (mouseY: number, node: NodeSchema, element: HTMLElement, isAltPressed: boolean) => {
+      const rect = element.getBoundingClientRect()
+
+      // Auto scroll
+      handleAutoScroll(mouseY)
+
+      const position = calculateDropPosition(mouseY, rect, node, isAltPressed)
+
+      // 计算父节点 ID
+      let targetParentId: string | null = null
+      if (rootNode) {
+        const parent = componentStore.findParentNode(rootNode, node.id)
+        targetParentId = parent?.id || null
+      }
+
+      // 更新指示器状态
+      indicatorState.value = {
+        visible: true,
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+        position,
+        targetId: node.id,
+        targetParentId,
+      }
+    },
+    50, // 50ms throttle (~20fps)
+  )
+
+  /**
    * 处理 dragover 事件
    * 核心算法：根据鼠标位置计算插入位置
    */
   function handleDragOver(e: DragEvent, node: NodeSchema, element: HTMLElement) {
-    e.preventDefault()
-    e.stopPropagation()
-
     // 忽略拖拽到自身
     if (draggingId.value && node.id === draggingId.value) {
       return
@@ -162,35 +196,11 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       }
     }
 
-    const rect = element.getBoundingClientRect()
-    const mouseY = e.clientY
-    const isAltPressed = e.altKey
+    // 允许拖放
+    e.preventDefault()
+    e.stopPropagation()
 
-    // Auto scroll
-    handleAutoScroll(mouseY)
-
-    const position = calculateDropPosition(mouseY, rect, node, isAltPressed)
-
-    // 计算父节点 ID
-    let targetParentId: string | null = null
-    if (rootNode) {
-      const parent = componentStore.findParentNode(rootNode, node.id)
-      targetParentId = parent?.id || null
-    }
-
-    // 更新指示器状态
-    indicatorState.value = {
-      visible: true,
-      rect: {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      },
-      position,
-      targetId: node.id,
-      targetParentId,
-    }
+    updateIndicatorState(e.clientY, node, element, e.altKey)
   }
 
   /**

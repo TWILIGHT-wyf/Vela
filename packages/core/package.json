@@ -32,9 +32,8 @@
       ]
     }
   },
-  "devDependencies": {
-    "@types/lodash-es": "^4.17.12",
-    "lodash-es": "^4.17.21"
-  },
-  "dependencies": {}
+  "dependencies": {
+    "nanoid": "^5.1.6",
+    "zod": "^4.3.5"
+  }
 }

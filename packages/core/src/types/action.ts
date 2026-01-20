@@ -21,7 +21,7 @@ export interface NavigateAction extends BaseAction {
 export interface UpdateStateAction extends BaseAction {
   type: 'updateState'
   stateName: string
-  value: any
+  value: unknown
 }
 
 export interface AlertAction extends BaseAction {
@@ -34,10 +34,25 @@ export interface CustomScriptAction extends BaseAction {
   content: string
 }
 
+export interface ComponentAction extends BaseAction {
+  type: 'component'
+  targetId: string
+  methodName: string
+  args?: unknown[]
+}
+
+export interface VisibilityAction extends BaseAction {
+  type: 'visibility'
+  targetId: string
+  value: boolean // true: show, false: hide
+}
+
 export type ActionSchema =
   | OpenUrlAction
   | NavigateAction
   | UpdateStateAction
   | AlertAction
   | CustomScriptAction
+  | ComponentAction
+  | VisibilityAction
   | BaseAction

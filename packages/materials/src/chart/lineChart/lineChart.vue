@@ -1,106 +1,28 @@
 <template>
-  <LineChartBase v-bind="chartProps" />
+  <div class="chart-wrapper">
+    <LineChartBase v-bind="$attrs" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useComponent } from '@vela/editor/stores/component'
+/**
+ * LineChart - 纯 Props 模式的折线图组件
+ *
+ * 设计原则：
+ * - 不依赖任何 Editor Store，保持物料库独立
+ * - 所有数据通过 props 传入（由 FreeRenderer 层处理数据源适配）
+ * - 使用 inheritAttrs: false + v-bind="$attrs" 透传所有属性
+ */
+import { lineChart as LineChartBase } from '@vela/ui'
 
-// 从视觉组件库导入基础组件和工具函数
-import {
-  lineChart as LineChartBase,
-  useDataSource,
-  extractNumberArray,
-  extractStringArray,
-  extractString,
-  parseNumberInput,
-  parseStringInput,
-} from '@vela/ui'
-const props = defineProps<{ id: string }>()
-
-//获取组件配置
-const componentStore = useComponent()
-const { rootNode } = storeToRefs(componentStore)
-const comp = computed(() => {
-  if (!rootNode.value) return null
-  return componentStore.findNodeById(rootNode.value, props.id)
-})
-
-//获取数据源
-const { data: remoteData } = useDataSource(computed(() => comp.value?.dataSource))
-
-//数据适配逻辑
-const chartData = computed(() => {
-  const ds = comp.value?.dataSource
-  const p = comp.value?.props
-
-  if (ds?.enabled && remoteData.value) {
-    return extractNumberArray(remoteData.value, ds.dataPath) || []
-  }
-
-  if (p?.dataInput) return parseNumberInput(p.dataInput as string)
-  return p?.data as number[]
-})
-
-const xAxisData = computed(() => {
-  const ds = comp.value?.dataSource
-  const p = comp.value?.props
-
-  if (ds?.enabled && remoteData.value) {
-    return extractStringArray(remoteData.value, ds.xAxisPath) || []
-  }
-  if (p?.xAxisInput) return parseStringInput(p.xAxisInput as string)
-  return p?.xAxisData as string[]
-})
-
-const seriesName = computed(() => {
-  const ds = comp.value?.dataSource
-  const p = comp.value?.props
-
-  if (ds?.enabled && remoteData.value) {
-    return extractString(remoteData.value, ds.seriesNamePath)
-  }
-  return p?.seriesName as string
-})
-
-const customOption = computed(() => {
-  const opt = comp.value?.props?.option
-  return typeof opt === 'string' ? JSON.parse(opt) : opt
-})
-
-// 聚合要透传给库组件的 props，减少模板中的重复并改善类型推断
-
-const chartProps = computed((): Record<string, unknown> => {
-  const p = comp.value?.props
-  return {
-    data: chartData.value,
-    xAxisData: xAxisData.value,
-    seriesName: seriesName.value,
-
-    // 样式/选项属性（直接从组件配置读取，若未定义则为 undefined）
-    title: p?.title,
-    lineColor: p?.lineColor,
-    smooth: p?.smooth,
-    showArea: p?.showArea,
-    showTooltip: p?.showTooltip,
-    showLegend: p?.showLegend,
-    legendPosition: p?.legendPosition,
-    showGrid: p?.showGrid,
-    xAxisName: p?.xAxisName,
-    yAxisName: p?.yAxisName,
-    showXAxisLine: p?.showXAxisLine,
-    showXAxisLabel: p?.showXAxisLabel,
-    showYAxisLine: p?.showYAxisLine,
-    showYAxisLabel: p?.showYAxisLabel,
-    symbolSize: p?.symbolSize,
-    lineWidth: p?.lineWidth,
-    lineType: p?.lineType,
-    areaOpacity: p?.areaOpacity,
-    showSymbol: p?.showSymbol,
-
-    // 高级配置覆盖
-    option: customOption.value,
-  }
+defineOptions({
+  inheritAttrs: false,
 })
 </script>
+
+<style scoped>
+.chart-wrapper {
+  width: 100%;
+  height: 100%;
+}
+</style>

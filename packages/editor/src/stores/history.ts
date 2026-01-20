@@ -1,150 +1,147 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { useComponent } from './component'
+import { ref, computed, watch } from 'vue'
 import type { NodeSchema } from '@vela/core'
-import { cloneDeep } from 'lodash-es'
+import { cloneDeep, debounce } from 'lodash-es'
+import { useComponent } from './component'
 
 /**
  * 历史记录管理 Store
- * 实现撤销/重做功能
+ * 实现撤销/重做功能 (Snapshot模式)
  */
 export const useHistoryStore = defineStore('history', () => {
   const componentStore = useComponent()
 
   // ========== State ==========
 
-  /**
-   * 历史快照栈
-   */
-  const history = ref<NodeSchema[]>([])
+  const stack = ref<NodeSchema[]>([])
+  const pointer = ref(-1)
+  const MAX_HISTORY = 30
 
-  /**
-   * 当前快照索引（指向当前状态在 history 中的位置）
-   */
-  const currentIndex = ref<number>(-1)
-
-  /**
-   * 最大历史记录数
-   */
-  const maxSize = ref<number>(50)
+  // 锁：当正在撤销/重做时，不应记录新的历史
+  const isLocked = ref(false)
 
   // ========== Getters ==========
 
-  /**
-   * 是否可以撤销
-   */
-  const canUndo = ref<boolean>(false)
-
-  /**
-   * 是否可以重做
-   */
-  const canRedo = ref<boolean>(false)
+  const canUndo = computed(() => pointer.value > 0)
+  const canRedo = computed(() => pointer.value < stack.value.length - 1)
 
   // ========== Actions ==========
 
   /**
-   * 提交快照
+   * 记录新快照
+   * @param state 新的状态树
    */
-  function commit() {
-    const tree = componentStore.rootNode
-    if (!tree) return
+  function pushState(state: NodeSchema) {
+    if (isLocked.value) return
 
-    // 克隆当前状态
-    const snapshot = cloneDeep(tree)
-
-    // 如果当前不是最新状态，删除后面的历史
-    if (currentIndex.value < history.value.length - 1) {
-      history.value = history.value.slice(0, currentIndex.value + 1)
+    // 如果指针不在末尾，丢弃后面的记录 (分叉历史)
+    if (pointer.value < stack.value.length - 1) {
+      stack.value = stack.value.slice(0, pointer.value + 1)
     }
 
-    // 添加新快照
-    history.value.push(snapshot)
+    stack.value.push(cloneDeep(state))
+    pointer.value++
 
     // 限制历史记录数量
-    if (history.value.length > maxSize.value) {
-      history.value.shift()
-    } else {
-      currentIndex.value++
+    if (stack.value.length > MAX_HISTORY) {
+      stack.value.shift()
+      pointer.value--
     }
 
-    updateCanState()
-    console.log(`[History] Committed snapshot, index: ${currentIndex.value}`)
+    console.log(`[History] Pushed state, pointer: ${pointer.value}`)
+  }
+
+  // 防抖的记录函数，避免拖拽时频繁记录
+  const debouncedPush = debounce((state: NodeSchema) => {
+    if (state) pushState(state)
+  }, 500)
+
+  /**
+   * 初始化历史记录 (通常在页面加载完成后调用)
+   */
+  function init() {
+    // 停止之前的 watch（如果有）
+    // 注意：Pinia setup store 中难以直接停止 watch，除非保存 unwatch 函数
+    // 这里简单处理：通过 isLocked 配合
+
+    if (componentStore.rootNode) {
+      stack.value = [cloneDeep(componentStore.rootNode)]
+      pointer.value = 0
+    } else {
+      stack.value = []
+      pointer.value = -1
+    }
+
+    isLocked.value = false
+    console.log('[History] Initialized')
+
+    // 启动监听
+    // deep: true 监听整棵树的变化
+    watch(
+      () => componentStore.rootNode,
+      (newVal) => {
+        if (!isLocked.value && newVal) {
+          debouncedPush(newVal)
+        }
+      },
+      { deep: true },
+    )
   }
 
   /**
    * 撤销
    */
   function undo() {
-    if (currentIndex.value <= 0) {
-      console.warn('[History] Cannot undo')
-      return
+    if (!canUndo.value) return
+
+    // 加锁，防止 setTree 触发 pushState
+    isLocked.value = true
+
+    pointer.value--
+    const prevState = stack.value[pointer.value]
+
+    // 恢复状态
+    if (prevState) {
+      componentStore.setTree(cloneDeep(prevState))
     }
 
-    currentIndex.value--
-    const snapshot = history.value[currentIndex.value]
-    componentStore.setTree(cloneDeep(snapshot))
+    // 恢复完成后解锁 (使用 setTimeout 确保 watch 已执行完毕)
+    setTimeout(() => {
+      isLocked.value = false
+    }, 100) // 稍微增加延迟以确保安全
 
-    updateCanState()
-    console.log(`[History] Undo to index: ${currentIndex.value}`)
+    console.log(`[History] Undo to: ${pointer.value}`)
   }
 
   /**
    * 重做
    */
   function redo() {
-    if (currentIndex.value >= history.value.length - 1) {
-      console.warn('[History] Cannot redo')
-      return
+    if (!canRedo.value) return
+
+    isLocked.value = true
+
+    pointer.value++
+    const nextState = stack.value[pointer.value]
+
+    if (nextState) {
+      componentStore.setTree(cloneDeep(nextState))
     }
 
-    currentIndex.value++
-    const snapshot = history.value[currentIndex.value]
-    componentStore.setTree(cloneDeep(snapshot))
+    setTimeout(() => {
+      isLocked.value = false
+    }, 100)
 
-    updateCanState()
-    console.log(`[History] Redo to index: ${currentIndex.value}`)
-  }
-
-  /**
-   * 清空历史
-   */
-  function clear() {
-    history.value = []
-    currentIndex.value = -1
-    updateCanState()
-    console.log('[History] Cleared')
-  }
-
-  /**
-   * 初始化历史（保存初始状态）
-   */
-  function init() {
-    clear()
-    commit()
-    console.log('[History] Initialized')
-  }
-
-  /**
-   * 更新 canUndo 和 canRedo 状态
-   */
-  function updateCanState() {
-    canUndo.value = currentIndex.value > 0
-    canRedo.value = currentIndex.value < history.value.length - 1
+    console.log(`[History] Redo to: ${pointer.value}`)
   }
 
   return {
-    // State
-    history,
-    currentIndex,
-    maxSize,
+    stack,
+    pointer,
     canUndo,
     canRedo,
-
-    // Actions
-    commit,
+    init,
     undo,
     redo,
-    clear,
-    init,
   }
 })

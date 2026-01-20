@@ -1,17 +1,15 @@
-
-
 :root {
   /* --- 浅色主题 (Gemini 风格) --- */
-  --bg-app: #F0F4F9;          /* 应用底色 (浅灰蓝) */
-  --bg-card: #FFFFFF;         /* 卡片背景 (纯白) */
-  --bg-hover: #F5F7FA;        /* 悬停背景 */
+  --bg-app: #f0f4f9; /* 应用底色 (浅灰蓝) */
+  --bg-card: #ffffff; /* 卡片背景 (纯白) */
+  --bg-hover: #f5f7fa; /* 悬停背景 */
 
-  --text-primary: #1F1F1F;    /* 主要文字 */
-  --text-secondary: #444746;  /* 次要文字 */
-  --text-tertiary: #747775;   /* 提示文字 */
+  --text-primary: #1f1f1f; /* 主要文字 */
+  --text-secondary: #444746; /* 次要文字 */
+  --text-tertiary: #747775; /* 提示文字 */
 
   --border-color: transparent; /* 隐藏默认边框，用阴影代替 */
-  --border-light: #E0E3E7;     /* 内部轻微分割线 */
+  --border-light: #e0e3e7; /* 内部轻微分割线 */
 
   /* 柔和的悬浮阴影 */
   --shadow-card: 0 2px 6px rgba(60, 64, 67, 0.04), 0 0 2px rgba(60, 64, 67, 0.06);
@@ -25,12 +23,12 @@
 /* --- 暗色主题适配 --- */
 .theme-dark {
   --bg-app: #131314;
-  --bg-card: #1E1F20;
-  --bg-hover: #2D2E30;
+  --bg-card: #1e1f20;
+  --bg-hover: #2d2e30;
 
-  --text-primary: #E3E3E3;
-  --text-secondary: #C4C7C5;
-  --text-tertiary: #8E918F;
+  --text-primary: #e3e3e3;
+  --text-secondary: #c4c7c5;
+  --text-tertiary: #8e918f;
 
   --border-color: transparent;
   --border-light: #444746;
@@ -44,7 +42,14 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   margin: 0;
-  font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Google Sans',
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -68,4 +73,11 @@ body {
 .el-input__wrapper {
   border-radius: 8px;
   box-shadow: 0 0 0 1px var(--border-light) inset !important;
+}
+
+/* ECharts 容器样式修复 */
+.echart {
+  width: 100%;
+  height: 100%;
+  min-height: 50px;
 }

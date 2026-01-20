@@ -35,10 +35,32 @@ export interface PropConfig {
     | 'SelectSetter'
     | 'ColorSetter'
     | 'JsonSetter'
+    | 'ArraySetter'
+    | 'SliderSetter'
+    | 'TextareaSetter'
+    | 'ImageSetter'
     | string
   // 传递给设置器的参数 (如 Select 的 options)
-  setterProps?: Record<string, any>
-  defaultValue?: any
+  setterProps?: Record<string, unknown>
+  defaultValue?: unknown
   description?: string // 属性说明
   group?: string // 属性分组（用于折叠面板）
+
+  // ===== V2: Schema 驱动扩展 =====
+  /**
+   * Zod schema 引用键，用于运行时校验
+   * 格式: "{componentName}.{propName}" (e.g., "vLineChart.data")
+   * 如果设置，Command Store 会在更新前校验值
+   */
+  schemaKey?: string
+
+  /**
+   * 校验失败时的自定义错误消息
+   */
+  validationMessage?: string
+
+  /**
+   * 是否必填
+   */
+  required?: boolean
 }

@@ -57,6 +57,15 @@ export interface Component {
     align?: string
     padding?: number
   }
+  dataSource?: {
+    enabled?: boolean
+    url?: string
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+    headers?: Record<string, string>
+    body?: string
+    interval?: number
+    dataPath?: string
+  }
 }
 
 /**
@@ -112,35 +121,33 @@ export function componentToNodeSchema(comp: Component): NodeSchema {
  * Convert NodeSchema to legacy Component
  */
 export function nodeSchemaToComponent(node: NodeSchema): Component {
-  const style = node.style || {}
+  const {
+    x,
+    y,
+    width,
+    height,
+    rotate,
+    zIndex,
+    // Extract layout properties to exclude them from the style spread
+    ...visualStyles
+  } = node.style || {}
+
   return {
     id: node.id,
     type: node.componentName,
     position: {
-      x: (style.x as number) ?? 0,
-      y: (style.y as number) ?? 0,
+      x: (x as number) ?? 0,
+      y: (y as number) ?? 0,
     },
     size: {
-      width: (style.width as number) ?? 100,
-      height: (style.height as number) ?? 100,
+      width: (width as number) ?? 100,
+      height: (height as number) ?? 100,
     },
-    rotation: (style.rotation as number) ?? 0,
-    zindex: (style.zIndex as number) ?? 0,
+    rotation: (rotate as number) ?? 0,
+    zindex: (zIndex as number) ?? 0,
     props: node.props,
-    style: {
-      visible: style.visible as boolean,
-      opacity: style.opacity as number,
-      fontSize: style.fontSize as number,
-      fontColor: style.fontColor as string,
-      fontWeight: style.fontWeight as string,
-      textAlign: style.textAlign as string,
-      lineHeight: style.lineHeight as string | number,
-      backgroundColor: style.backgroundColor as string,
-      borderRadius: style.borderRadius as number,
-      border: style.border as string,
-      boxShadow: style.boxShadow as string,
-      padding: style.padding as number,
-    },
+    // Spread all remaining styles to ensure extensibility (Open-Closed Principle)
+    style: visualStyles as Component['style'],
     animation: node.animation
       ? {
           class: node.animation.class,

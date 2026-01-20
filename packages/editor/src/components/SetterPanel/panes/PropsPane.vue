@@ -71,6 +71,7 @@ import NumberSetter from '../setters/NumberSetter.vue'
 import SelectSetter from '../setters/SelectSetter.vue'
 import ColorSetter from '../setters/ColorSetter.vue'
 import BooleanSetter from '../setters/BooleanSetter.vue'
+import JsonSetter from '../setters/JsonSetter.vue'
 import { ElMessage } from 'element-plus'
 
 // Extended prop config with name field for iteration
@@ -93,6 +94,7 @@ const setterMap: Record<string, Component> = {
   SelectSetter,
   ColorSetter,
   BooleanSetter,
+  JsonSetter,
 }
 
 const { executeCommand } = useCommands()

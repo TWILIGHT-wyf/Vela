@@ -1,10 +1,16 @@
 <template>
-  <div class="resize-handle" :class="`resize-handle--${position}`" @mousedown="handleMouseDown">
+  <div
+    class="resize-handle"
+    :class="[`resize-handle--${position}`, { 'is-active': active }]"
+    @mousedown="handleMouseDown"
+  >
     <div class="resize-handle__line"></div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 defineProps<{
   position: 'left' | 'right'
 }>()
@@ -14,14 +20,22 @@ const emit = defineEmits<{
   'resize-end': []
 }>()
 
+const active = ref(false)
+
 function handleMouseDown(e: MouseEvent) {
   e.preventDefault()
+  active.value = true
   emit('resize-start')
-
-  // 添加全局鼠标样式
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
 }
+
+// 供父组件调用以重置状态
+function reset() {
+  active.value = false
+}
+
+defineExpose({
+  reset,
+})
 </script>
 
 <style scoped>
@@ -35,41 +49,16 @@ function handleMouseDown(e: MouseEvent) {
   transition: background-color 0.2s;
 }
 
-.resize-handle--left {
-  right: 0;
-}
-
-.resize-handle--right {
-  left: 0;
-}
-
-.resize-handle__line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1px;
-  background-color: transparent;
-  transition: all 0.2s;
-}
-
-.resize-handle:hover {
-  background-color: rgba(var(--el-color-primary-rgb), 0.1);
-}
-
-.resize-handle:hover .resize-handle__line {
-  width: 2px;
-  background-color: var(--el-color-primary);
-}
-
+/* 激活状态 */
+.resize-handle.is-active,
 .resize-handle:active {
   background-color: rgba(var(--el-color-primary-rgb), 0.15);
 }
 
-/* 拖拽时的视觉反馈 */
+.resize-handle.is-active .resize-handle__line,
 .resize-handle:active .resize-handle__line {
   background-color: var(--el-color-primary);
+  width: 2px;
   box-shadow: 0 0 4px var(--el-color-primary);
 }
 </style>

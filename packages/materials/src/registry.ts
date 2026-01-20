@@ -81,20 +81,60 @@ console.log(
   materialList.map((m) => `${m.category}/${m.componentName}`).sort(),
 )
 
+// 别名映射 (兼容旧名称)
+const ALIAS_MAP: Record<string, string> = {
+  KpiText: 'Text',
+  KpiProgress: 'Progress',
+  KpiStat: 'Stat',
+  KpiBox: 'Box',
+  KpiCountUp: 'CountUp',
+  // 图表旧名称兼容
+  stackedBarChart: 'StackedBarChart',
+  scatterChart: 'ScatterChart',
+  sankeyChart: 'SankeyChart',
+  radarChart: 'RadarChart',
+  funnelChart: 'FunnelChart',
+  doughnutChart: 'DoughnutChart',
+  barChart: 'BarChart',
+  lineChart: 'LineChart',
+  pieChart: 'PieChart',
+  gaugeChart: 'GaugeChart',
+}
+
+/**
+ * 解析组件名称（处理别名和大小写）
+ */
+function resolveComponentName(name: string): string | null {
+  const targetName = ALIAS_MAP[name] || name
+
+  // 1. 精确匹配
+  if (componentMap[targetName]) return targetName
+
+  // 2. PascalCase 匹配
+  const pascalName = targetName.charAt(0).toUpperCase() + targetName.slice(1)
+  if (componentMap[pascalName]) return pascalName
+
+  return null
+}
+
 /**
  * 获取组件实现，优先使用 materials 的包装，其次从 @vela/ui 获取
  */
 export function getComponent(name: string): Component | string {
   console.log(`[Registry] getComponent called with: ${name}`)
 
-  // 1. 优先使用 materials 中的包装组件
-  if (componentMap[name]) {
-    console.log(`[Registry] Found in componentMap: ${name}`)
-    return componentMap[name]
+  // 1. 尝试解析 materials 组件
+  const resolvedName = resolveComponentName(name)
+  if (resolvedName) {
+    console.log(`[Registry] Found in componentMap: ${resolvedName}`)
+    return componentMap[resolvedName]
   }
 
   // 2. V1.5: 回退到 @vela/ui 的组件 (添加 v 前缀)
-  const uiComponentName = `v${name}`
+  // 注意：这里也尝试用 PascalCase 处理 name
+  const pascalName = name.charAt(0).toUpperCase() + name.slice(1)
+  const uiComponentName = `v${pascalName}`
+
   if ((uiComponentRegistry as any)[uiComponentName]) {
     console.log(`[Registry] Found in UI registry: ${uiComponentName}`)
     return (uiComponentRegistry as any)[uiComponentName]
@@ -109,8 +149,11 @@ export function getComponent(name: string): Component | string {
  * 检查组件是否已注册
  */
 export function hasComponent(name: string): boolean {
-  const uiComponentName = `v${name}`
-  return name in componentMap || uiComponentName in uiComponentRegistry
+  if (resolveComponentName(name)) return true
+
+  const pascalName = name.charAt(0).toUpperCase() + name.slice(1)
+  const uiComponentName = `v${pascalName}`
+  return uiComponentName in uiComponentRegistry
 }
 
 /**

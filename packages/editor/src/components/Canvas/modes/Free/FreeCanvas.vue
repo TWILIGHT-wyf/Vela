@@ -11,13 +11,13 @@
   >
     <div class="world" :style="worldStyle">
       <div class="stage" :style="stageStyle">
-        <!-- V1.5: 使用 FreeRenderer 渲染组件树（包含 Shape 包裹器） -->
-        <!-- currentTree 是 Page 根节点，只渲染它的 children -->
+        <!-- V1.5: 使用 UniversalRenderer 渲染组件树 -->
         <template v-if="currentTree && currentTree.children && currentTree.children.length > 0">
-          <FreeRenderer
+          <UniversalRenderer
             v-for="child in currentTree.children"
             :key="child.id"
             :node="child"
+            :wrapper="ShapeWrapper"
             @open-context-menu="onComponentContextMenu"
             @snap-lines="handleSnapLines"
           />
@@ -47,14 +47,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, provide, onMounted, onBeforeUnmount } from 'vue'
-import FreeRenderer from './FreeRenderer.vue'
+import { ref, computed, provide, onMounted, onBeforeUnmount, shallowRef } from 'vue'
+import UniversalRenderer from '../../UniversalRenderer.vue'
+import ShapeWrapper from './Shape/ShapeWrapper.vue'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useCanvasInteraction } from './composables/useCanvasInteraction'
 import SnapLine from './Snap/SnapLine.vue'
 import ContextMenu from './ContextMenu/ContextMenu.vue'
+
+import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
+import { useContextMenu } from '@/composables/useContextMenu'
 
 const wrap = ref<HTMLDivElement | null>(null)
 
@@ -71,8 +75,15 @@ const {
 
 // 使用新的组件 Store
 const compStore = useComponent()
-const { rootNode: currentTree, selectedId, selectedIds } = storeToRefs(compStore)
+const { rootNode: currentTree } = storeToRefs(compStore)
 const { addComponent, selectComponent, clearSelection } = compStore
+
+// ========== Shared Logic ==========
+const { menuState, openContextMenu, closeContextMenu } = useContextMenu()
+
+useEditorShortcuts({
+  closeMenu: closeContextMenu,
+})
 
 // ========== Snap Lines State ==========
 const snapLines = ref<{ x?: number; y?: number }[]>([])
@@ -138,16 +149,18 @@ const handleDrop = (e: DragEvent) => {
     console.log('[FreeCanvas] Pan:', panX.value, panY.value, 'Scale:', scaleValue)
 
     // 创建新组件（自由画布模式使用 position: absolute）
+    // 使用新的统一样式格式：x/y/width/height 为数值类型
     const newId = addComponent(null, {
       id: `comp_${Date.now()}`,
       componentName: data.componentName,
       props: data.props || {},
       style: {
         position: 'absolute',
-        left: `${stageX}px`,
-        top: `${stageY}px`,
-        width: `${data.width || 120}px`,
-        height: `${data.height || 80}px`,
+        x: Math.round(stageX),
+        y: Math.round(stageY),
+        width: data.width || 120,
+        height: data.height || 80,
+        zIndex: 0,
         ...(data.style || {}),
       },
       children: [],
@@ -164,19 +177,6 @@ const handleDrop = (e: DragEvent) => {
 }
 
 // ========== Context Menu Logic ==========
-const menuState = ref<{
-  x: number
-  y: number
-  stageX?: number
-  stageY?: number
-  visible: boolean
-  targetId?: string
-}>({
-  x: 0,
-  y: 0,
-  visible: false,
-})
-
 function onCanvasContextMenu(e: MouseEvent) {
   const target = e.target as HTMLElement
 
@@ -193,39 +193,16 @@ function onCanvasContextMenu(e: MouseEvent) {
   const stageX = (visualX - panX.value) / scaleValue
   const stageY = (visualY - panY.value) / scaleValue
 
-  menuState.value = {
-    x: visualX,
-    y: visualY,
-    stageX,
-    stageY,
-    visible: true,
-    targetId: undefined,
-  }
+  openContextMenu(e, undefined, { stageX, stageY })
 }
 
 function onComponentContextMenu(payload: { id: string; event: MouseEvent }) {
-  const e = payload.event
-  const rect = wrap.value?.getBoundingClientRect()
-  if (!rect) return
-
-  const visualX = e.clientX - rect.left
-  const visualY = e.clientY - rect.top
-
-  menuState.value = {
-    x: visualX,
-    y: visualY,
-    visible: true,
-    targetId: payload.id,
-  }
-}
-
-function hideContextMenu() {
-  if (menuState.value.visible) menuState.value.visible = false
+  openContextMenu(payload.event, payload.id)
 }
 
 function onMenuAction(action: string) {
   console.log('[FreeCanvas] Menu action:', action)
-  hideContextMenu()
+  closeContextMenu()
 
   switch (action) {
     case 'copy':
@@ -238,10 +215,10 @@ function onMenuAction(action: string) {
       compStore.pasteNodes()
       break
     case 'delete':
-      if (selectedId.value) {
-        compStore.deleteComponent(selectedId.value)
-      } else if (selectedIds.value.length > 0) {
-        compStore.deleteComponents([...selectedIds.value])
+      if (compStore.selectedId) {
+        compStore.deleteComponent(compStore.selectedId)
+      } else if (compStore.selectedIds.length > 0) {
+        compStore.deleteComponents([...compStore.selectedIds])
       }
       break
     default:
@@ -253,89 +230,21 @@ function handleGlobalClick(e: MouseEvent) {
   const el = document.querySelector('.ctx-menu')
   if (!el) return
   if (menuState.value.visible && !el.contains(e.target as Node)) {
-    hideContextMenu()
+    closeContextMenu()
   }
 }
 
 // ========== Keyboard Shortcuts ==========
-const handleKeyDown = (e: KeyboardEvent) => {
-  // Ignore if user is typing in an input
-  const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    return
-  }
-
-  const isMac = navigator.platform.toUpperCase().includes('MAC')
-  const ctrlKey = isMac ? e.metaKey : e.ctrlKey
-
-  // Delete - 删除选中组件
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (selectedId.value) {
-      e.preventDefault()
-      compStore.deleteComponent(selectedId.value)
-    } else if (selectedIds.value.length > 0) {
-      e.preventDefault()
-      compStore.deleteComponents([...selectedIds.value])
-    }
-    return
-  }
-
-  // Ctrl+C - 复制
-  if (ctrlKey && e.key === 'c') {
-    if (selectedId.value || selectedIds.value.length > 0) {
-      e.preventDefault()
-      compStore.copySelectedNodes()
-    }
-    return
-  }
-
-  // Ctrl+X - 剪切
-  if (ctrlKey && e.key === 'x') {
-    if (selectedId.value || selectedIds.value.length > 0) {
-      e.preventDefault()
-      compStore.cutSelectedNodes()
-    }
-    return
-  }
-
-  // Ctrl+V - 粘贴
-  if (ctrlKey && e.key === 'v') {
-    e.preventDefault()
-    compStore.pasteNodes()
-    return
-  }
-
-  // Ctrl+A - 全选 (选中所有顶层组件)
-  if (ctrlKey && e.key === 'a') {
-    if (currentTree.value?.children && currentTree.value.children.length > 0) {
-      e.preventDefault()
-      const allIds = currentTree.value.children.map((n) => n.id)
-      compStore.selectComponents(allIds)
-    }
-    return
-  }
-
-  // Escape - 取消选中 / 关闭菜单
-  if (e.key === 'Escape') {
-    if (menuState.value.visible) {
-      hideContextMenu()
-    } else {
-      clearSelection()
-    }
-    return
-  }
-}
+// (Refactored to useEditorShortcuts)
 
 onMounted(() => {
   window.addEventListener('mousedown', handleGlobalClick)
-  window.addEventListener('scroll', hideContextMenu, true)
-  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('scroll', closeContextMenu, true)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousedown', handleGlobalClick)
-  window.removeEventListener('scroll', hideContextMenu, true)
-  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('scroll', closeContextMenu, true)
 })
 
 // ========== Styles ==========

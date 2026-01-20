@@ -45,10 +45,13 @@ export interface CategoryConfig {
  */
 export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
   图表: { order: 1, defaultWidth: 320, defaultHeight: 200 },
-  KPI: { order: 2, defaultWidth: 160, defaultHeight: 100 },
-  数据展示: { order: 3, defaultWidth: 360, defaultHeight: 240 },
-  基础控件: { order: 4, defaultWidth: 180, defaultHeight: 50 },
+  KPI: { order: 2, defaultWidth: 160, defaultHeight: 100 }, // 兼容旧分类
+  数据: { order: 3, defaultWidth: 360, defaultHeight: 240 },
+  数据展示: { order: 3, defaultWidth: 360, defaultHeight: 240 }, // 兼容旧分类
+  基础组件: { order: 4, defaultWidth: 180, defaultHeight: 50 },
+  基础控件: { order: 4, defaultWidth: 180, defaultHeight: 50 }, // 兼容旧分类
   布局容器: { order: 5, defaultWidth: 400, defaultHeight: 240 },
+  表单组件: { order: 5, defaultWidth: 200, defaultHeight: 40 },
   内容: { order: 6, defaultWidth: 300, defaultHeight: 200 },
   媒体: { order: 7, defaultWidth: 300, defaultHeight: 200 },
   高级: { order: 8, defaultWidth: 300, defaultHeight: 150 },

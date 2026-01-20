@@ -1,4 +1,4 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'FunnelChart',
@@ -10,7 +10,34 @@ const meta: MaterialMeta = {
       setter: 'StringSetter',
       defaultValue: '',
     },
-    dataInput: {
+    showLegend: {
+      title: '显示图例',
+      setter: 'BooleanSetter',
+      defaultValue: true,
+    },
+    showLabel: {
+      title: '显示标签',
+      setter: 'BooleanSetter',
+      defaultValue: true,
+    },
+    sort: {
+      title: '排序',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '降序', value: 'descending' },
+          { label: '升序', value: 'ascending' },
+          { label: '无', value: 'none' },
+        ],
+      },
+      defaultValue: 'descending',
+    },
+    gap: {
+      title: '间距',
+      setter: 'NumberSetter',
+      defaultValue: 0,
+    },
+    data: {
       title: '数据',
       setter: 'JsonSetter',
       defaultValue: [
@@ -20,7 +47,7 @@ const meta: MaterialMeta = {
       ],
     },
     option: {
-      title: 'ECharts配置',
+      title: '高级配置(JSON)',
       setter: 'JsonSetter',
       defaultValue: {},
     },

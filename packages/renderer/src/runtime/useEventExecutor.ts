@@ -1,4 +1,4 @@
-﻿import { type Ref, onUnmounted } from 'vue'
+import { type Ref, onUnmounted } from 'vue'
 import { type Router } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { Component, EventAction } from '@vela/core/types/components'
@@ -180,7 +180,7 @@ function executeSandboxedScript(
       // 4. 其他情况返回 undefined（阻止访问 window 等危险对象）
       return undefined
     },
- 
+
     // 拦截设置操作，防止修改 context 对象
     set(target, key: string | symbol, value: unknown) {
       // 只允许修改 context 中已存在的属性
@@ -194,18 +194,16 @@ function executeSandboxedScript(
   })
 
   try {
-    // 使用 with 语法配合 Proxy 实现真正的沙箱隔离
-    // 注意：with 在严格模式下不可用，所以这里不能加 "use strict"
-    const fn = new Function(
-      'sandbox',
-      `
-      with(sandbox) {
-        ${code}
-      }
-      `,
-    )
+    // 构造参数名列表和参数值列表
+    const paramNames = Object.keys(context)
+    const paramValues = Object.values(context)
 
-    fn(proxy)
+    // 使用 new Function 创建一个封闭的作用域
+    // 参数直接作为函数的参数传入，不再依赖 with
+    const fn = new Function(...paramNames, code)
+
+    // 执行函数
+    fn(...paramValues)
   } catch (error) {
     console.warn('[事件] 脚本执行失败:', error)
     ElMessage.error('脚本执行失败')

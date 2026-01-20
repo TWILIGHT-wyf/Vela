@@ -85,24 +85,56 @@ const isMultiSelected = computed(
 )
 const isLocked = computed(() => props.node.style?.locked === true)
 
-// 从 node.style 中提取位置和尺寸信息
-const position = computed(() => ({
-  x: parseFloat(props.node.style?.left || '0') || 0,
-  y: parseFloat(props.node.style?.top || '0') || 0,
-}))
+/**
+ * 解析样式值为数值
+ * 支持两种格式：
+ * - 新格式：数值 (如 100)
+ * - 旧格式：带单位字符串 (如 "100px")
+ */
+function parseStyleValue(value: unknown, defaultValue: number): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value)
+    return isNaN(parsed) ? defaultValue : parsed
+  }
+  return defaultValue
+}
 
-const size = computed(() => ({
-  width: parseFloat(props.node.style?.width || '100') || 100,
-  height: parseFloat(props.node.style?.height || '100') || 100,
-}))
+// 从 node.style 中提取位置信息（兼容 x/y 和 left/top 两种格式）
+const position = computed(() => {
+  const style = props.node.style
+  return {
+    // 优先使用新格式 x/y，回退到旧格式 left/top
+    x: style?.x !== undefined ? parseStyleValue(style.x, 0) : parseStyleValue(style?.left, 0),
+    y: style?.y !== undefined ? parseStyleValue(style.y, 0) : parseStyleValue(style?.top, 0),
+  }
+})
 
+// 从 node.style 中提取尺寸信息
+const size = computed(() => {
+  const style = props.node.style
+  return {
+    width: parseStyleValue(style?.width, 100),
+    height: parseStyleValue(style?.height, 100),
+  }
+})
+
+// 从 node.style 中提取旋转角度（兼容 rotate 数值和 transform 字符串）
 const rotation = computed(() => {
-  const transform = props.node.style?.transform || ''
+  const style = props.node.style
+  // 优先使用新格式 rotate 数值
+  if (typeof style?.rotate === 'number') return style.rotate
+  // 回退到从 transform 字符串解析
+  const transform = style?.transform || ''
   const match = transform.match(/rotate\(([-\d.]+)deg\)/)
   return match ? parseFloat(match[1]) : 0
 })
 
-const zIndex = computed(() => parseInt(props.node.style?.zIndex || '0') || 0)
+const zIndex = computed(() => {
+  const z = props.node.style?.zIndex
+  if (typeof z === 'number') return z
+  return parseInt(String(z || '0')) || 0
+})
 
 // ========== Styles ==========
 const wrapperStyle = computed(() => ({
@@ -228,9 +260,10 @@ const onDragMove = throttle((e: MouseEvent) => {
     }
   }
 
+  // 使用新的统一样式格式：x/y 为数值类型
   updateStyle(props.node.id, {
-    left: `${newX}px`,
-    top: `${newY}px`,
+    x: Math.round(newX),
+    y: Math.round(newY),
   })
 }, 16)
 
@@ -295,11 +328,12 @@ const onResizeMove = throttle((e: MouseEvent) => {
     newHeight = Math.round(newHeight / GRID_SIZE) * GRID_SIZE
   }
 
+  // 使用新的统一样式格式：数值类型
   updateStyle(props.node.id, {
-    left: `${newX}px`,
-    top: `${newY}px`,
-    width: `${newWidth}px`,
-    height: `${newHeight}px`,
+    x: Math.round(newX),
+    y: Math.round(newY),
+    width: Math.round(newWidth),
+    height: Math.round(newHeight),
   })
 }, 16)
 
@@ -341,12 +375,9 @@ const onRotateMove = throttle((e: MouseEvent) => {
     deg = Math.round(deg / 15) * 15
   }
 
-  const currentTransform = props.node.style?.transform || ''
-  const newTransform = currentTransform.replace(/rotate\([^)]+\)/, '').trim()
-  const finalTransform = newTransform ? `${newTransform} rotate(${deg}deg)` : `rotate(${deg}deg)`
-
+  // 使用新的统一样式格式：rotate 为数值类型（度）
   updateStyle(props.node.id, {
-    transform: finalTransform,
+    rotate: Math.round(deg),
   })
 }, 16)
 

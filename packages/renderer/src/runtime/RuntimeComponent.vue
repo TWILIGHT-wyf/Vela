@@ -68,7 +68,21 @@ const componentType = computed(() => {
     col: 'el-col',
     Group: 'div',
   }
-  return componentRegistry[props.component.type] || typeMap[props.component.type] || 'div'
+  // 优先使用 componentName (新版 Schema), 降级使用 type (旧版)
+  const type = props.component.componentName || props.component.type
+
+  if (!type) {
+    console.warn(`[RuntimeComponent] Component has no type or componentName:`, props.component)
+    return 'div'
+  }
+
+  const resolved = componentRegistry[type] || typeMap[type]
+  if (!resolved) {
+    // console.warn(`[RuntimeComponent] Failed to resolve component: ${type}`)
+    return 'div'
+  }
+
+  return resolved
 })
 
 // 子组件

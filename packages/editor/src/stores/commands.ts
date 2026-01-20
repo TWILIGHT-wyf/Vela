@@ -20,6 +20,8 @@
 
 import { useHistoryStore } from './history'
 import { useComponent } from './component'
+import { getPropSchema } from '@vela/core'
+import { ElMessage } from 'element-plus'
 import type { NodeSchema } from '@vela/core'
 
 // ========== Command Types ==========
@@ -176,6 +178,23 @@ function executeUpdateProp(
   const node = componentStore.findNodeById(componentStore.rootNode!, command.id)
   if (!node) return false
 
+  // Validation: Check Zod schema if registered
+  if (node.componentName) {
+    const schema = getPropSchema(node.componentName, command.path)
+    if (schema) {
+      const result = schema.safeParse(command.value)
+      if (!result.success) {
+        console.warn(
+          `[Commands] Validation failed for ${node.componentName}.${command.path}:`,
+          result.error,
+        )
+        const msg = result.error.errors[0]?.message || 'Validation failed'
+        ElMessage.warning(`Invalid value: ${msg}`)
+        return false
+      }
+    }
+  }
+
   if (!node.props) {
     node.props = {}
   }
@@ -213,8 +232,28 @@ function executeUpdateStyle(
   const node = componentStore.findNodeById(componentStore.rootNode!, command.id)
   if (!node) return false
 
-  if (!node.style) {
-    node.style = {}
+  // Validation: Check Zod schema if registered
+  if (node.componentName) {
+    // Only support top-level prop validation for now (nested paths skipped)
+    if (!command.path.includes('.')) {
+      const schema = getPropSchema(node.componentName, command.path)
+      if (schema) {
+        const result = schema.safeParse(command.value)
+        if (!result.success) {
+          console.warn(
+            `[Commands] Validation failed for ${node.componentName}.${command.path}:`,
+            result.error,
+          )
+          const msg = result.error.errors[0]?.message || 'Validation failed'
+          ElMessage.warning(`属性校验失败: ${msg}`)
+          return false
+        }
+      }
+    }
+  }
+
+  if (!node.props) {
+    node.props = {}
   }
 
   // Cast to satisfy PropValue type
