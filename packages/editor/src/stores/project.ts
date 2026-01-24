@@ -25,8 +25,20 @@ export const useProjectStore = defineStore('project', () => {
     return project.value.pages.find((p) => p.id === currentPageId.value)
   })
 
+  // Save Status
+  const saveStatus = ref<'saved' | 'saving' | 'unsaved'>('saved')
+  const lastSavedTime = ref<number | null>(null)
+
   // Actions
-  function initProject() {
+  function initProject(schema?: ProjectSchema) {
+    if (schema) {
+      project.value = schema
+      if (project.value.pages.length > 0) {
+        currentPageId.value = project.value.pages[0].id
+      }
+      return
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
@@ -107,8 +119,18 @@ export const useProjectStore = defineStore('project', () => {
     currentPageId.value = pageId
   }
 
-  function saveProject() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(project.value))
+  async function saveProject() {
+    saveStatus.value = 'saving'
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(project.value))
+      // 模拟保存延迟
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      saveStatus.value = 'saved'
+      lastSavedTime.value = Date.now()
+    } catch (e) {
+      console.error('Save failed', e)
+      saveStatus.value = 'unsaved'
+    }
   }
 
   function updatePageConfig(config: Partial<PageSchema['config']>) {
@@ -117,13 +139,25 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  function changePageLayout(pageId: string, layout: 'free' | 'flow'): boolean {
+    const page = project.value.pages.find((p) => p.id === pageId)
+    if (page && page.config) {
+      page.config.layout = layout
+      return true
+    }
+    return false
+  }
+
   return {
     project,
     currentPageId,
     currentPage,
+    saveStatus,
+    lastSavedTime,
     initProject,
     addPage,
     saveProject,
     updatePageConfig,
+    changePageLayout,
   }
 })

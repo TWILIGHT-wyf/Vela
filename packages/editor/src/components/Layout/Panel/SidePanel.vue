@@ -28,29 +28,31 @@ defineProps<Props>()
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: transparent; /* Integrated with parent card */
 }
 
 .panel-header {
   flex-shrink: 0;
-  height: 40px;
+  height: 48px; /* Taller for modern feel */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  background-color: var(--el-fill-color-blank);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
 }
 
 .panel-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
 }
 
 .panel-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .panel-body {
@@ -58,12 +60,13 @@ defineProps<Props>()
   overflow: hidden;
 }
 
-/* 确保 el-scrollbar 充满高度 */
+/* Ensure el-scrollbar fills height */
 .panel-body :deep(.el-scrollbar) {
   height: 100%;
 }
 
 .panel-body :deep(.el-scrollbar__view) {
   height: 100%;
+  padding: 12px; /* Content breathing room */
 }
 </style>

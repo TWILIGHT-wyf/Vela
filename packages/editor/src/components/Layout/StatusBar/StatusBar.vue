@@ -2,54 +2,58 @@
   <div class="vela-status-bar">
     <div class="status-left">
       <!-- 运行模式指示 -->
-      <span class="status-item" :class="{ 'status-warning': isSimulationMode }">
+      <div class="status-item" :class="{ 'status-warning': isSimulationMode }">
         <el-icon class="status-icon">
           <VideoPlay v-if="isSimulationMode" />
           <CircleCheck v-else />
         </el-icon>
-        {{ isSimulationMode ? '模拟运行中' : '编辑模式' }}
-      </span>
-      <el-divider direction="vertical" />
+        <span>{{ isSimulationMode ? '模拟运行中' : '编辑模式' }}</span>
+      </div>
+      
+      <div class="divider-line"></div>
 
       <!-- 画布模式 -->
-      <span class="status-item">
+      <div class="status-item">
         <el-icon class="status-icon"><Grid /></el-icon>
-        {{ canvasMode === 'free' ? '自由布局' : '流式布局' }}
-      </span>
-      <el-divider direction="vertical" />
+        <span>{{ canvasMode === 'free' ? '自由布局' : '流式布局' }}</span>
+      </div>
+      
+      <div class="divider-line"></div>
 
       <!-- 选中组件信息 -->
-      <span class="status-item breadcrumb">
+      <div class="status-item breadcrumb">
         <el-icon class="status-icon"><Aim /></el-icon>
-        {{ selectedInfo }}
-      </span>
+        <span>{{ selectedInfo }}</span>
+      </div>
     </div>
 
     <div class="status-right">
       <!-- 组件数量 -->
-      <span class="status-item">
+      <div class="status-item">
         <el-icon class="status-icon"><Files /></el-icon>
-        {{ componentCount }} 个组件
-      </span>
-      <el-divider direction="vertical" />
+        <span>{{ componentCount }} 个组件</span>
+      </div>
+      
+      <div class="divider-line"></div>
 
       <!-- 缩放控制 -->
       <div class="zoom-control">
-        <el-button text size="small" @click="zoomOut" :disabled="zoom <= 20">
+        <el-button text circle size="small" @click="zoomOut" :disabled="zoom <= 20">
           <el-icon><Minus /></el-icon>
         </el-button>
         <span class="zoom-value" @click="resetZoom">{{ zoom }}%</span>
-        <el-button text size="small" @click="zoomIn" :disabled="zoom >= 400">
+        <el-button text circle size="small" @click="zoomIn" :disabled="zoom >= 400">
           <el-icon><Plus /></el-icon>
         </el-button>
       </div>
-      <el-divider direction="vertical" />
+      
+      <div class="divider-line"></div>
 
       <!-- 画布尺寸 -->
-      <span class="status-item">
+      <div class="status-item">
         <el-icon class="status-icon"><FullScreen /></el-icon>
-        {{ canvasWidth }} × {{ canvasHeight }}
-      </span>
+        <span>{{ canvasWidth }} × {{ canvasHeight }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -121,28 +125,34 @@ function resetZoom() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 16px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--text-tertiary);
   user-select: none;
+  background: transparent;
 }
 
 .status-left,
 .status-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.status-item:hover {
+  color: var(--text-secondary);
 }
 
 .status-item.status-warning {
-  color: var(--el-color-warning);
+  color: #e37400; /* Google Dark Orange */
   font-weight: 500;
 }
 
@@ -155,39 +165,38 @@ function resetZoom() {
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: 'Consolas', 'Monaco', monospace;
+  opacity: 0.8;
 }
 
-.el-divider--vertical {
+/* 分隔符 */
+.divider-line {
+  width: 1px;
   height: 12px;
-  margin: 0 4px;
+  background-color: var(--border-light);
+  opacity: 0.5;
 }
 
 /* 缩放控制 */
 .zoom-control {
   display: flex;
   align-items: center;
-  gap: 2px;
-}
-
-.zoom-control .el-button {
+  gap: 4px;
+  background-color: rgba(0,0,0,0.03);
   padding: 2px;
-  height: 18px;
-  width: 18px;
+  border-radius: 99px;
 }
 
 .zoom-value {
-  min-width: 40px;
+  min-width: 36px;
   text-align: center;
   cursor: pointer;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  color: var(--el-text-color-primary);
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  color: var(--text-primary);
+  font-size: 12px;
 }
 
 .zoom-value:hover {
-  background-color: var(--el-fill-color-light);
+  color: var(--color-primary);
 }
 </style>

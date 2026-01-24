@@ -242,8 +242,9 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 /* 搜索框区域 */
 .search-wrapper {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--border-light); /* Refined border */
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.3); /* Slight tint */
 }
 
 /* 现代化 Tabs */
@@ -262,13 +263,14 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
 .modern-tabs :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
-  background-color: var(--el-border-color-lighter);
+  background-color: var(--border-light);
 }
 
 .modern-tabs :deep(.el-tabs__item) {
-  height: 44px;
+  height: 48px; /* Taller click area */
   font-weight: 500;
-  color: var(--el-text-color-secondary);
+  color: var(--text-secondary);
+  transition: color 0.2s;
 }
 
 .modern-tabs :deep(.el-tabs__item.is-active) {

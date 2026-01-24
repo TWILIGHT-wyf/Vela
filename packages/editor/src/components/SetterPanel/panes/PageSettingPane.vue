@@ -122,7 +122,7 @@ import type { LayoutMode } from '@/utils/layoutConverter'
 const projectStore = useProjectStore()
 const uiStore = useUIStore()
 
-const { currentPage, currentPageLayout, activePageId } = storeToRefs(projectStore)
+const { currentPage, currentPageId: activePageId } = storeToRefs(projectStore)
 const { canvasWidth: storeCanvasWidth, canvasHeight: storeCanvasHeight } = storeToRefs(uiStore)
 
 // 本地状态
@@ -133,7 +133,7 @@ const canvasHeight = ref(1080)
 const selectedPreset = ref('')
 
 // 当前布局模式
-const currentLayout = computed(() => currentPageLayout.value)
+const currentLayout = computed(() => currentPage.value?.config?.layout || 'free')
 
 // 同步页面信息
 watch(
@@ -162,7 +162,8 @@ watch(
 // 处理名称变更
 function handleNameChange(value: string) {
   if (currentPage.value) {
-    projectStore.renamePage(currentPage.value.id, value)
+    currentPage.value.name = value
+    projectStore.saveStatus = 'unsaved'
   }
 }
 
@@ -193,13 +194,11 @@ async function handleLayoutChange(mode: LayoutMode) {
     )
 
     // 用户确认，执行切换
-    const success = projectStore.changePageLayout(activePageId.value, mode)
+    projectStore.updatePageConfig({ layout: mode })
 
-    if (success) {
-      // 同步更新 UI store 的 canvasMode
-      uiStore.setCanvasMode(mode)
-      ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
-    }
+    // 同步更新 UI store 的 canvasMode
+    uiStore.setCanvasMode(mode)
+    ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
   } catch {
     // 用户取消
     console.log('[PageSettingPane] Layout change cancelled')

@@ -31,6 +31,7 @@
               :is="getSetterComponent(prop.setter)"
               v-model="propValues[prop.name]"
               v-bind="prop.setterProps || {}"
+              :properties="prop.properties"
             />
             <div v-if="prop.description" class="prop-description">
               {{ prop.description }}
@@ -72,6 +73,7 @@ import SelectSetter from '../setters/SelectSetter.vue'
 import ColorSetter from '../setters/ColorSetter.vue'
 import BooleanSetter from '../setters/BooleanSetter.vue'
 import JsonSetter from '../setters/JsonSetter.vue'
+import ObjectSetter from '../setters/ObjectSetter.vue'
 
 // Extended prop config with name field for iteration
 interface NamedPropConfig extends PropConfig {
@@ -94,6 +96,7 @@ const setterMap: Record<string, Component> = {
   ColorSetter,
   BooleanSetter,
   JsonSetter,
+  ObjectSetter,
 }
 
 // 使用 Component Store 直接更新

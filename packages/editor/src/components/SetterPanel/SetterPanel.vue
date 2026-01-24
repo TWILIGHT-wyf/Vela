@@ -74,7 +74,30 @@ const activeTab = ref('props')
   margin: 0;
   padding: 0 10px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.setter-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 0;
+}
+
+.setter-tabs :deep(.el-tabs__item) {
+  height: 48px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+.setter-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.advanced-content :deep(.el-collapse-item__header) {
+  font-weight: 500;
+  padding-left: 0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .setter-tabs :deep(.el-tabs__nav-wrap::after) {

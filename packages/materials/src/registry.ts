@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { defineAsyncComponent, type Component } from 'vue'
-import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta, PropSchema } from '@vela/core/types'
 import { componentRegistry as uiComponentRegistry } from '@vela/ui'
 
 /**
@@ -170,24 +170,36 @@ export function getMaterialsByCategory(): Record<string, MaterialMeta[]> {
 
 /**
  * 从 MaterialMeta 的 props 中提取默认值
+ * 支持 ObjectSetter 嵌套属性的递归提取
  */
-export function extractDefaultProps(props: MaterialMeta['props']): Record<string, unknown> {
+export function extractDefaultProps(
+  props: MaterialMeta['props'] | PropSchema[],
+): Record<string, unknown> {
   const defaults: Record<string, unknown> = {}
 
-  if (Array.isArray(props)) {
-    props.forEach((prop) => {
-      if ('defaultValue' in prop) {
-        defaults[prop.name] = prop.defaultValue
-      }
-    })
-  } else {
-    for (const key in props) {
-      const prop = props[key]
-      if (prop && 'defaultValue' in prop) {
-        defaults[key] = prop.defaultValue
+  // 统一转为数组处理
+  const propList: PropSchema[] = Array.isArray(props)
+    ? props
+    : Object.values(props as Record<string, PropSchema>)
+
+  propList.forEach((prop) => {
+    let value = prop.defaultValue
+
+    // 递归处理 ObjectSetter 的嵌套属性
+    if (prop.setter === 'ObjectSetter' && prop.properties) {
+      const subDefaults = extractDefaultProps(prop.properties)
+      // 合并：显式 defaultValue 优先，嵌套属性填充缺失值
+      if (typeof value === 'object' && value !== null) {
+        value = { ...subDefaults, ...value }
+      } else if (Object.keys(subDefaults).length > 0) {
+        value = subDefaults
       }
     }
-  }
+
+    if (value !== undefined) {
+      defaults[prop.name] = value
+    }
+  })
 
   return defaults
 }

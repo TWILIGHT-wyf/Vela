@@ -8,6 +8,7 @@
     "type-check": "vue-tsc --noEmit -p packages/editor/tsconfig.app.json"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.0",
     "@types/node": "^20.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitest/eslint-plugin": "^1.6.6",
