@@ -1,15 +1,14 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
-// vite.config.ts might not exist if it was moved to packages/editor or not at root
-// Fallback: define basic config if import fails or just define minimal config here
-// Assuming this is a monorepo root config.
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
+  plugins: [vue()],
   resolve: {
     alias: {
       '@vela/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
-      '@vela/ui': path.resolve(__dirname, 'packages/ui/src/index.ts'),
+      '@vela/ui': path.resolve(__dirname, 'packages/ui/index.ts'),
       '@vela/renderer': path.resolve(__dirname, 'packages/renderer/src/index.ts'),
       // Add other workspace aliases as needed
     },

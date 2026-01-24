@@ -11,6 +11,9 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.27
+      '@vitejs/plugin-vue':
+        specifier: ^5.0.0
+        version: 5.2.4(vite@7.3.1(@types/node@20.19.27)(jiti@2.6.1)(sass-embedded@1.93.3)(sass@1.93.3)(tsx@4.21.0))(vue@3.5.25(typescript@5.9.3))
       '@vitest/eslint-plugin':
         specifier: ^1.6.6
         version: 1.6.6(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.17(@types/node@20.19.27)(jiti@2.6.1)(jsdom@27.4.0)(sass-embedded@1.93.3)(sass@1.93.3)(tsx@4.21.0))
@@ -3635,6 +3638,11 @@ snapshots:
   '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@22.19.1)(sass-embedded@1.93.3)(sass@1.93.3))(vue@3.5.25(typescript@5.9.3))':
     dependencies:
       vite: 5.4.21(@types/node@22.19.1)(sass-embedded@1.93.3)(sass@1.93.3)
+      vue: 3.5.25(typescript@5.9.3)
+
+  '@vitejs/plugin-vue@5.2.4(vite@7.3.1(@types/node@20.19.27)(jiti@2.6.1)(sass-embedded@1.93.3)(sass@1.93.3)(tsx@4.21.0))(vue@3.5.25(typescript@5.9.3))':
+    dependencies:
+      vite: 7.3.1(@types/node@20.19.27)(jiti@2.6.1)(sass-embedded@1.93.3)(sass@1.93.3)(tsx@4.21.0)
       vue: 3.5.25(typescript@5.9.3)
 
   '@vitest/eslint-plugin@1.6.6(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.17(@types/node@20.19.27)(jiti@2.6.1)(jsdom@27.4.0)(sass-embedded@1.93.3)(sass@1.93.3)(tsx@4.21.0))':

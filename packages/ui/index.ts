@@ -116,6 +116,13 @@ export const vTrigger = componentRegistry.vTrigger
 // Group 组件
 export const vGroup = componentRegistry.vGroup
 
+// Standard Components (New Architecture) - Static Imports for reliability
+import vBaseButton from './src/components/v2/basic/BaseButton.vue'
+import vKpiCard from './src/components/v2/kpi/KpiCard.vue'
+import vGridBox from './src/components/v2/layout/GridBox.vue'
+
+export { vBaseButton, vKpiCard, vGridBox }
+
 // 导出组件注册表，供外部使用
 export { componentRegistry }
 
