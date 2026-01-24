@@ -1,7 +1,8 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Document, ArrowRight } from '@element-plus/icons-vue'
+import { ElScrollbar, ElEmpty, ElIcon } from 'element-plus'
 
 export interface ListItem {
   title?: string

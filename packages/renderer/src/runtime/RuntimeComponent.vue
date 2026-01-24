@@ -2,222 +2,320 @@
   <component
     :is="componentType"
     :ref="setComponentRef"
-    :id="component.id"
-    :data-component-id="component.id"
+    :id="node.id"
+    :data-id="node.id"
+    :data-component="node.componentName"
     :class="computedClasses"
-    :style="computedStyle"
+    :style="computedStyle as any"
     v-bind="componentProps"
-    @click="handleClick"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
-    @dblclick="handleDoubleClick"
-    @update:modelValue="handleUpdateModelValue"
+    v-on="eventHandlers"
   >
-    <!-- Text组件特殊处理 -->
-    <template v-if="component.type === 'Text'">
-      {{ component.props?.text }}
+    <!-- Text component special handling -->
+    <template v-if="node.componentName === 'Text'">
+      {{ node.props?.text }}
     </template>
 
-    <!-- 递归渲染子组件 -->
-    <template v-else>
+    <!-- Recursive children rendering -->
+    <template v-else-if="node.children && node.children.length">
       <RuntimeComponent
-        v-for="child in children"
+        v-for="child in node.children"
         :key="child.id"
-        :component="child"
-        :allComponents="allComponents"
+        :node="child"
+        :mode="mode"
         @trigger-event="$emit('trigger-event', $event)"
         @update-prop="$emit('update-prop', $event)"
       />
     </template>
+
+    <!-- Default slot for external content -->
+    <slot v-else />
   </component>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
-import { componentRegistry } from '@vela/materials/registry'
-import type { Component, EventAction } from '@vela/core/types/components'
+import { getComponent, hasComponent } from '@vela/materials'
+import type { NodeSchema } from '@vela/core'
+import { useComponentStyle, type ComponentCSSStyle } from '../composables/useComponentStyle'
 import { useComponentDataSource } from './useComponentDataSource'
+import type { RuntimeMode } from '../types'
 
-const props = defineProps<{
-  component: Component
-  allComponents: Component[]
-}>()
+/**
+ * Unified Runtime Component
+ *
+ * Renders a NodeSchema as a Vue component with full support for:
+ * - Dynamic component resolution from @vela/materials
+ * - Layout and visual styles via useComponentStyle
+ * - Animations (load, hover, click triggers)
+ * - Event handling (in runtime mode)
+ * - Data source integration
+ *
+ * Modes:
+ * - 'runtime': Full interaction, events enabled (default)
+ * - 'editor': Read-only, no event handling, for canvas preview
+ * - 'preview': Full interaction but may have debug features
+ */
+
+const props = withDefaults(
+  defineProps<{
+    node: NodeSchema
+    /**
+     * Operating mode
+     * - 'runtime': Full interaction (default)
+     * - 'editor': Read-only, no events
+     * - 'preview': Full interaction with debug
+     */
+    mode?: RuntimeMode
+    /**
+     * Whether to include layout styles (position, left, top, width, height, transform)
+     * Set to false when an external wrapper handles layout (e.g., in editor mode)
+     * @default true
+     */
+    includeLayout?: boolean
+  }>(),
+  {
+    mode: 'runtime',
+    includeLayout: true,
+  },
+)
 
 const emit = defineEmits<{
-  'trigger-event': [payload: { componentId: string; eventType: string; actions: EventAction[] }]
+  'trigger-event': [payload: { componentId: string; eventType: string; actions: unknown[] }]
   'update-prop': [payload: { componentId: string; path: string; value: unknown }]
 }>()
 
-// Data Source Integration
-// @ts-ignore - Component type mismatch with NodeSchema
-const { dataSourceProps } = useComponentDataSource(toRef(props, 'component'))
+// ========== Component Resolution ==========
+const componentType = computed(() => {
+  const name = props.node.componentName
 
+  // Built-in type mapping for common elements
+  const typeMap: Record<string, string> = {
+    Text: 'div',
+    Group: 'div',
+    Container: 'div',
+  }
+
+  // Try material registry first
+  if (hasComponent(name)) {
+    return getComponent(name)
+  }
+
+  // Fallback to type map or div
+  const resolved = typeMap[name]
+  if (!resolved && props.mode !== 'editor') {
+    console.warn(`[RuntimeComponent] Component "${name}" not found, falling back to div`)
+  }
+
+  return resolved || 'div'
+})
+
+// ========== Styles (via shared composable) ==========
+const nodeRef = toRef(props, 'node')
+const nodeStyleRef = computed(() => props.node.style)
+const {
+  computedStyle: baseComputedStyle,
+  animationClasses: baseAnimationClasses,
+  locked,
+  visible,
+} = useComponentStyle(nodeStyleRef as any, {
+  includeLayout: props.includeLayout,
+  includeAnimation: true,
+})
+
+// ========== Data Source ==========
+const { dataSourceProps } = useComponentDataSource(nodeRef)
+
+// ========== Animation State ==========
 const componentRef = ref<HTMLElement | { $el: HTMLElement } | null>(null)
 const animationPlaying = ref(false)
 
-// Ref callback for template
 function setComponentRef(el: unknown) {
   componentRef.value = el as HTMLElement | { $el: HTMLElement } | null
 }
 
-// 获取组件类型
-const componentType = computed(() => {
-  const typeMap: Record<string, string> = {
-    Text: 'div',
-    row: 'el-row',
-    col: 'el-col',
-    Group: 'div',
-  }
-  // 优先使用 componentName (新版 Schema), 降级使用 type (旧版)
-  const type = props.component.componentName || props.component.type
-
-  if (!type) {
-    console.warn(`[RuntimeComponent] Component has no type or componentName:`, props.component)
-    return 'div'
-  }
-
-  const resolved = componentRegistry[type] || typeMap[type]
-  if (!resolved) {
-    // console.warn(`[RuntimeComponent] Failed to resolve component: ${type}`)
-    return 'div'
-  }
-
-  return resolved
-})
-
-// 子组件
-const children = computed(() => {
-  return props.allComponents.filter((c) => c.groupId === props.component.id)
-})
-
-// 计算样式
+// ========== Computed Styles ==========
 const computedStyle = computed(() => {
-  const comp = props.component
-  const style: Record<string, string | number> = {
-    position: 'absolute',
-    left: `${comp.position.x}px`,
-    top: `${comp.position.y}px`,
-    width: `${comp.size.width}px`,
-    height: `${comp.size.height}px`,
-    transform: `rotate(${comp.rotation || 0}deg)`,
-    zIndex: comp.zindex || 0,
+  const style = { ...baseComputedStyle.value }
+
+  // Additional animation styles when playing
+  if (animationPlaying.value && props.node.animation) {
+    const anim = props.node.animation
+    style.animationDuration = `${anim.duration || 0.7}s`
+    style.animationDelay = `${anim.delay || 0}s`
+    style.animationIterationCount = anim.iterationCount || 1
+    style.animationTimingFunction = anim.timingFunction || 'ease'
   }
 
-  // Text组件特殊样式
-  if (comp.type === 'Text' && comp.style) {
-    if (comp.style.fontSize) style.fontSize = `${comp.style.fontSize}px`
-    if (comp.style.fontColor) style.color = String(comp.style.fontColor)
-    if (comp.style.fontWeight) style.fontWeight = String(comp.style.fontWeight)
-    if (comp.style.textAlign) style.textAlign = String(comp.style.textAlign)
-    if (comp.style.lineHeight) style.lineHeight = String(comp.style.lineHeight)
-  }
-
-  // 通用样式
-  if (comp.style) {
-    if (comp.style.opacity !== undefined) {
-      style.opacity = Number(comp.style.opacity) / 100
-    }
-    // 处理可见性 - 显式设置display以确保toggle正常工作
-    if (comp.style.visible === false) {
-      style.display = 'none'
-    } else if (comp.style.visible === true || comp.style.visible === undefined) {
-      // 显式设置为空字符串,移除display限制
-      style.display = ''
-    }
-    if (comp.style.backgroundColor) {
-      style.backgroundColor = String(comp.style.backgroundColor)
-    }
-    if (comp.style.borderRadius) {
-      style.borderRadius = `${comp.style.borderRadius}px`
-    }
-    if (comp.style.border) {
-      style.border = String(comp.style.border)
-    }
-    if (comp.style.boxShadow) {
-      style.boxShadow = String(comp.style.boxShadow)
-    }
-    if (comp.style.padding) {
-      style.padding = `${comp.style.padding}px`
-    }
-  }
-
-  // 动画样式
-  if (comp.animation && comp.animation.class) {
-    style.animationDuration = `${comp.animation.duration || 0.7}s`
-    style.animationDelay = `${comp.animation.delay || 0}s`
-    style.animationIterationCount = comp.animation.iterationCount || 1
-    style.animationTimingFunction = comp.animation.timingFunction || 'ease'
+  // Editor mode: show locked indicator
+  if (props.mode === 'editor' && locked.value) {
+    style.cursor = 'not-allowed'
   }
 
   return style
 })
 
-// 计算class
+// ========== Computed Classes ==========
 const computedClasses = computed(() => {
-  const classes: string[] = []
+  const classes: string[] = ['runtime-component']
 
-  if (props.component.animation && props.component.animation.class) {
-    const trigger = props.component.animation.trigger || 'load'
+  const animation = props.node.animation
+  if (animation && animation.class) {
+    const trigger = animation.trigger || 'load'
 
-    // load触发的动画直接添加class,自动播放
+    // Load-triggered animations play immediately
     if (trigger === 'load') {
-      classes.push('animated', props.component.animation.class)
+      classes.push('animated', animation.class)
     }
-    // hover/click触发的动画只在播放时添加class,避免初始opacity:0等样式导致不可见
+    // Hover/click animations only play when triggered
     else if ((trigger === 'hover' || trigger === 'click') && animationPlaying.value) {
-      classes.push('animated', props.component.animation.class)
+      classes.push('animated', animation.class)
     }
+  }
+
+  // Editor mode indicator
+  if (props.mode === 'editor') {
+    classes.push('runtime-component--editor')
   }
 
   return classes
 })
 
-// 组件Props
+// ========== Component Props ==========
 const componentProps = computed(() => {
   const compProps: Record<string, unknown> = {}
-  if (props.component.props) {
-    for (const [key, value] of Object.entries(props.component.props)) {
-      // Text组件跳过text属性(已用插值渲染)
-      if (props.component.type === 'Text' && key === 'text') continue
+
+  if (props.node.props) {
+    for (const [key, value] of Object.entries(props.node.props)) {
+      // Skip text prop for Text component (rendered via interpolation)
+      if (props.node.componentName === 'Text' && key === 'text') continue
       compProps[key] = value
     }
   }
+
   // Merge data source props
   return { ...compProps, ...dataSourceProps.value }
 })
 
+// ========== Event Handlers (conditional based on mode) ==========
+const isInteractive = computed(() => props.mode !== 'editor')
+
+const eventHandlers = computed(() => {
+  // In editor mode, no event handlers
+  if (!isInteractive.value) {
+    return {}
+  }
+
+  const handlers: Record<string, (e?: Event) => void> = {}
+  const events = props.node.events
+
+  // Only bind handlers if there are configured events or animations
+  const hasClickEvent = events?.click && events.click.length > 0
+  const hasHoverEvent = events?.hover && events.hover.length > 0
+  const hasDblClickEvent = events?.doubleClick && events.doubleClick.length > 0
+  const hasClickAnimation = props.node.animation?.trigger === 'click'
+  const hasHoverAnimation = props.node.animation?.trigger === 'hover'
+
+  // Click handler
+  if (hasClickEvent || hasClickAnimation) {
+    handlers.click = handleClick
+  }
+
+  // Hover handlers
+  if (hasHoverEvent || hasHoverAnimation) {
+    handlers.mouseenter = handleMouseEnter
+    handlers.mouseleave = handleMouseLeave
+  }
+
+  // Double click handler
+  if (hasDblClickEvent) {
+    handlers.dblclick = handleDoubleClick
+  }
+
+  // Model value update (for form components)
+  handlers['update:modelValue'] = handleUpdateModelValue
+
+  return handlers
+})
+
+// ========== Event Handler Implementations ==========
+function handleClick() {
+  const node = props.node
+
+  // Animation trigger
+  if (node.animation?.trigger === 'click') {
+    playAnimation()
+  }
+
+  // Business events
+  if (node.events?.click && node.events.click.length > 0) {
+    emit('trigger-event', {
+      componentId: node.id,
+      eventType: 'click',
+      actions: node.events.click,
+    })
+  }
+}
+
+function handleMouseEnter() {
+  const node = props.node
+
+  // Animation trigger
+  if (node.animation?.trigger === 'hover') {
+    playAnimation()
+  }
+
+  // Business events
+  if (node.events?.hover && node.events.hover.length > 0) {
+    emit('trigger-event', {
+      componentId: node.id,
+      eventType: 'hover',
+      actions: node.events.hover,
+    })
+  }
+}
+
+function handleMouseLeave() {
+  const node = props.node
+
+  // Reset hover animation
+  if (node.animation?.trigger === 'hover') {
+    resetAnimation()
+  }
+}
+
+function handleDoubleClick() {
+  const node = props.node
+
+  if (node.events?.doubleClick && node.events.doubleClick.length > 0) {
+    emit('trigger-event', {
+      componentId: node.id,
+      eventType: 'doubleClick',
+      actions: node.events.doubleClick,
+    })
+  }
+}
+
 function handleUpdateModelValue(val: unknown) {
   emit('update-prop', {
-    componentId: props.component.id,
+    componentId: props.node.id,
     path: 'props.modelValue',
     value: val,
   })
 }
 
-// 页面加载时触发动画
-onMounted(() => {
-  if (props.component.animation && props.component.animation.trigger === 'load') {
-    nextTick(() => {
-      // load触发的动画自动播放
-    })
+// ========== Animation Utilities ==========
+function getElement(): HTMLElement | null {
+  if (!componentRef.value) return null
+
+  if ('$el' in componentRef.value) {
+    return componentRef.value.$el as HTMLElement
   }
-})
+  return componentRef.value as HTMLElement
+}
 
-// 监听动画配置变化
-watch(
-  () => props.component.animation,
-  () => {
-    if (props.component.animation?.trigger === 'load') {
-      playAnimation()
-    }
-  },
-)
-
-// 播放动画
 function playAnimation() {
   animationPlaying.value = true
 
-  // 使用nextTick确保class更新后再设置动画
   nextTick(() => {
     const el = getElement()
     if (!el) return
@@ -230,7 +328,6 @@ function playAnimation() {
   })
 }
 
-// 重置动画
 function resetAnimation() {
   const el = getElement()
   if (!el) return
@@ -243,82 +340,38 @@ function resetAnimation() {
   }, 10)
 }
 
-// 获取DOM元素
-function getElement(): HTMLElement | null {
-  if (!componentRef.value) return null
-
-  // Vue组件需要访问$el
-  if ('$el' in componentRef.value) {
-    return componentRef.value.$el as HTMLElement
-  }
-  // 原生元素直接返回
-  return componentRef.value as HTMLElement
-}
-
-// 点击事件
-function handleClick() {
-  const comp = props.component
-
-  // 动画触发
-  if (comp.animation && comp.animation.trigger === 'click') {
-    playAnimation()
-  }
-
-  // 业务事件
-  if (comp.events?.click && comp.events.click.length > 0) {
-    emit('trigger-event', {
-      componentId: comp.id,
-      eventType: 'click',
-      actions: comp.events.click,
+// ========== Lifecycle ==========
+onMounted(() => {
+  // Auto-play load-triggered animations
+  if (props.node.animation?.trigger === 'load' && isInteractive.value) {
+    nextTick(() => {
+      // Animation class is already applied via computedClasses
     })
   }
-}
+})
 
-// 鼠标进入
-function handleMouseEnter() {
-  const comp = props.component
-
-  // 动画触发
-  if (comp.animation && comp.animation.trigger === 'hover') {
-    playAnimation()
-  }
-
-  // 业务事件
-  if (comp.events?.hover && comp.events.hover.length > 0) {
-    emit('trigger-event', {
-      componentId: comp.id,
-      eventType: 'hover',
-      actions: comp.events.hover,
-    })
-  }
-}
-
-// 鼠标离开
-function handleMouseLeave() {
-  const comp = props.component
-
-  // 动画重置
-  if (comp.animation && comp.animation.trigger === 'hover') {
-    resetAnimation()
-  }
-}
-
-// 双击事件
-function handleDoubleClick() {
-  const comp = props.component
-
-  if (comp.events?.doubleClick && comp.events.doubleClick.length > 0) {
-    emit('trigger-event', {
-      componentId: comp.id,
-      eventType: 'doubleClick',
-      actions: comp.events.doubleClick,
-    })
-  }
-}
+// Watch for animation config changes
+watch(
+  () => props.node.animation,
+  () => {
+    if (props.node.animation?.trigger === 'load' && isInteractive.value) {
+      playAnimation()
+    }
+  },
+)
 </script>
 
 <style scoped>
-/* 动画效果 */
+.runtime-component {
+  box-sizing: border-box;
+}
+
+/* Editor mode - no pointer events on content, let overlay handle */
+.runtime-component--editor {
+  /* Content still renders, but interactions handled by overlay */
+}
+
+/* Animation effects */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -417,7 +470,7 @@ function handleDoubleClick() {
   animation-fill-mode: both;
 }
 
-/* 高亮效果 */
+/* Highlight effect (for event actions) */
 .highlight-effect {
   outline: 3px solid #409eff;
   outline-offset: 2px;
@@ -425,7 +478,7 @@ function handleDoubleClick() {
   transition: all 0.3s ease;
 }
 
-/* 展开效果 */
+/* Expanded effect */
 .expanded {
   transform: scale(1.1);
   z-index: 1000;

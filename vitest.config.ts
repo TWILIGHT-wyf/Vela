@@ -22,6 +22,7 @@ export default defineConfig({
       'tests/unit/**/*.spec.ts',
       'tests/components/**/*.spec.ts',
       'tests/integration/**/*.spec.ts',
+      'packages/**/tests/**/*.spec.ts', // Support package-local tests
     ],
     exclude: [...configDefaults.exclude, 'tests/e2e/**', 'e2e/**'],
     root: fileURLToPath(new URL('./', import.meta.url)),

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <el-image
       v-if="url"
@@ -35,6 +35,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Picture, Loading } from '@element-plus/icons-vue'
+import { ElImage, ElIcon } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

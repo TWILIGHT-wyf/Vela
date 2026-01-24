@@ -1,6 +1,6 @@
-﻿import { watch, type Ref, type WatchStopHandle } from 'vue'
+import { watch, type Ref, type WatchStopHandle, type ComputedRef } from 'vue'
 import { get, isEqual } from 'lodash-es'
-import type { Component, DataBinding } from '@vela/core/types/components'
+import type { NodeSchema, DataBinding } from '@vela/core'
 
 export interface DataBindingEngine {
   start: () => void
@@ -12,8 +12,8 @@ export interface DataBindingEngine {
 /**
  * 归一化组件的数据绑定配置
  */
-function normalizeBindings(comp: Component): DataBinding[] {
-  return Array.isArray(comp.dataBindings) ? comp.dataBindings : []
+function normalizeBindings(node: NodeSchema): DataBinding[] {
+  return Array.isArray(node.dataBindings) ? node.dataBindings : []
 }
 
 /**
@@ -26,7 +26,9 @@ function normalizeBindings(comp: Component): DataBinding[] {
  * 4. 支持数据转换器（表达式/模板）
  * 5. 精确路径监听，避免不必要的 deep watch
  */
-export function useDataBindingEngine(components: Ref<Component[]>): DataBindingEngine {
+export function useDataBindingEngine(
+  components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>,
+): DataBindingEngine {
   let stops: WatchStopHandle[] = []
   // 更新锁：防止 A→B→A 循环绑定导致无限递归
   const updateLocks = new Set<string>()

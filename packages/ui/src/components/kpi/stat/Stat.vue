@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-stat-card" :style="cardStyle">
     <div class="v-stat-header">
       <div class="v-stat-title" :style="titleStyleComputed">{{ title }}</div>
@@ -22,51 +22,82 @@ import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 
 // 定义纯 UI Props，无业务逻辑
-const props = defineProps<{
-  // 数据
-  title?: string
-  value?: number
-  change?: number
-  suffix?: string
-  icon?: string
-  precision?: number
-  showChange?: boolean
+const props = withDefaults(
+  defineProps<{
+    // 数据
+    title?: string
+    value?: number
+    change?: number
+    suffix?: string
+    icon?: string
+    precision?: number
+    showChange?: boolean
 
-  // 卡片样式
-  opacity?: number
-  visible?: boolean
-  backgroundColor?: string
-  borderColor?: string
-  borderWidth?: number
-  borderRadius?: number
-  boxShadow?: string
-  padding?: number
+    // 卡片样式
+    opacity?: number
+    visible?: boolean
+    backgroundColor?: string
+    borderColor?: string
+    borderWidth?: number
+    borderRadius?: number
+    boxShadow?: string
+    padding?: number
 
-  // 标题样式
-  titleColor?: string
-  titleFontSize?: number
-  titleFontWeight?: 'normal' | 'bold' | 'lighter' | number
+    // 标题样式
+    titleColor?: string
+    titleFontSize?: number
+    titleFontWeight?: 'normal' | 'bold' | 'lighter' | number
 
-  // 数值样式
-  valueColor?: string
-  valueFontSize?: number
-  valueFontWeight?: 'normal' | 'bold' | 'lighter' | number
+    // 数值样式
+    valueColor?: string
+    valueFontSize?: number
+    valueFontWeight?: 'normal' | 'bold' | 'lighter' | number
 
-  // 变化率样式
-  changeFontSize?: number
-  changeFontWeight?: 'normal' | 'bold' | 'lighter' | number
-  changeColorPositive?: string
-  changeColorNegative?: string
+    // 变化率样式
+    changeFontSize?: number
+    changeFontWeight?: 'normal' | 'bold' | 'lighter' | number
+    changeColorPositive?: string
+    changeColorNegative?: string
 
-  // 图标样式
-  iconColor?: string
-  iconSize?: number
-}>()
+    // 图标样式
+    iconColor?: string
+    iconSize?: number
+  }>(),
+  {
+    title: 'Statistic Title',
+    value: 0,
+    change: 0,
+    suffix: '',
+    icon: '',
+    precision: 0,
+    showChange: false,
+    opacity: 100,
+    visible: true,
+    backgroundColor: '#fff',
+    borderColor: '#e0e0e0',
+    borderWidth: 1,
+    borderRadius: 8,
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    padding: 20,
+    titleColor: '#909399',
+    titleFontSize: 14,
+    titleFontWeight: 'normal',
+    valueColor: '#303133',
+    valueFontSize: 24,
+    valueFontWeight: 'bold',
+    changeFontSize: 14,
+    changeFontWeight: 500,
+    changeColorPositive: '#28a745',
+    changeColorNegative: '#dc3545',
+    iconColor: '#409eff',
+    iconSize: 32,
+  },
+)
 
 // 格式化显示值
 const formattedValue = computed(() => {
-  const val = props.value ?? 0
-  const prec = props.precision ?? 0
+  const val = props.value
+  const prec = props.precision
   return val.toLocaleString(undefined, {
     minimumFractionDigits: prec,
     maximumFractionDigits: prec,
@@ -76,15 +107,15 @@ const formattedValue = computed(() => {
 // 卡片样式
 const cardStyle = computed<CSSProperties>(() => {
   return {
-    opacity: ((props.opacity ?? 100) as number) / 100,
+    opacity: props.opacity / 100,
     display: props.visible === false ? 'none' : 'flex',
-    backgroundColor: props.backgroundColor ?? '#fff',
-    borderColor: props.borderColor ?? '#e0e0e0',
-    borderWidth: `${props.borderWidth ?? 1}px`,
+    backgroundColor: props.backgroundColor,
+    borderColor: props.borderColor,
+    borderWidth: `${props.borderWidth}px`,
     borderStyle: 'solid',
-    borderRadius: `${props.borderRadius ?? 8}px`,
-    boxShadow: props.boxShadow ?? '0 2px 4px rgba(0, 0, 0, 0.1)',
-    padding: `${props.padding ?? 20}px`,
+    borderRadius: `${props.borderRadius}px`,
+    boxShadow: props.boxShadow,
+    padding: `${props.padding}px`,
     flexDirection: 'column',
     justifyContent: 'space-between',
     width: '100%',
@@ -96,9 +127,9 @@ const cardStyle = computed<CSSProperties>(() => {
 // 标题样式
 const titleStyleComputed = computed<CSSProperties>(() => {
   return {
-    color: props.titleColor ?? '#909399',
-    fontSize: `${props.titleFontSize ?? 14}px`,
-    fontWeight: props.titleFontWeight ?? 'normal',
+    color: props.titleColor,
+    fontSize: `${props.titleFontSize}px`,
+    fontWeight: props.titleFontWeight,
     margin: 0,
   }
 })
@@ -106,32 +137,29 @@ const titleStyleComputed = computed<CSSProperties>(() => {
 // 数值样式
 const valueStyleComputed = computed<CSSProperties>(() => {
   return {
-    color: props.valueColor ?? '#303133',
-    fontSize: `${props.valueFontSize ?? 24}px`,
-    fontWeight: props.valueFontWeight ?? 'bold',
+    color: props.valueColor,
+    fontSize: `${props.valueFontSize}px`,
+    fontWeight: props.valueFontWeight,
     lineHeight: 1,
   }
 })
 
 // 变化率样式
 const changeStyleComputed = computed<CSSProperties>(() => {
-  const changeVal = props.change ?? 0
-  const color =
-    changeVal > 0
-      ? (props.changeColorPositive ?? '#28a745')
-      : (props.changeColorNegative ?? '#dc3545')
+  const changeVal = props.change
+  const color = changeVal > 0 ? props.changeColorPositive : props.changeColorNegative
   return {
     color,
-    fontSize: `${props.changeFontSize ?? 14}px`,
-    fontWeight: props.changeFontWeight ?? '500',
+    fontSize: `${props.changeFontSize}px`,
+    fontWeight: props.changeFontWeight,
   }
 })
 
 // 图标样式
 const iconStyle = computed<CSSProperties>(() => {
   return {
-    fontSize: `${props.iconSize ?? 32}px`,
-    color: props.iconColor ?? '#409eff',
+    fontSize: `${props.iconSize}px`,
+    color: props.iconColor,
   }
 })
 </script>

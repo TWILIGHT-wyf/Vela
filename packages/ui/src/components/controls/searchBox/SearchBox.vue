@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <el-input
       v-model="internalValue"
@@ -30,6 +30,7 @@
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties, Component } from 'vue'
 import { Search as SearchIcon } from '@element-plus/icons-vue'
+import { ElInput, ElButton } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

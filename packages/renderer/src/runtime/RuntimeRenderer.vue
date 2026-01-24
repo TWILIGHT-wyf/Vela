@@ -1,18 +1,18 @@
 <template>
-  <div ref="stageRef" class="runtime-renderer">
-    <!-- 空状态 -->
-    <div v-if="topLevelComponents.length === 0" class="empty-state">
+  <div ref="stageRef" class="runtime-renderer" :style="rendererStyle">
+    <!-- Empty state -->
+    <div v-if="!hasContent" class="empty-state">
       <div class="empty-illustration">📄</div>
       <p class="empty-title">画布为空</p>
       <p class="empty-desc">当前页面暂无组件</p>
     </div>
 
-    <!-- 渲染顶层组件 -->
+    <!-- Render component tree -->
     <RuntimeComponent
-      v-for="comp in topLevelComponents"
-      :key="comp.id"
-      :component="comp"
-      :allComponents="components"
+      v-for="child in rootChildren"
+      :key="child.id"
+      :node="child"
+      :mode="mode"
       @trigger-event="handleComponentEvent"
       @update-prop="handleUpdateProp"
     />
@@ -20,33 +20,72 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, watch, provide, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
 import RuntimeComponent from './RuntimeComponent.vue'
-import type { Component } from '@vela/core/types/components'
-import type { Page, RuntimePlugin, RuntimeContext } from '../types'
+import type { NodeSchema } from '@vela/core'
+import type { Page, RuntimePlugin, RuntimeContext, RuntimeMode } from '../types'
 
 /**
- * 运行时渲染器
+ * Runtime Renderer
  *
- * 职责：
- * 1. 管理组件树的渲染
- * 2. 初始化并维护插件系统 (数据联动/事件执行)
- * 3. 处理组件事件并分发给插件
+ * Entry point for rendering a NodeSchema tree in runtime/preview mode.
+ * Supports both the new NodeSchema tree format and legacy flat Component array.
+ *
+ * Responsibilities:
+ * 1. Manage component tree rendering
+ * 2. Initialize and maintain plugin system (data binding, event execution)
+ * 3. Handle component events and dispatch to plugins
  */
 
 const props = withDefaults(
   defineProps<{
-    components: Component[]
-    pages: Page[]
-    isProjectMode: boolean
-    mode?: 'edit' | 'simulation' | 'runtime'
+    /**
+     * Root node of the component tree (NodeSchema format)
+     * This is the primary input format
+     */
+    rootNode?: NodeSchema
+
+    /**
+     * Page configuration for multi-page support
+     */
+    pages?: Page[]
+
+    /**
+     * Whether running in project mode (multi-page) or single page
+     */
+    isProjectMode?: boolean
+
+    /**
+     * Operating mode
+     * - 'runtime': Full interaction (default)
+     * - 'editor': Read-only preview in editor
+     * - 'preview': Full interaction with debug
+     * - 'simulation': Simulation mode
+     */
+    mode?: RuntimeMode
+
+    /**
+     * Runtime plugins (event executor, data binding, etc.)
+     */
     plugins?: RuntimePlugin[]
+
+    /**
+     * Canvas dimensions (optional, for sizing the renderer)
+     */
+    width?: number
+    height?: number
+    backgroundColor?: string
   }>(),
   {
+    pages: () => [],
+    isProjectMode: false,
     mode: 'runtime',
     plugins: () => [],
+    width: undefined,
+    height: undefined,
+    backgroundColor: 'transparent',
   },
 )
 
@@ -58,15 +97,67 @@ const emit = defineEmits<{
 const router = useRouter()
 const stageRef = ref<HTMLDivElement | null>(null)
 
-// 本地响应式组件数组
-const localComponents = ref<Component[]>([])
+// ========== Local State ==========
+// Local reactive copy of the tree for mutation (data binding)
+const localRootNode = ref<NodeSchema | null>(null)
 
-// 插件事件订阅者
-const componentEventSubscribers = new Set<(payload: any) => void>()
+// ========== Computed ==========
+const hasContent = computed(() => {
+  const node = localRootNode.value
+  return node && node.children && node.children.length > 0
+})
 
-// 上下文构建
+const rootChildren = computed(() => {
+  return localRootNode.value?.children || []
+})
+
+const rendererStyle = computed(() => {
+  const style: Record<string, string> = {}
+
+  if (props.width) {
+    style.width = `${props.width}px`
+  }
+  if (props.height) {
+    style.height = `${props.height}px`
+  }
+  if (props.backgroundColor) {
+    style.backgroundColor = props.backgroundColor
+  }
+
+  return style
+})
+
+// ========== Plugin System ==========
+const componentEventSubscribers = new Set<
+  (payload: { componentId: string; eventType: string; actions: unknown[] }) => void
+>()
+
+// Build node index for O(1) lookup
+const nodeIndex = computed(() => {
+  const index = new Map<string, NodeSchema>()
+
+  function traverse(node: NodeSchema) {
+    index.set(node.id, node)
+    if (node.children) {
+      node.children.forEach(traverse)
+    }
+  }
+
+  if (localRootNode.value) {
+    traverse(localRootNode.value)
+  }
+
+  return index
+})
+
+// Runtime context for plugins
 const context: RuntimeContext = {
-  components: localComponents,
+  // Provide a ref to the flat component list for backward compatibility
+  components: computed(() => {
+    const nodes: NodeSchema[] = []
+    nodeIndex.value.forEach((node) => nodes.push(node))
+    return nodes
+  }) as unknown as Ref<NodeSchema[]>,
   pages: computed(() => props.pages),
   isProjectMode: computed(() => props.isProjectMode),
   router,
@@ -75,38 +166,49 @@ const context: RuntimeContext = {
   },
 }
 
-// 初始化插件
+// Initialize plugins
 props.plugins?.forEach((plugin) => plugin(context))
 
-// 处理组件事件分发
-function handleComponentEvent(payload: { componentId: string; eventType: string; actions: any[] }) {
+// ========== Event Handling ==========
+function handleComponentEvent(payload: {
+  componentId: string
+  eventType: string
+  actions: unknown[]
+}) {
+  // Dispatch to all subscribed plugins
   componentEventSubscribers.forEach((handler) => handler(payload))
 }
 
-// 只渲染顶层组件
-const topLevelComponents = computed(() => {
-  return localComponents.value.filter((c) => !c.groupId)
-})
-
-// 监听 props.components 变化并同步到本地
-watch(
-  () => props.components,
-  (newComponents) => {
-    localComponents.value = newComponents
-    // console.log('[RuntimeRenderer] components synced, count:', newComponents.length)
-  },
-  { immediate: true },
-)
-
-// 处理属性更新
 function handleUpdateProp(payload: { componentId: string; path: string; value: unknown }) {
-  if (props.mode === 'edit') return
+  if (props.mode === 'editor') return
 
-  const comp = localComponents.value.find((c) => c.id === payload.componentId)
-  if (comp) {
-    set(comp, payload.path, payload.value)
+  // Find the node and update it
+  const node = nodeIndex.value.get(payload.componentId)
+  if (node) {
+    set(node, payload.path, payload.value)
   }
 }
+
+// ========== Sync Props to Local State ==========
+watch(
+  () => props.rootNode,
+  (newRoot) => {
+    if (newRoot) {
+      // Deep clone to allow local mutations
+      localRootNode.value = JSON.parse(JSON.stringify(newRoot))
+    } else {
+      localRootNode.value = null
+    }
+  },
+  { immediate: true, deep: false },
+)
+
+// ========== Provide Context ==========
+provide(
+  'runtimeMode',
+  computed(() => props.mode),
+)
+provide('nodeIndex', nodeIndex)
 </script>
 
 <style scoped>
@@ -115,9 +217,10 @@ function handleUpdateProp(payload: { componentId: string; path: string; value: u
   width: 100%;
   height: 100%;
   background: transparent;
+  overflow: hidden;
 }
 
-/* 空状态 */
+/* Empty state */
 .empty-state {
   position: absolute;
   top: 50%;

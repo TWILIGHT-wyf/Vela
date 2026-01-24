@@ -5,10 +5,10 @@ const meta: MaterialMeta = {
   title: '图片',
   category: '基础组件',
   props: {
-    src: {
+    url: {
       title: '图片地址',
       setter: 'StringSetter',
-      defaultValue: '',
+      defaultValue: 'https://via.placeholder.com/300x200?text=Image',
     },
     alt: {
       title: '替代文本',

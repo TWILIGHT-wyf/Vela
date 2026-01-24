@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-badge-container" :style="containerStyle">
     <el-badge
       :value="value"
@@ -10,7 +10,7 @@
       :offset="offset"
     >
       <slot>
-        <span v-if="slotText" :style="slotContentStyle">{{ slotText }}</span>
+        <span :style="slotContentStyle">{{ slotText || 'Badge Content' }}</span>
       </slot>
     </el-badge>
   </div>
@@ -19,38 +19,56 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElBadge } from 'element-plus'
 
 // 定义纯 UI Props，无业务逻辑
-const props = defineProps<{
-  // Badge 值
-  value?: string | number
-  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
-  isDot?: boolean
-  max?: number
-  hidden?: boolean
-  showZero?: boolean
-  offset?: [number, number]
+const props = withDefaults(
+  defineProps<{
+    // Badge 值
+    value?: string | number
+    type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+    isDot?: boolean
+    max?: number
+    hidden?: boolean
+    showZero?: boolean
+    offset?: [number, number]
 
-  // 默认插槽文本（当没有子组件时显示）
-  slotText?: string
+    // 默认插槽文本（当没有子组件时显示）
+    slotText?: string
 
-  // 容器样式
-  opacity?: number
-  visible?: boolean
-  padding?: number
+    // 容器样式
+    opacity?: number
+    visible?: boolean
+    padding?: number
 
-  // 插槽内容样式
-  slotFontSize?: number
-  slotColor?: string
-  slotPadding?: number
-}>()
+    // 插槽内容样式
+    slotFontSize?: number
+    slotColor?: string
+    slotPadding?: number
+  }>(),
+  {
+    value: '1',
+    type: 'primary',
+    isDot: false,
+    max: 99,
+    hidden: false,
+    showZero: false,
+    slotText: '徽章内容',
+    opacity: 100,
+    visible: true,
+    padding: 4,
+    slotFontSize: 14,
+    slotColor: '#303133',
+    slotPadding: 8,
+  },
+)
 
 // 容器样式
 const containerStyle = computed<CSSProperties>(() => {
   return {
-    opacity: ((props.opacity ?? 100) as number) / 100,
+    opacity: props.opacity / 100,
     display: props.visible === false ? 'none' : 'inline-flex',
-    padding: `${props.padding ?? 4}px`,
+    padding: `${props.padding}px`,
     boxSizing: 'border-box',
     alignItems: 'center',
     justifyContent: 'center',
@@ -60,9 +78,9 @@ const containerStyle = computed<CSSProperties>(() => {
 // 插槽内容样式
 const slotContentStyle = computed<CSSProperties>(() => {
   return {
-    fontSize: `${props.slotFontSize ?? 14}px`,
-    color: props.slotColor ?? '#303133',
-    padding: `${props.slotPadding ?? 8}px`,
+    fontSize: `${props.slotFontSize}px`,
+    color: props.slotColor,
+    padding: `${props.slotPadding}px`,
   }
 })
 </script>

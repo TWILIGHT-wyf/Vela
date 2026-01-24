@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-countup-container" :style="containerStyle">
     <el-statistic
       :value="animatedValue"
@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { computed, watch, ref } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElStatistic } from 'element-plus'
 
 // 定义纯 UI Props，无业务逻辑
 const props = defineProps<{
@@ -84,7 +85,7 @@ function easeOutExpo(t: number, b: number, c: number, d: number): number {
 // 数字动画
 function animateValue(start: number, end: number) {
   const startTime = Date.now()
-  const dur = props.duration ?? 2000
+  const dur = (props.duration ?? 2) * 1000 // Convert seconds to ms
   const useEase = props.useEasing !== false
 
   function update() {

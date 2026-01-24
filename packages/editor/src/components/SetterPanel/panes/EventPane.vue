@@ -163,13 +163,7 @@
 <script setup lang="ts">
 import { useEventConfiguration } from '../composables/useEvents'
 import type { NodeSchema } from '@vela/core'
-import type {
-  ActionSchema,
-  NavigateAction,
-  CustomScriptAction,
-  OpenUrlAction,
-  AlertAction,
-} from '@vela/core/types/action'
+import type { ActionSchema } from '@vela/core/types/action'
 import { Plus, Delete, Select } from '@element-plus/icons-vue'
 
 interface Props {
@@ -189,42 +183,41 @@ const {
 
 function onActionTypeChange(action: ActionSchema) {
   if (action.type !== 'customScript') {
-    // Use type assertion to Partial to allow delete on potentially non-optional property
-    delete (action as Partial<CustomScriptAction>).content
+    delete action.content
   }
 }
 
 // Type-safe getters for action properties
 function getActionPath(action: ActionSchema): string {
-  return (action as NavigateAction).path || ''
+  return action.path || ''
 }
 
 function setActionPath(action: ActionSchema, value: string) {
-  ;(action as NavigateAction).path = value
+  action.path = value
 }
 
 function getActionUrl(action: ActionSchema): string {
-  return (action as OpenUrlAction).url || ''
+  return action.url || ''
 }
 
 function setActionUrl(action: ActionSchema, value: string) {
-  ;(action as OpenUrlAction).url = value
+  action.url = value
 }
 
 function getActionMessage(action: ActionSchema): string {
-  return (action as AlertAction).message || ''
+  return action.message || ''
 }
 
 function setActionMessage(action: ActionSchema, value: string) {
-  ;(action as AlertAction).message = value
+  action.message = value
 }
 
 function getActionContent(action: ActionSchema): string {
-  return (action as CustomScriptAction).content || ''
+  return action.content || ''
 }
 
 function setActionContent(action: ActionSchema, value: string) {
-  ;(action as CustomScriptAction).content = value
+  action.content = value
 }
 </script>
 

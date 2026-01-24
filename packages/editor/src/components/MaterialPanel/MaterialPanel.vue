@@ -213,8 +213,20 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
     children: [], // V1.5 必须包含 children 字段
   }
 
-  // 使用 V1.5 标准数据格式
-  event.dataTransfer?.setData('application/x-vela', JSON.stringify(nodeSchema))
+  // DEBUG: 打印拖拽数据
+  console.log('[MaterialPanel] Drag start:', {
+    componentName,
+    defaultProps,
+    categoryConfig,
+    nodeSchema,
+  })
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData('application/x-vela', JSON.stringify(nodeSchema))
+    // Add text/plain fallback for better compatibility
+    event.dataTransfer.setData('text/plain', JSON.stringify(nodeSchema))
+  }
 }
 </script>
 

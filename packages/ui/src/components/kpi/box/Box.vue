@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-box-container" :style="containerStyle">
     <div class="v-box-content" :style="contentStyle">
       {{ content }}
@@ -10,29 +10,47 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 
-// 定义纯 UI Props，无业务逻辑
-const props = defineProps<{
-  // 内容
-  content?: string
+const props = withDefaults(
+  defineProps<{
+    // 内容
+    content?: string
 
-  // 容器样式
-  opacity?: number
-  visible?: boolean
-  backgroundColor?: string
-  borderColor?: string
-  borderWidth?: number
-  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none'
-  borderRadius?: number
-  padding?: number
-  boxShadow?: string
+    // 容器样式
+    opacity?: number
+    visible?: boolean
+    backgroundColor?: string
+    borderColor?: string
+    borderWidth?: number
+    borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none'
+    borderRadius?: number
+    padding?: number
+    boxShadow?: string
 
-  // 文字样式
-  fontSize?: number
-  textColor?: string
-  fontWeight?: 'normal' | 'bold' | 'lighter' | number
-  textAlign?: 'left' | 'center' | 'right' | 'justify'
-  lineHeight?: number
-}>()
+    // 文字样式
+    fontSize?: number
+    textColor?: string
+    fontWeight?: 'normal' | 'bold' | 'lighter' | number
+    textAlign?: 'left' | 'center' | 'right' | 'justify'
+    lineHeight?: number
+  }>(),
+  {
+    content: 'Box Content',
+    opacity: 100,
+    visible: true,
+    backgroundColor: '#ffffff',
+    borderColor: '#dcdfe6',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderRadius: 4,
+    padding: 16,
+    boxShadow: 'none',
+    fontSize: 14,
+    textColor: '#606266',
+    fontWeight: 'normal',
+    textAlign: 'center',
+    lineHeight: 1.5,
+  },
+)
 
 // 计算容器样式
 const containerStyle = computed<CSSProperties>(() => {

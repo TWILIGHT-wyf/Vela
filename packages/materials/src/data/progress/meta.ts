@@ -8,7 +8,7 @@ const meta: MaterialMeta = {
     percentage: {
       title: '进度百分比',
       setter: 'NumberSetter',
-      defaultValue: 0,
+      defaultValue: 50,
     },
     type: {
       title: '类型',
@@ -49,6 +49,11 @@ const meta: MaterialMeta = {
       title: '显示文字',
       setter: 'BooleanSetter',
       defaultValue: true,
+    },
+    circleWidth: {
+      title: '圆形进度条宽度',
+      setter: 'NumberSetter',
+      defaultValue: 126,
     },
     trackColor: {
       title: '轨道颜色',

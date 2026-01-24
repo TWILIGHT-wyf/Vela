@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="select-container" :style="containerStyle">
     <el-select
       v-model="internalValue"
@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElSelect, ElOption } from 'element-plus'
 
 // 选项接口
 export interface SelectOption {

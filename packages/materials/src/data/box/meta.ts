@@ -1,11 +1,11 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'Box',
   title: '占位盒',
   category: 'KPI',
   props: {
-    text: {
+    content: {
       title: '占位文本',
       setter: 'StringSetter',
       defaultValue: '占位内容',

@@ -33,7 +33,6 @@
     }
   },
   "dependencies": {
-    "nanoid": "^5.1.6",
     "zod": "^4.3.5"
   }
 }

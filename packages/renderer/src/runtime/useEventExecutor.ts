@@ -1,15 +1,38 @@
-import { type Ref, onUnmounted } from 'vue'
+import { type Ref, type ComputedRef, onUnmounted } from 'vue'
 import { type Router } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { Component, EventAction } from '@vela/core/types/components'
+import type { NodeSchema } from '@vela/core'
 import type { Page } from '../types'
+
+/**
+ * Generic event action type for runtime execution
+ * This is intentionally permissive to handle various action types dynamically
+ */
+interface EventAction {
+  id: string
+  type: string
+  targetId?: string
+  delay?: number
+  message?: string
+  messageType?: 'success' | 'warning' | 'error' | 'info'
+  url?: string
+  openInNewTab?: boolean
+  script?: string
+  content?: string
+  eventName?: string
+  pageId?: string
+  path?: string
+  blank?: boolean
+  value?: unknown
+  [key: string]: unknown
+}
 
 // 类型定义
 
 export interface EventExecutorContext {
-  components: Ref<Component[]>
-  pages: Ref<Page[]>
-  isProjectMode: Ref<boolean>
+  components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>
+  pages: Ref<Page[]> | ComputedRef<Page[]>
+  isProjectMode: Ref<boolean> | ComputedRef<boolean>
   router: Router
   onNavigate?: (pageId: string) => void
 }
@@ -92,7 +115,7 @@ function removeHighlightStyles(): void {
  * @param componentId 组件ID
  * @returns DOM 元素或 null
  */
-function getComponentEl(componentId: string): HTMLElement | null {
+function getNodeSchemaEl(componentId: string): HTMLElement | null {
   if (!componentId) return null
 
   // 尝试多种选择器
@@ -120,8 +143,8 @@ function getComponentEl(componentId: string): HTMLElement | null {
 function executeSandboxedScript(
   code: string,
   context: {
-    component?: Component
-    components: Component[]
+    component?: NodeSchema
+    components: NodeSchema[]
     navigateToPage: (pageId: string) => void
     allPages: Page[]
   },
@@ -249,7 +272,7 @@ export function useEventExecutor(context: EventExecutorContext) {
   /**
    * 执行单个事件动作
    */
-  async function executeAction(action: EventAction, sourceComponent?: Component): Promise<void> {
+  async function executeAction(action: EventAction, sourceNodeSchema?: NodeSchema): Promise<void> {
     // 延迟执行
     if (action.delay && action.delay > 0) {
       await new Promise((resolve) => setTimeout(resolve, action.delay))
@@ -281,7 +304,7 @@ export function useEventExecutor(context: EventExecutorContext) {
         break
 
       case 'custom-script':
-        handleCustomScript(action, sourceComponent)
+        handleCustomScript(action, sourceNodeSchema)
         break
 
       case 'play-animation':
@@ -293,7 +316,7 @@ export function useEventExecutor(context: EventExecutorContext) {
         break
 
       case 'refresh-data':
-        handleRefreshData(action, sourceComponent)
+        handleRefreshData(action, sourceNodeSchema)
         break
 
       default:
@@ -321,7 +344,7 @@ export function useEventExecutor(context: EventExecutorContext) {
   function handleScrollTo(action: EventAction): void {
     if (!action.targetId) return
 
-    const el = getComponentEl(action.targetId)
+    const el = getNodeSchemaEl(action.targetId)
     if (!el) return
 
     // 使用 scrollIntoView 并处理可能的错误
@@ -409,7 +432,7 @@ export function useEventExecutor(context: EventExecutorContext) {
 
     let targetEl: Element = document.documentElement
     if (action.targetId) {
-      const componentEl = getComponentEl(action.targetId)
+      const componentEl = getNodeSchemaEl(action.targetId)
       if (componentEl) targetEl = componentEl
     }
 
@@ -421,11 +444,11 @@ export function useEventExecutor(context: EventExecutorContext) {
   /**
    * 执行自定义脚本（沙箱环境）
    */
-  function handleCustomScript(action: EventAction, sourceComponent?: Component): void {
+  function handleCustomScript(action: EventAction, sourceNodeSchema?: NodeSchema): void {
     if (!action.content) return
 
     executeSandboxedScript(action.content, {
-      component: sourceComponent,
+      component: sourceNodeSchema,
       components: components.value,
       navigateToPage,
       allPages: pages.value,
@@ -439,7 +462,7 @@ export function useEventExecutor(context: EventExecutorContext) {
     if (!action.targetId) return
 
     const target = components.value.find((c) => c.id === action.targetId)
-    const el = getComponentEl(action.targetId)
+    const el = getNodeSchemaEl(action.targetId)
     if (!el) return
 
     const animationName = target?.animation?.name || 'fadeIn'
@@ -473,7 +496,7 @@ export function useEventExecutor(context: EventExecutorContext) {
   function handleHighlight(action: EventAction): void {
     if (!action.targetId) return
 
-    const el = getComponentEl(action.targetId)
+    const el = getNodeSchemaEl(action.targetId)
     if (!el) return
 
     // 清除之前的定时器（如果存在）
@@ -499,14 +522,14 @@ export function useEventExecutor(context: EventExecutorContext) {
   /**
    * 刷新数据源
    */
-  function handleRefreshData(action: EventAction, sourceComponent?: Component): void {
-    const targetId = action.targetId || sourceComponent?.id
+  function handleRefreshData(action: EventAction, sourceNodeSchema?: NodeSchema): void {
+    const targetId = action.targetId || sourceNodeSchema?.id
     if (!targetId) return
 
     const target = components.value.find((c) => c.id === targetId)
     if (target?.dataSource?.enabled) {
       // 触发数据刷新事件（由组件自身监听处理）
-      const el = getComponentEl(targetId)
+      const el = getNodeSchemaEl(targetId)
       if (el) {
         el.dispatchEvent(new CustomEvent('data-refresh', { bubbles: true }))
       }

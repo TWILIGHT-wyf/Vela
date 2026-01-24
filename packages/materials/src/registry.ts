@@ -59,9 +59,6 @@ for (const path in vueModules) {
   }
 }
 
-// Debug: 打印所有注册的组件
-console.log('[Registry] Registered components:', Object.keys(componentMap).sort())
-
 /**
  * 组件元数据列表 - materialList
  * 从所有 index.ts 中提取 MaterialMeta
@@ -70,16 +67,14 @@ export const materialList: MaterialMeta[] = []
 
 for (const path in metaModules) {
   const meta = metaModules[path]?.default
-  if (meta && meta.componentName) {
+  if (meta && (meta.name || meta.componentName)) {
+    // 兼容处理：确保 name 存在
+    if (!meta.name && meta.componentName) {
+      meta.name = meta.componentName
+    }
     materialList.push(meta)
   }
 }
-
-// Debug: 打印所有物料
-console.log(
-  '[Registry] Loaded materials:',
-  materialList.map((m) => `${m.category}/${m.componentName}`).sort(),
-)
 
 // 别名映射 (兼容旧名称)
 const ALIAS_MAP: Record<string, string> = {
@@ -121,12 +116,9 @@ function resolveComponentName(name: string): string | null {
  * 获取组件实现，优先使用 materials 的包装，其次从 @vela/ui 获取
  */
 export function getComponent(name: string): Component | string {
-  console.log(`[Registry] getComponent called with: ${name}`)
-
   // 1. 尝试解析 materials 组件
   const resolvedName = resolveComponentName(name)
   if (resolvedName) {
-    console.log(`[Registry] Found in componentMap: ${resolvedName}`)
     return componentMap[resolvedName]
   }
 
@@ -136,12 +128,10 @@ export function getComponent(name: string): Component | string {
   const uiComponentName = `v${pascalName}`
 
   if ((uiComponentRegistry as any)[uiComponentName]) {
-    console.log(`[Registry] Found in UI registry: ${uiComponentName}`)
     return (uiComponentRegistry as any)[uiComponentName]
   }
 
   // 3. 兜底返回 div
-  console.warn(`[Registry] Component ${name} not found, falling back to div`)
   return 'div'
 }
 
@@ -183,12 +173,22 @@ export function getMaterialsByCategory(): Record<string, MaterialMeta[]> {
  */
 export function extractDefaultProps(props: MaterialMeta['props']): Record<string, unknown> {
   const defaults: Record<string, unknown> = {}
-  for (const key in props) {
-    const prop = props[key]
-    if (prop && 'defaultValue' in prop) {
-      defaults[key] = prop.defaultValue
+
+  if (Array.isArray(props)) {
+    props.forEach((prop) => {
+      if ('defaultValue' in prop) {
+        defaults[prop.name] = prop.defaultValue
+      }
+    })
+  } else {
+    for (const key in props) {
+      const prop = props[key]
+      if (prop && 'defaultValue' in prop) {
+        defaults[key] = prop.defaultValue
+      }
     }
   }
+
   return defaults
 }
 

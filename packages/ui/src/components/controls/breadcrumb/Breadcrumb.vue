@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-breadcrumb :separator="separator" class="custom-breadcrumb" :style="containerStyle">
     <el-breadcrumb-item v-for="(item, index) in displayItems" :key="index">
       <span v-if="index === displayItems.length - 1" class="current">{{ item.label }}</span>
@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElBreadcrumb, ElBreadcrumbItem } from 'element-plus'
 
 export interface BreadcrumbItem {
   label: string

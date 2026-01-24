@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="date-range-container" :style="containerStyle">
     <el-date-picker
       v-model="internalValue"
@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElDatePicker } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

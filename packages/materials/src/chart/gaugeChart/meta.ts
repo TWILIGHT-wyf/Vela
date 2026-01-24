@@ -41,9 +41,13 @@ const meta: MaterialMeta = {
       defaultValue: -45,
     },
     axisLineColor: {
-      title: '轴线颜色',
-      setter: 'ColorSetter',
-      defaultValue: '#67e0e3',
+      title: '轴线颜色配置',
+      setter: 'JsonSetter',
+      defaultValue: [
+        [0.3, '#67e0e3'],
+        [0.7, '#37a2da'],
+        [1, '#fd666d'],
+      ],
     },
     progressWidth: {
       title: '进度条宽度',

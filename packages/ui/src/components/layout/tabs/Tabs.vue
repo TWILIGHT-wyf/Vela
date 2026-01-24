@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-tabs-container" :style="containerStyle">
     <el-tabs
       v-model="activeTabValue"
@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElTabs, ElTabPane } from 'element-plus'
 
 // Tab 项类型
 interface TabItem {

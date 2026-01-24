@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <el-switch
       v-model="internalValue"
@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties, Component } from 'vue'
+import { ElSwitch } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

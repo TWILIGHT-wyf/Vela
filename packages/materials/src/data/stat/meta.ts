@@ -13,7 +13,7 @@ const meta: MaterialMeta = {
     value: {
       title: '数值',
       setter: 'NumberSetter',
-      defaultValue: 0,
+      defaultValue: 12345,
     },
     precision: {
       title: '精度',

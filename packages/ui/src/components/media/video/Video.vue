@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <video
       v-if="url"
@@ -28,6 +28,7 @@
 import { computed, ref } from 'vue'
 import type { CSSProperties } from 'vue'
 import { VideoPlay } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

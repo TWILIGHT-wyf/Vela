@@ -1,6 +1,7 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElTable, ElTableColumn } from 'element-plus'
 
 export interface TableColumn {
   prop: string

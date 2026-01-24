@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-row
     :gutter="gutter"
     :justify="justify"
@@ -18,39 +18,57 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElRow } from 'element-plus'
 
 // 定义纯 UI Props
-const props = defineProps<{
-  // Row 布局属性
-  gutter?: number
-  justify?: 'start' | 'end' | 'center' | 'space-around' | 'space-between' | 'space-evenly'
-  align?: 'top' | 'middle' | 'bottom'
-  tag?: string
+const props = withDefaults(
+  defineProps<{
+    // Row 布局属性
+    gutter?: number
+    justify?: 'start' | 'end' | 'center' | 'space-around' | 'space-between' | 'space-evenly'
+    align?: 'top' | 'middle' | 'bottom'
+    tag?: string
 
-  // 容器样式
-  padding?: number
-  backgroundColor?: string
-  borderRadius?: number
-  borderWidth?: number
-  borderColor?: string
-  minHeight?: string
+    // 容器样式
+    padding?: number
+    backgroundColor?: string
+    borderRadius?: number
+    borderWidth?: number
+    borderColor?: string
+    minHeight?: string
 
-  // 占位文本
-  placeholder?: string
-  textColor?: string
-  fontSize?: number
-}>()
+    // 占位文本
+    placeholder?: string
+    textColor?: string
+    fontSize?: number
+  }>(),
+  {
+    gutter: 0,
+    justify: 'start',
+    align: 'top',
+    tag: 'div',
+    padding: 0,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: '#dcdfe6',
+    minHeight: 'auto',
+    placeholder: '行布局容器 - 可拖入其他组件',
+    textColor: '#909399',
+    fontSize: 14,
+  },
+)
 
 // 容器样式
 const containerStyle = computed<CSSProperties>(() => {
   return {
-    padding: `${props.padding ?? 0}px`,
-    backgroundColor: props.backgroundColor ?? 'transparent',
-    borderRadius: `${props.borderRadius ?? 0}px`,
-    borderWidth: `${props.borderWidth ?? 0}px`,
+    padding: `${props.padding}px`,
+    backgroundColor: props.backgroundColor,
+    borderRadius: `${props.borderRadius}px`,
+    borderWidth: `${props.borderWidth}px`,
     borderStyle: props.borderWidth ? 'solid' : 'none',
-    borderColor: props.borderColor ?? '#dcdfe6',
-    minHeight: props.minHeight ?? 'auto',
+    borderColor: props.borderColor,
+    minHeight: props.minHeight,
     boxSizing: 'border-box',
   }
 })
@@ -63,17 +81,10 @@ const placeholderStyle = computed<CSSProperties>(() => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: props.textColor ?? '#909399',
-    fontSize: `${props.fontSize ?? 14}px`,
+    color: props.textColor,
+    fontSize: `${props.fontSize}px`,
   }
 })
-
-// Props 默认值
-const gutter = computed(() => props.gutter ?? 0)
-const justify = computed(() => props.justify ?? 'start')
-const align = computed(() => props.align ?? 'top')
-const tag = computed(() => props.tag ?? 'div')
-const placeholder = computed(() => props.placeholder ?? '行布局容器 - 可拖入其他组件')
 </script>
 
 <style scoped>

@@ -1,11 +1,11 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'CountUp',
   title: '数字动画',
   category: 'KPI',
   props: {
-    endValue: {
+    value: {
       title: '结束值',
       setter: 'NumberSetter',
       defaultValue: 100,

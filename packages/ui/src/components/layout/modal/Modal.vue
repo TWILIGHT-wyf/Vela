@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-dialog
     v-model="dialogVisible"
     :title="title"
@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElDialog, ElButton } from 'element-plus'
 
 // 定义纯 UI Props
 const props = defineProps<{

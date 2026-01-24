@@ -1,6 +1,79 @@
 import { NodeSchema } from '../types/schema'
 
 /**
+ * 树索引器：提供 O(1) 的节点查找能力
+ * 建议在 Store 中维护一个实例，并在树结构变化时调用 rebuild
+ */
+export class TreeIndex {
+  // ID -> Node
+  public nodeMap = new Map<string, NodeSchema>()
+  // ID -> Parent Node
+  public parentMap = new Map<string, NodeSchema>()
+  // ID -> Depth (Root = 0)
+  public depthMap = new Map<string, number>()
+
+  constructor(root?: NodeSchema) {
+    if (root) this.rebuild(root)
+  }
+
+  /**
+   * 重建索引 (全量)
+   * 复杂度: O(N)
+   */
+  rebuild(root: NodeSchema) {
+    this.nodeMap.clear()
+    this.parentMap.clear()
+    this.depthMap.clear()
+    this._index(root, 0)
+  }
+
+  private _index(node: NodeSchema, depth: number, parent?: NodeSchema) {
+    this.nodeMap.set(node.id, node)
+    this.depthMap.set(node.id, depth)
+
+    if (parent) {
+      this.parentMap.set(node.id, parent)
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        this._index(child, depth + 1, node)
+      }
+    }
+  }
+
+  /** 获取节点 O(1) */
+  getNode(id: string): NodeSchema | undefined {
+    return this.nodeMap.get(id)
+  }
+
+  /** 获取父节点 O(1) */
+  getParent(id: string): NodeSchema | undefined {
+    return this.parentMap.get(id)
+  }
+
+  /** 获取节点深度 O(1) */
+  getDepth(id: string): number {
+    return this.depthMap.get(id) ?? -1
+  }
+
+  /**
+   * 获取节点路径 (从根到该节点)
+   * @returns NodeSchema[]
+   */
+  getPath(id: string): NodeSchema[] {
+    const path: NodeSchema[] = []
+    let current = this.getNode(id)
+    while (current) {
+      path.push(current)
+      const parent = this.getParent(current.id)
+      current = parent
+    }
+    return path.reverse()
+  }
+}
+
+/**
  * 深度优先查找节点
  */
 export function findNodeById(root: NodeSchema, id: string): NodeSchema | null {

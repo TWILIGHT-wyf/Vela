@@ -24,7 +24,7 @@ export function provideComponentEvents() {
         break
       case 'openUrl':
         if ('url' in action) {
-          const url = action.url
+          const url = action.url || ''
           if (action.blank) {
             window.open(url, '_blank')
           } else {
@@ -34,18 +34,19 @@ export function provideComponentEvents() {
         break
       case 'navigate':
         if ('path' in action) {
-          window.location.hash = action.path
+          window.location.hash = action.path || ''
         }
         break
       case 'updateState':
         if ('stateName' in action && 'value' in action) {
+          // @ts-ignore
           console.log('Update state:', action.stateName, action.value)
         }
         break
       case 'customScript':
         if ('content' in action) {
           try {
-            const fn = new Function('component', 'rootNode', action.content)
+            const fn = new Function('component', 'rootNode', action.content || '')
             fn(sourceComponent, rootNode?.value ?? null)
           } catch (error) {
             console.error('Error executing custom script:', error)

@@ -8,7 +8,12 @@ const meta: MaterialMeta = {
     value: {
       title: '显示值',
       setter: 'StringSetter',
-      defaultValue: '',
+      defaultValue: '1',
+    },
+    slotText: {
+      title: '内容文本',
+      setter: 'StringSetter',
+      defaultValue: '徽章内容',
     },
     max: {
       title: '最大值',

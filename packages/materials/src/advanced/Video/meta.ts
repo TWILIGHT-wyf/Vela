@@ -1,11 +1,11 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   componentName: 'Video',
   title: '视频',
   category: '媒体',
   props: {
-    src: {
+    url: {
       title: '视频地址',
       setter: 'StringSetter',
       defaultValue: '',

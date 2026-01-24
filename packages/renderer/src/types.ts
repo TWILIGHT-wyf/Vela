@@ -1,6 +1,6 @@
-import type { Ref } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
 import type { Router } from 'vue-router'
-import type { Component } from '@vela/core/types/components'
+import type { NodeSchema } from '@vela/core'
 
 export interface Page {
   id: string
@@ -10,16 +10,45 @@ export interface Page {
   // Add other properties if needed
 }
 
+/**
+ * Runtime context provided to plugins
+ */
 export interface RuntimeContext {
-  components: Ref<Component[]>
-  pages: Ref<Page[]>
-  isProjectMode: Ref<boolean>
+  /**
+   * Flat list of all components (for backward compatibility)
+   * @deprecated Use nodeIndex for O(1) lookup
+   */
+  components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>
+
+  /**
+   * Available pages
+   */
+  pages: Ref<Page[]> | ComputedRef<Page[]>
+
+  /**
+   * Whether running in multi-page project mode
+   */
+  isProjectMode: Ref<boolean> | ComputedRef<boolean>
+
+  /**
+   * Vue Router instance
+   */
   router: Router
 
-  // Hooks
+  /**
+   * Subscribe to component events
+   */
   subscribeComponentEvent: (
-    handler: (payload: { componentId: string; eventType: string; actions: any[] }) => void,
+    handler: (payload: { componentId: string; eventType: string; actions: unknown[] }) => void,
   ) => void
 }
 
+/**
+ * Runtime plugin function type
+ */
 export type RuntimePlugin = (context: RuntimeContext) => void
+
+/**
+ * Operating mode for runtime components
+ */
+export type RuntimeMode = 'runtime' | 'editor' | 'preview' | 'simulation'

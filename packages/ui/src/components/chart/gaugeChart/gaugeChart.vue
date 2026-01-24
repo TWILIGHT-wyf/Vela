@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-gauge-chart" :style="{ width: '100%', height: '100%' }">
     <v-chart :option="finalOption" autoresize class="echart" />
   </div>
@@ -55,7 +55,7 @@ const props = defineProps<{
 // 计算最终 Option
 const finalOption = computed<EChartsOption>(() => {
   // 如果有高级配置 option，优先使用
-  if (props.option) return props.option
+  if (props.option && Object.keys(props.option).length > 0) return props.option
 
   const value = props.value ?? 75
   const name = props.name || 'Progress'

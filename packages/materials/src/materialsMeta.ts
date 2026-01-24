@@ -10,7 +10,7 @@
  * to keep UI concerns isolated from component logic.
  */
 
-import type { MaterialMeta } from '@vela/core/types/material'
+import type { MaterialMeta, I18nString } from '@vela/core/types'
 import type { Component } from 'vue'
 import {
   Pointer,
@@ -79,19 +79,19 @@ export function getCategoryConfig(category: string): CategoryConfig {
  * Icon mapping for component types
  * Based on componentName patterns
  */
-export function getComponentIcon(componentName: string): Component {
-  const name = componentName.toLowerCase()
+export function getComponentIcon(name: string): Component {
+  const n = name.toLowerCase()
 
-  if (name.includes('button')) return Pointer
-  if (name.includes('input') || name.includes('form')) return EditPen
-  if (name.includes('table') || name.includes('list')) return Grid
-  if (name.includes('image') || name.includes('video') || name.includes('media')) return Picture
-  if (name.includes('chart')) return PieChart
-  if (name.includes('histogram') || name.includes('bar')) return Histogram
-  if (name.includes('line') || name.includes('trend')) return DataLine
-  if (name.includes('container') || name.includes('row') || name.includes('col')) return Files
-  if (name.includes('layout') || name.includes('grid')) return Monitor
-  if (name.includes('tool') || name.includes('menu')) return Tools
+  if (n.includes('button')) return Pointer
+  if (n.includes('input') || n.includes('form')) return EditPen
+  if (n.includes('table') || n.includes('list')) return Grid
+  if (n.includes('image') || n.includes('video') || n.includes('media')) return Picture
+  if (n.includes('chart')) return PieChart
+  if (n.includes('histogram') || n.includes('bar')) return Histogram
+  if (n.includes('line') || n.includes('trend')) return DataLine
+  if (n.includes('container') || n.includes('row') || n.includes('col')) return Files
+  if (n.includes('layout') || n.includes('grid')) return Monitor
+  if (n.includes('tool') || n.includes('menu')) return Tools
 
   // Default fallback
   return Box
@@ -103,8 +103,8 @@ export function getComponentIcon(componentName: string): Component {
  * Group materials with UI metadata
  */
 export interface MaterialItem {
-  componentName: string
-  label: string
+  name: string
+  label: I18nString
   meta: MaterialMeta
   categoryConfig: CategoryConfig
   icon: Component
@@ -117,11 +117,11 @@ export function createMaterialItem(meta: MaterialMeta, materials: MaterialMeta[]
   const categoryConfig = getCategoryConfig(meta.category || '其他')
 
   return {
-    componentName: meta.componentName,
+    name: meta.name,
     label: meta.title,
     meta,
     categoryConfig,
-    icon: getComponentIcon(meta.componentName),
+    icon: getComponentIcon(meta.name),
   }
 }
 

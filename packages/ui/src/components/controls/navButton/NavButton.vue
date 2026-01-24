@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="nav-button" :style="containerStyle" @click="handleClick">
     <el-icon v-if="icon" class="nav-icon" :size="iconSize">
       <component :is="iconComponent" />
@@ -11,6 +11,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import * as Icons from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 
 export interface NavButtonProps {
   label?: string

@@ -11,15 +11,13 @@
   >
     <div class="world" :style="worldStyle">
       <div class="stage" :style="stageStyle">
-        <!-- V1.5: 使用 UniversalRenderer 渲染组件树 -->
+        <!-- V2.0: 使用 EditorTreeRenderer 统一渲染组件树 -->
         <template v-if="currentTree && currentTree.children && currentTree.children.length > 0">
-          <UniversalRenderer
+          <EditorTreeRenderer
             v-for="child in currentTree.children"
             :key="child.id"
             :node="child"
-            :wrapper="ShapeWrapper"
             @open-context-menu="onComponentContextMenu"
-            @snap-lines="handleSnapLines"
           />
         </template>
 
@@ -29,6 +27,27 @@
           <p>从左侧拖入组件开始设计</p>
           <p class="hint-sub">支持拖拽、缩放、旋转和智能吸附</p>
         </div>
+
+        <!-- 交互层分离：选中框 -->
+        <SelectionOverlay
+          v-if="selectedNode"
+          :is-active="true"
+          :label="selectedNode.title || selectedNode.componentName"
+          :x="selectedNodeStyle.x"
+          :y="selectedNodeStyle.y"
+          :width="selectedNodeStyle.width"
+          :height="selectedNodeStyle.height"
+          :rotate="selectedNodeStyle.rotate"
+          :z-index="999"
+          :show-rotate="true"
+          :show-toolbar="true"
+          :is-multi-selected="isMultiSelected"
+          @drag-start="onDragStart"
+          @resize-start="onResizeStart"
+          @rotate-start="onRotateStart"
+          @delete="handleDelete"
+          @copy="handleCopy"
+        />
 
         <!-- 吸附辅助线 -->
         <SnapLine v-if="snapLines.length > 0" :lines="snapLines" />
@@ -47,13 +66,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, provide, onMounted, onBeforeUnmount, shallowRef } from 'vue'
-import UniversalRenderer from '../../UniversalRenderer.vue'
-import ShapeWrapper from './Shape/ShapeWrapper.vue'
+import { ref, computed, provide, onMounted, onBeforeUnmount } from 'vue'
+import EditorTreeRenderer from '../../common/EditorTreeRenderer.vue'
+import SelectionOverlay from '../../common/SelectionOverlay.vue'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useCanvasInteraction } from './composables/useCanvasInteraction'
+import { useSelectionTransform } from './composables/useSelectionTransform'
 import SnapLine from './Snap/SnapLine.vue'
 import ContextMenu from './ContextMenu/ContextMenu.vue'
 
@@ -75,8 +95,76 @@ const {
 
 // 使用新的组件 Store
 const compStore = useComponent()
-const { rootNode: currentTree } = storeToRefs(compStore)
-const { addComponent, selectComponent, clearSelection } = compStore
+const { rootNode: currentTree, selectedId, selectedIds, styleVersion } = storeToRefs(compStore)
+const { addComponent, selectComponent, clearSelection, getComponentById } = compStore
+
+// ========== Selection State for Overlay ==========
+const selectedNode = computed(() => {
+  if (!selectedId.value) return null
+  return getComponentById(selectedId.value)
+})
+
+const isMultiSelected = computed(() => selectedIds.value.length > 1)
+
+// Helper to safely parse style values
+const parseVal = (val: unknown, def: number) => {
+  if (typeof val === 'number') return val
+  if (typeof val === 'string') {
+    const p = parseFloat(val)
+    return isNaN(p) ? def : p
+  }
+  return def
+}
+
+const selectedNodeStyle = computed(() => {
+  if (!selectedNode.value || !selectedId.value)
+    return { x: 0, y: 0, width: 0, height: 0, rotate: 0 }
+
+  // Reactivity trigger via styleVersion
+  const _v = styleVersion.value[selectedId.value]
+  const style = selectedNode.value.style || {}
+
+  // Parse transform for rotate fallback
+  let rot = 0
+  if (typeof style.rotate === 'number') rot = style.rotate
+  else if (style.transform) {
+    const m = style.transform.match(/rotate\(([-\d.]+)deg\)/)
+    if (m) rot = parseFloat(m[1])
+  }
+
+  return {
+    x: typeof style.x === 'number' ? style.x : parseVal(style.left, 0),
+    y: typeof style.y === 'number' ? style.y : parseVal(style.top, 0),
+    width: parseVal(style.width, 100),
+    height: parseVal(style.height, 100),
+    rotate: rot,
+  }
+})
+
+// ========== Transform Logic ==========
+// Snap lines state
+const snapLines = ref<{ x?: number; y?: number }[]>([])
+function handleSnapLines(lines: { x?: number; y?: number }[]) {
+  snapLines.value = lines
+}
+
+// Connect overlay events to transform logic
+const { onDragStart, onResizeStart, onRotateStart } = useSelectionTransform(
+  computed(() => selectedId.value),
+  computed(() => selectedNode.value?.style),
+  {
+    canvasScale: scale,
+    emitSnapLines: handleSnapLines,
+  },
+)
+
+// Actions for overlay toolbar
+const handleDelete = () => {
+  if (selectedId.value) compStore.deleteComponent(selectedId.value)
+}
+const handleCopy = () => {
+  compStore.copySelectedNodes()
+}
 
 // ========== Shared Logic ==========
 const { menuState, openContextMenu, closeContextMenu } = useContextMenu()
@@ -85,18 +173,11 @@ useEditorShortcuts({
   closeMenu: closeContextMenu,
 })
 
-// ========== Snap Lines State ==========
-const snapLines = ref<{ x?: number; y?: number }[]>([])
-
-function handleSnapLines(lines: { x?: number; y?: number }[]) {
-  snapLines.value = lines
-}
-
 // ========== Interaction ==========
 const { panX, panY, isPanning } = useCanvasInteraction(wrap, scale, {
   enablePan: true,
   enableZoom: true,
-  enableDrop: true,
+  enableDrop: false, // Drop is handled by template event handler
 })
 
 // 向子组件提供画布平移量，用于组件拖拽时坐标转换
@@ -117,7 +198,6 @@ const handleCanvasClick = (e: MouseEvent) => {
   }
 
   // 点击空白处，取消选中
-  console.log('[FreeCanvas] Clicked empty space, clearing selection')
   clearSelection()
 }
 
@@ -126,16 +206,21 @@ const handleDrop = (e: DragEvent) => {
   e.stopPropagation() // Prevent canvas pan
 
   try {
-    const dataStr = e.dataTransfer?.getData('application/x-vela') || '{}'
+    const dataStr =
+      e.dataTransfer?.getData('application/x-vela') || e.dataTransfer?.getData('text/plain') || '{}'
+
+    console.log('[FreeCanvas] Drop raw data:', dataStr)
     const data = JSON.parse(dataStr)
 
     if (!data.componentName) {
-      console.warn('[FreeCanvas] Invalid drop data:', data)
+      console.warn('[FreeCanvas] Invalid drop data - no componentName:', data)
       return
     }
 
     const el = wrap.value
-    if (!el) return
+    if (!el) {
+      return
+    }
 
     const rect = el.getBoundingClientRect()
     const scaleValue = scale.value || 1
@@ -144,17 +229,11 @@ const handleDrop = (e: DragEvent) => {
     const stageX = (e.clientX - rect.left - panX.value) / scaleValue
     const stageY = (e.clientY - rect.top - panY.value) / scaleValue
 
-    console.log('[FreeCanvas] Drop position - client:', e.clientX, e.clientY)
-    console.log('[FreeCanvas] Drop position - stage:', stageX, stageY)
-    console.log('[FreeCanvas] Pan:', panX.value, panY.value, 'Scale:', scaleValue)
-
     // 创建新组件（自由画布模式使用 position: absolute）
-    // 使用新的统一样式格式：x/y/width/height 为数值类型
-    // 注意：MaterialPanel 传递的尺寸在 data.style 中
     const dropWidth = data.style?.width || data.width || 120
     const dropHeight = data.style?.height || data.height || 80
 
-    const newId = addComponent(null, {
+    const componentToAdd = {
       id: `comp_${Date.now()}`,
       componentName: data.componentName,
       props: data.props || {},
@@ -167,12 +246,14 @@ const handleDrop = (e: DragEvent) => {
         zIndex: 0,
       },
       children: data.children || [],
-    })
+    }
+
+    const newId = addComponent(null, componentToAdd)
 
     if (newId) {
       selectComponent(newId)
-      console.log('[FreeCanvas] Created component:', newId)
-      console.log('[FreeCanvas] Current tree:', currentTree.value)
+    } else {
+      console.error('[FreeCanvas] addComponent returned falsy ID!')
     }
   } catch (err) {
     console.error('[FreeCanvas] Drop error:', err)
@@ -204,7 +285,6 @@ function onComponentContextMenu(payload: { id: string; event: MouseEvent }) {
 }
 
 function onMenuAction(action: string) {
-  console.log('[FreeCanvas] Menu action:', action)
   closeContextMenu()
 
   switch (action) {

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <el-button-group>
       <el-button
@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElButtonGroup, ElButton } from 'element-plus'
 
 // 按钮接口
 export interface ButtonItem {

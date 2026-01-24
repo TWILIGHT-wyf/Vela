@@ -54,6 +54,12 @@ export const useComponent = defineStore('component', () => {
   const parentIndex = new Map<string, string>()
 
   /**
+   * 节点样式版本号：id -> version
+   * 用于触发特定节点的响应式更新，避免全树重渲染
+   */
+  const styleVersion = ref<Record<string, number>>({})
+
+  /**
    * 重建整个索引（在加载新树时调用）
    */
   function rebuildIndex() {
@@ -270,6 +276,7 @@ export const useComponent = defineStore('component', () => {
 
   /**
    * 更新组件的 props
+   * 使用版本号触发特定组件的响应式更新，避免全树重渲染
    */
   function updateProps(id: string, props: Record<string, any>) {
     const node = nodeIndex.get(id)
@@ -278,28 +285,45 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    if (!node.props) {
-      node.props = {}
+    // 使用对象展开创建新对象
+    node.props = {
+      ...(node.props || {}),
+      ...props,
     }
-    Object.assign(node.props, props)
+
+    // 递增该节点的版本号，触发订阅该节点的组件更新
+    styleVersion.value = {
+      ...styleVersion.value,
+      [id]: (styleVersion.value[id] || 0) + 1,
+    }
+
     syncToProjectStore()
   }
 
   /**
    * 更新组件的 style
+   * 使用版本号触发特定组件的响应式更新，避免全树重渲染
    */
   function updateStyle(id: string, style: Record<string, any>) {
     const node = nodeIndex.get(id)
     if (!node) {
-      console.warn(`[ComponentStore] Node not found: ${id}`)
+      console.warn(`[ComponentStore] updateStyle - Node not found: ${id}`)
+      console.warn(`[ComponentStore] Available nodes:`, Array.from(nodeIndex.keys()))
       return
     }
 
-    if (!node.style) {
-      node.style = {}
+    // 使用对象展开创建新对象
+    node.style = {
+      ...(node.style || {}),
+      ...style,
     }
 
-    Object.assign(node.style, style)
+    // 递增该节点的版本号，触发订阅该节点的组件更新
+    styleVersion.value = {
+      ...styleVersion.value,
+      [id]: (styleVersion.value[id] || 0) + 1,
+    }
+
     syncToProjectStore()
   }
 
@@ -683,17 +707,26 @@ export const useComponent = defineStore('component', () => {
     { immediate: true },
   )
 
+  /**
+   * 获取节点样式的版本号（用于触发响应式更新）
+   */
+  function getStyleVersion(id: string): number {
+    return styleVersion.value[id] || 0
+  }
+
   return {
     // State
     rootNode,
     selectedId,
     selectedIds,
     hoveredId,
+    styleVersion,
 
     // Getters
     selectedNode,
     selectedNodes,
     hoveredNode,
+    getStyleVersion,
 
     // Utilities
     findNodeById,

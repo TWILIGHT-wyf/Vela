@@ -1,11 +1,4 @@
-/**
- * Page-related types
- * Re-exports from project.ts with additional template types
- */
-
-export type { PageSchema, PageConfig, ProjectSchema } from './project'
-
-import type { Component } from './components'
+import type { NodeSchema } from './schema'
 
 /**
  * Page template for predefined layouts
@@ -16,5 +9,9 @@ export interface PageTemplate {
   description: string
   preview: string
   category: 'dashboard' | 'gis' | 'form' | 'chart' | 'other'
-  components: Component[]
+  /**
+   * 模板包含的组件树
+   * 使用 NodeSchema 替代旧的 Component
+   */
+  children: NodeSchema[]
 }

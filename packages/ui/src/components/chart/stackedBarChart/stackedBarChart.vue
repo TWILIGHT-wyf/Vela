@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-stacked-bar-chart" :style="{ width: '100%', height: '100%' }">
     <v-chart :option="finalOption" autoresize class="echart" />
   </div>
@@ -62,7 +62,7 @@ const defaultColors = ['#5470c6', '#91cc75', '#fac858']
 // 计算最终 Option
 const finalOption = computed<EChartsOption>(() => {
   // 如果有高级配置 option，优先使用
-  if (props.option) return props.option
+  if (props.option && Object.keys(props.option).length > 0) return props.option
 
   const xAxisData = props.xAxisData && props.xAxisData.length ? props.xAxisData : defaultXAxis
   const seriesNames =

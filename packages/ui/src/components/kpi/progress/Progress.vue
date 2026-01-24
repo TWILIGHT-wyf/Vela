@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="v-progress-container" :style="containerStyle">
     <el-progress
       :percentage="percentage"
@@ -11,9 +11,9 @@
       :format="formatText"
       :width="circleWidth"
       :stroke-linecap="strokeLinecap"
-      :define-back-color="trackColor"
       :striped="showStripe"
       :striped-flow="animateStripe"
+      class="custom-progress"
     />
   </div>
 </template>
@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElProgress } from 'element-plus'
 
 // 颜色配置类型
 interface ColorStop {
@@ -29,43 +30,69 @@ interface ColorStop {
 }
 
 // 定义纯 UI Props，无业务逻辑
-const props = defineProps<{
-  // 核心数据
-  percentage?: number
-  type?: 'line' | 'circle' | 'dashboard'
-  status?: '' | 'success' | 'exception' | 'warning'
+const props = withDefaults(
+  defineProps<{
+    // 核心数据
+    percentage?: number
+    type?: 'line' | 'circle' | 'dashboard'
+    status?: '' | 'success' | 'exception' | 'warning'
 
-  // 进度条配置
-  strokeWidth?: number
-  textInside?: boolean
-  showText?: boolean
-  showStripe?: boolean
-  animateStripe?: boolean
-  circleWidth?: number
-  strokeLinecap?: 'butt' | 'round' | 'square'
-  textFormat?: string
+    // 进度条配置
+    strokeWidth?: number
+    textInside?: boolean
+    showText?: boolean
+    showStripe?: boolean
+    animateStripe?: boolean
+    circleWidth?: number
+    strokeLinecap?: 'butt' | 'round' | 'square'
+    textFormat?: string
 
-  // 颜色配置
-  barColor?: string
-  trackColor?: string
-  successColor?: string
-  warningColor?: string
-  exceptionColor?: string
-  useGradient?: boolean
+    // 颜色配置
+    barColor?: string
+    trackColor?: string
+    textColor?: string
+    successColor?: string
+    warningColor?: string
+    exceptionColor?: string
+    useGradient?: boolean
 
-  // 容器样式
-  opacity?: number
-  visible?: boolean
-  backgroundColor?: string
-  borderColor?: string
-  borderWidth?: number
-  borderRadius?: number
-  padding?: number
-}>()
+    // 容器样式
+    opacity?: number
+    visible?: boolean
+    backgroundColor?: string
+    borderColor?: string
+    borderWidth?: number
+    borderRadius?: number
+    padding?: number
+  }>(),
+  {
+    percentage: 0,
+    type: 'line',
+    status: '',
+    strokeWidth: 6,
+    textInside: false,
+    showText: true,
+    showStripe: false,
+    animateStripe: false,
+    circleWidth: 126,
+    strokeLinecap: 'round',
+    textFormat: '{value}%',
+    opacity: 100,
+    visible: true,
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    borderWidth: 0,
+    borderRadius: 0,
+    padding: 10,
+    barColor: '#409eff',
+    trackColor: '#e4e7ed',
+    textColor: '#606266',
+  },
+)
 
 // 计算颜色
 const computedColor = computed<string | ColorStop[]>(() => {
-  const barColor = props.barColor ?? '#409eff'
+  const barColor = props.barColor
   const successColor = props.successColor ?? '#67c23a'
   const warningColor = props.warningColor ?? '#e6a23c'
   const exceptionColor = props.exceptionColor ?? '#f56c6c'
@@ -91,27 +118,28 @@ const computedColor = computed<string | ColorStop[]>(() => {
 
 // 格式化文本
 const formatText = (percentage: number) => {
-  const format = props.textFormat ?? '{value}%'
+  const format = props.textFormat
   return format.replace('{value}', percentage.toFixed(0))
 }
 
 // 容器样式
 const containerStyle = computed<CSSProperties>(() => {
   return {
-    opacity: ((props.opacity ?? 100) as number) / 100,
+    opacity: props.opacity / 100,
     display: props.visible === false ? 'none' : 'flex',
-    backgroundColor: props.backgroundColor ?? 'transparent',
-    borderColor: props.borderColor ?? 'transparent',
-    borderWidth: `${props.borderWidth ?? 0}px`,
+    backgroundColor: props.backgroundColor,
+    borderColor: props.borderColor,
+    borderWidth: `${props.borderWidth}px`,
     borderStyle: 'solid',
-    borderRadius: `${props.borderRadius ?? 0}px`,
-    padding: `${props.padding ?? 10}px`,
+    borderRadius: `${props.borderRadius}px`,
+    padding: `${props.padding}px`,
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     boxSizing: 'border-box',
-  }
+    '--el-fill-color-light': props.trackColor, // Hack: Element Plus track color
+  } as CSSProperties
 })
 </script>
 
@@ -126,5 +154,6 @@ const containerStyle = computed<CSSProperties>(() => {
 
 :deep(.el-progress__text) {
   font-size: inherit !important;
+  color: v-bind('props.textColor');
 }
 </style>

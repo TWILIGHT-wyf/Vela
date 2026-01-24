@@ -1,5 +1,10 @@
 <template>
-  <div class="selection-overlay" :class="{ active: isActive }">
+  <div
+    class="selection-overlay"
+    :class="{ active: isActive }"
+    :style="overlayStyle"
+    @mousedown.stop="onDragMouseDown"
+  >
     <!-- Border -->
     <div v-if="isActive" class="selection-border" :style="borderStyle" />
 
@@ -69,6 +74,14 @@ interface Props {
   showSelectParent?: boolean
   /** Multi-selection mode (dashed border) */
   isMultiSelected?: boolean
+
+  // Position props
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  rotate?: number
+  zIndex?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -80,15 +93,36 @@ const props = withDefaults(defineProps<Props>(), {
   showRotate: false,
   showSelectParent: false,
   isMultiSelected: false,
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  rotate: 0,
+  zIndex: 100,
 })
 
 const emit = defineEmits<{
+  'drag-start': [event: MouseEvent]
   'resize-start': [handle: string, event: MouseEvent]
   'rotate-start': [event: MouseEvent]
   delete: []
   copy: []
   'select-parent': []
 }>()
+
+// Overlay position style
+const overlayStyle = computed<CSSProperties>(() => ({
+  position: 'absolute',
+  left: `${props.x}px`,
+  top: `${props.y}px`,
+  width: `${props.width}px`,
+  height: `${props.height}px`,
+  transform: `rotate(${props.rotate}deg)`,
+  transformOrigin: 'center center',
+  zIndex: props.zIndex,
+  pointerEvents: props.isActive ? 'none' : 'none', // Base is always none, specific elements override
+  display: props.isActive ? 'block' : 'none',
+}))
 
 // Border style based on selection type
 const borderStyle = computed<CSSProperties>(() => ({
@@ -97,9 +131,10 @@ const borderStyle = computed<CSSProperties>(() => ({
   left: 0,
   width: '100%',
   height: '100%',
-  border: props.isMultiSelected ? '1px dashed #409EFF' : '1px solid #409EFF',
+  border: props.isMultiSelected ? '1px dashed #409EFF' : '2px solid #409EFF',
   pointerEvents: 'none',
   boxSizing: 'border-box',
+  borderRadius: '2px',
 }))
 
 // Handle configuration with positions
@@ -124,6 +159,31 @@ const handlePositions = computed(() =>
     })),
 )
 
+// Events
+const onDragMouseDown = (e: MouseEvent) => {
+  // Only trigger drag if we click inside the box (even though it's pointer-events: none,
+  // we'll likely handle this by a transparent overlay div if we want drag-area behavior,
+  // OR we rely on the fact that ShapeWrapper handles selection, and this Overlay handles
+  // transformation once selected.
+
+  // Wait, if overlay is on top, we need a way to drag.
+  // We can add a transparent div for drag area if needed,
+  // but usually dragging is done by clicking the component itself.
+  // However, since we are moving interaction logic HERE, we might want a drag handler
+  // on the border or a transparent cover?
+
+  // Design decision:
+  // Option 1: ShapeWrapper handles drag start (original design).
+  // Option 2: SelectionOverlay has a transparent cover for drag.
+
+  // If we want to fully decouple, Overlay should handle drag for SELECTED items.
+  // But how do we select unselected items? ShapeWrapper must handle click-to-select.
+  // Once selected, Overlay appears. If we click Overlay, we drag.
+
+  // So we need a transparent hit area in Overlay.
+  emit('drag-start', e)
+}
+
 const onHandleMouseDown = (e: MouseEvent, handle: string) => {
   emit('resize-start', handle, e)
 }
@@ -135,14 +195,18 @@ const onRotateMouseDown = (e: MouseEvent) => {
 
 <style scoped>
 .selection-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
+  /* Default pointer-events is none to let clicks pass through to underlying components when not hitting controls */
+  /* But we need to capture events on handles */
 }
 
-.selection-overlay.active {
-  /* Keep container non-interactive, handles will be interactive */
+/* Hit area for drag - only active when selected */
+.selection-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  cursor: move;
+  pointer-events: auto; /* Catch clicks for dragging */
+  /* Debug color: background: rgba(255, 0, 0, 0.1); */
 }
 
 .selection-border {
@@ -158,6 +222,7 @@ const onRotateMouseDown = (e: MouseEvent) => {
   border: 1px solid #fff;
   pointer-events: auto;
   box-sizing: border-box;
+  z-index: 20;
 }
 
 .selection-handle.nw {
@@ -212,14 +277,16 @@ const onRotateMouseDown = (e: MouseEvent) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 20;
 }
 
 .rotate-icon {
   color: #fff;
-  font-size: 12px;
+  font-size: 14px;
+  user-select: none;
 }
 
-/* Breadcrumb (Parent > Current) */
+/* Breadcrumb */
 .selection-breadcrumb {
   position: absolute;
   top: -22px;
@@ -230,6 +297,7 @@ const onRotateMouseDown = (e: MouseEvent) => {
   font-size: 10px;
   white-space: nowrap;
   pointer-events: auto;
+  z-index: 20;
 }
 
 .breadcrumb-parent {
@@ -269,6 +337,7 @@ const onRotateMouseDown = (e: MouseEvent) => {
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
+  z-index: 20;
 }
 
 .selection-toolbar .el-button {

@@ -20,7 +20,7 @@
 
     <main class="preview-content">
       <div class="preview-viewport">
-        <RecursiveRenderer v-if="rootNode" :node="rootNode" />
+        <RuntimeRenderer v-if="rootNode" :root-node="rootNode" mode="preview" />
 
         <div v-else class="empty-state">
           <div class="empty-icon">📄</div>
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { RecursiveRenderer } from '@vela/renderer'
+import { RuntimeRenderer } from '@vela/renderer'
 import { useComponent } from '@/stores/component'
 import { useProjectStore } from '@/stores/project'
 import { storeToRefs } from 'pinia'

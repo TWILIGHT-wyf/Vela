@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, type Component } from 'vue'
+import { computed, toRef, watch, type Component } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
@@ -63,8 +63,12 @@ const props = defineProps<{
 }>()
 
 // Component Resolution
-const isResolved = computed(() => hasComponent(props.node.componentName))
-const componentRef = computed(() => getComponent(props.node.componentName))
+const isResolved = computed(() => {
+  return hasComponent(props.node.componentName)
+})
+const componentRef = computed(() => {
+  return getComponent(props.node.componentName)
+})
 
 // Data Source Adapter
 const nodeRef = toRef(props, 'node')

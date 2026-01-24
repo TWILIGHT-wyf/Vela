@@ -42,7 +42,7 @@ import { useComponent } from '@/stores/component'
 import type { Component } from '@vela/core/types/components'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
-import { useSnap } from '../composables/useSnapV2'
+import { useSnap } from '../composables/useSnap'
 import { throttle } from 'lodash-es'
 import {
   DRAG_THRESHOLD,

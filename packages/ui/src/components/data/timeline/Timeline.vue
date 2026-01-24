@@ -1,7 +1,8 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Clock } from '@element-plus/icons-vue'
+import { ElScrollbar, ElEmpty, ElTimeline, ElTimelineItem, ElCard } from 'element-plus'
 
 export interface TimelineItem {
   title?: string

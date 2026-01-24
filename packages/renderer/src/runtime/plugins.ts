@@ -27,11 +27,15 @@ export const EventExecutorPlugin: RuntimePlugin = (context: RuntimeContext) => {
     pages: context.pages,
     isProjectMode: context.isProjectMode,
     router: context.router,
-    // 如果需要自定义 navigate，可以在这里处理，或者让 useEventExecutor 默认处理
   })
 
   // 订阅组件事件
   context.subscribeComponentEvent((payload) => {
-    handleComponentEvent(payload)
+    // Cast actions to EventAction[] for the executor
+    handleComponentEvent({
+      componentId: payload.componentId,
+      eventType: payload.eventType,
+      actions: payload.actions as Array<{ id: string; type: string; [key: string]: unknown }>,
+    })
   })
 }

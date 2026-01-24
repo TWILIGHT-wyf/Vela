@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle">
     <el-slider
       v-model="internalValue"
@@ -25,6 +25,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
+import { ElSlider } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{

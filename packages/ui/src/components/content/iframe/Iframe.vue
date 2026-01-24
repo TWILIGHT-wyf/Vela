@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :style="containerStyle" class="iframe-container">
     <iframe
       v-if="url"
@@ -23,6 +23,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Link } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 
 const props = withDefaults(
   defineProps<{
