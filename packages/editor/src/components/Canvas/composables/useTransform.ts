@@ -1,0 +1,186 @@
+import { ref } from 'vue'
+import { throttle } from 'lodash-es'
+import type { NodeStyle } from '@vela/core'
+import { useCanvasContext } from './useCanvasContext'
+import { useSnapping } from './useSnapping'
+import { useComponent } from '@/stores/component'
+
+export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+
+export function useTransform() {
+  const { scale, toClientCoords } = useCanvasContext()
+  const store = useComponent()
+  const { snap, clearSnap, snapLines } = useSnapping()
+
+  const isDragging = ref(false)
+  const isResizing = ref(false)
+  const isRotating = ref(false)
+
+  const getSiblings = (id: string) => {
+    const parent = store.findParentNode(id)
+    if (parent && parent.children) {
+      return parent.children.filter((c) => c.id !== id)
+    }
+    if (store.rootNode?.children) {
+      return store.rootNode.children.filter((c) => c.id !== id)
+    }
+    return []
+  }
+
+  // --- Drag ---
+  const startDrag = (id: string, initialStyle: NodeStyle, e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    isDragging.value = true
+    const startX = e.clientX
+    const startY = e.clientY
+
+    const initialX = parseFloat(String(initialStyle.x)) || 0
+    const initialY = parseFloat(String(initialStyle.y)) || 0
+    const width = parseFloat(String(initialStyle.width)) || 100
+    const height = parseFloat(String(initialStyle.height)) || 100
+
+    const siblings = getSiblings(id)
+
+    const onMove = throttle((ev: MouseEvent) => {
+      const dx = (ev.clientX - startX) / scale.value
+      const dy = (ev.clientY - startY) / scale.value
+
+      const rawX = initialX + dx
+      const rawY = initialY + dy
+
+      // Snap
+      const { position } = snap(
+        {
+          x: rawX,
+          y: rawY,
+          w: width,
+          h: height,
+        },
+        siblings,
+      )
+
+      store.updateStyle(id, {
+        x: Math.round(position.x),
+        y: Math.round(position.y),
+      })
+    }, 16)
+
+    const onUp = () => {
+      isDragging.value = false
+      clearSnap()
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // --- Resize ---
+  const startResize = (
+    id: string,
+    handle: ResizeHandle,
+    initialStyle: NodeStyle,
+    e: MouseEvent,
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    isResizing.value = true
+    const startX = e.clientX
+    const startY = e.clientY
+
+    const initialX = parseFloat(String(initialStyle.x)) || 0
+    const initialY = parseFloat(String(initialStyle.y)) || 0
+    const initialW = parseFloat(String(initialStyle.width)) || 100
+    const initialH = parseFloat(String(initialStyle.height)) || 100
+
+    const onMove = throttle((ev: MouseEvent) => {
+      const dx = (ev.clientX - startX) / scale.value
+      const dy = (ev.clientY - startY) / scale.value
+
+      let newX = initialX
+      let newY = initialY
+      let newW = initialW
+      let newH = initialH
+
+      if (handle.includes('e')) newW = initialW + dx
+      if (handle.includes('w')) {
+        newX = initialX + dx
+        newW = initialW - dx
+      }
+      if (handle.includes('s')) newH = initialH + dy
+      if (handle.includes('n')) {
+        newY = initialY + dy
+        newH = initialH - dy
+      }
+
+      if (newW < 10) newW = 10
+      if (newH < 10) newH = 10
+
+      store.updateStyle(id, {
+        x: Math.round(newX),
+        y: Math.round(newY),
+        width: Math.round(newW),
+        height: Math.round(newH),
+      })
+    }, 16)
+
+    const onUp = () => {
+      isResizing.value = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // --- Rotate ---
+  const startRotate = (id: string, initialStyle: NodeStyle, e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    isRotating.value = true
+
+    const cx = Number(initialStyle.x ?? 0) + Number(initialStyle.width ?? 100) / 2
+    const cy = Number(initialStyle.y ?? 0) + Number(initialStyle.height ?? 100) / 2
+
+    const center = toClientCoords(cx, cy)
+    const startAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x)
+    const initialRotate = Number(initialStyle.rotate ?? 0)
+
+    const onMove = throttle((ev: MouseEvent) => {
+      const angle = Math.atan2(ev.clientY - center.y, ev.clientX - center.x)
+      const delta = angle - startAngle
+      const deg = initialRotate + (delta * 180) / Math.PI
+
+      const finalDeg = ev.shiftKey ? Math.round(deg / 15) * 15 : deg
+
+      store.updateStyle(id, {
+        rotate: Math.round(finalDeg),
+      })
+    }, 16)
+
+    const onUp = () => {
+      isRotating.value = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  return {
+    isDragging,
+    isResizing,
+    isRotating,
+    startDrag,
+    startResize,
+    startRotate,
+    snapLines,
+  }
+}

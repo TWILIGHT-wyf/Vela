@@ -15,12 +15,12 @@ const props = withDefaults(
     content?: string
 
     // 样式配置
-    fontSize?: number
-    fontColor?: string
-    fontWeight?: 'normal' | 'bold' | 'lighter' | number
+    fontSize?: number | string // 标准化类型
+    color?: string // 标准化命名：原 fontColor
+    fontWeight?: 'normal' | 'bold' | 'lighter' | number | string
     textAlign?: 'left' | 'center' | 'right' | 'justify'
-    letterSpacing?: number
-    lineHeight?: number
+    letterSpacing?: number | string
+    lineHeight?: number | string
     paddingX?: number
     paddingY?: number
     opacity?: number
@@ -30,7 +30,7 @@ const props = withDefaults(
   {
     content: '文本内容',
     fontSize: 16,
-    fontColor: '#000000',
+    color: '#000000',
     fontWeight: 'normal',
     textAlign: 'left',
     letterSpacing: 0,
@@ -48,11 +48,12 @@ const textStyle = computed<CSSProperties>(() => {
   return {
     opacity: props.opacity / 100,
     display: props.visible === false ? 'none' : 'block',
-    fontSize: `${props.fontSize}px`,
-    color: props.fontColor,
+    fontSize: typeof props.fontSize === 'number' ? `${props.fontSize}px` : props.fontSize,
+    color: props.color,
     fontWeight: props.fontWeight,
     textAlign: props.textAlign,
-    letterSpacing: `${props.letterSpacing}px`,
+    letterSpacing:
+      typeof props.letterSpacing === 'number' ? `${props.letterSpacing}px` : props.letterSpacing,
     lineHeight: props.lineHeight,
     padding: `${props.paddingY}px ${props.paddingX}px`,
     width: '100%',

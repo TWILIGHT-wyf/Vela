@@ -32,7 +32,7 @@ const props = defineProps<{
   title?: string
   barColor?: string
   barWidth?: string
-  borderRadius?: number
+  borderRadius?: number | number[]
   showTooltip?: boolean
   showLegend?: boolean
   legendPosition?: 'top' | 'bottom' | 'left' | 'right'

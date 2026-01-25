@@ -1,6 +1,4 @@
-import { PageSchema } from './data'
-
-export type { PageConfig } from './data'
+import { PageSchema } from './page'
 
 /**
  * 项目配置协议

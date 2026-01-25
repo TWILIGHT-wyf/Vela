@@ -1,11 +1,15 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
-  componentName: 'Button',
+  name: 'Button', // 必填字段
+  componentName: 'Button', // 兼容字段
   title: '按钮',
+  version: '1.0.0', // 必填字段
   category: '基础控件',
   props: {
     text: {
+      name: 'text',
+      label: '按钮文本',
       title: '按钮文本',
       setter: 'StringSetter',
       defaultValue: '按钮',
@@ -13,6 +17,8 @@ const meta: MaterialMeta = {
       group: '基础',
     },
     type: {
+      name: 'type',
+      label: '按钮类型',
       title: '按钮类型',
       setter: 'SelectSetter',
       setterProps: {
@@ -30,6 +36,8 @@ const meta: MaterialMeta = {
       group: '基础',
     },
     size: {
+      name: 'size',
+      label: '尺寸',
       title: '尺寸',
       setter: 'SelectSetter',
       setterProps: {
@@ -43,6 +51,8 @@ const meta: MaterialMeta = {
       group: '基础',
     },
     plain: {
+      name: 'plain',
+      label: '朴素按钮',
       title: '朴素按钮',
       setter: 'BooleanSetter',
       defaultValue: false,
@@ -50,6 +60,8 @@ const meta: MaterialMeta = {
       group: '样式',
     },
     round: {
+      name: 'round',
+      label: '圆角按钮',
       title: '圆角按钮',
       setter: 'BooleanSetter',
       defaultValue: false,
@@ -57,6 +69,8 @@ const meta: MaterialMeta = {
       group: '样式',
     },
     circle: {
+      name: 'circle',
+      label: '圆形按钮',
       title: '圆形按钮',
       setter: 'BooleanSetter',
       defaultValue: false,
@@ -64,6 +78,8 @@ const meta: MaterialMeta = {
       group: '样式',
     },
     disabled: {
+      name: 'disabled',
+      label: '禁用状态',
       title: '禁用状态',
       setter: 'BooleanSetter',
       defaultValue: false,
@@ -71,6 +87,8 @@ const meta: MaterialMeta = {
       group: '状态',
     },
     loading: {
+      name: 'loading',
+      label: '加载中',
       title: '加载中',
       setter: 'BooleanSetter',
       defaultValue: false,
@@ -78,6 +96,8 @@ const meta: MaterialMeta = {
       group: '状态',
     },
     icon: {
+      name: 'icon',
+      label: '图标',
       title: '图标',
       setter: 'StringSetter',
       defaultValue: '',
@@ -87,6 +107,8 @@ const meta: MaterialMeta = {
   },
   styles: {
     width: {
+      name: 'width',
+      label: '宽度',
       title: '宽度',
       setter: 'StringSetter',
       defaultValue: 'auto',
@@ -94,6 +116,8 @@ const meta: MaterialMeta = {
       group: '尺寸',
     },
     height: {
+      name: 'height',
+      label: '高度',
       title: '高度',
       setter: 'StringSetter',
       defaultValue: 'auto',
@@ -101,6 +125,8 @@ const meta: MaterialMeta = {
       group: '尺寸',
     },
     backgroundColor: {
+      name: 'backgroundColor',
+      label: '背景颜色',
       title: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '',
@@ -108,6 +134,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     color: {
+      name: 'color',
+      label: '文字颜色',
       title: '文字颜色',
       setter: 'ColorSetter',
       defaultValue: '',
@@ -115,6 +143,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     fontSize: {
+      name: 'fontSize',
+      label: '字体大小',
       title: '字体大小',
       setter: 'StringSetter',
       defaultValue: '14px',
@@ -122,6 +152,8 @@ const meta: MaterialMeta = {
       group: '文字',
     },
     fontWeight: {
+      name: 'fontWeight',
+      label: '字体粗细',
       title: '字体粗细',
       setter: 'SelectSetter',
       setterProps: {
@@ -136,6 +168,8 @@ const meta: MaterialMeta = {
       group: '文字',
     },
     borderRadius: {
+      name: 'borderRadius',
+      label: '圆角',
       title: '圆角',
       setter: 'StringSetter',
       defaultValue: '4px',
@@ -143,6 +177,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     padding: {
+      name: 'padding',
+      label: '内边距',
       title: '内边距',
       setter: 'StringSetter',
       defaultValue: '',
@@ -150,6 +186,8 @@ const meta: MaterialMeta = {
       group: '间距',
     },
     margin: {
+      name: 'margin',
+      label: '外边距',
       title: '外边距',
       setter: 'StringSetter',
       defaultValue: '',

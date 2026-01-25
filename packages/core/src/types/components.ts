@@ -15,11 +15,13 @@ export interface Component {
   type: string // componentName
   name?: string // display name
   position: { x: number; y: number }
-  size: { width: number; height: number }
+  size: { width: number | string; height: number | string }
   rotation?: number
   zindex?: number
   props?: Record<string, unknown>
   style?: Record<string, unknown> & {
+    width?: number | string
+    height?: number | string
     visible?: boolean
     opacity?: number
     fontSize?: number
@@ -140,8 +142,8 @@ export function nodeSchemaToComponent(node: NodeSchema): Component {
       y: (y as number) ?? 0,
     },
     size: {
-      width: (width as number) ?? 100,
-      height: (height as number) ?? 100,
+      width: width ?? 100,
+      height: height ?? 100,
     },
     rotation: (rotate as number) ?? 0,
     zindex: (zIndex as number) ?? 0,

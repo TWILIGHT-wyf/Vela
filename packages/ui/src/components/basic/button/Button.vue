@@ -44,10 +44,10 @@ const props = withDefaults(
     width?: string | number
     height?: string | number
     backgroundColor?: string
-    textColor?: string
-    fontSize?: number
+    color?: string // 标准化命名：原 textColor
+    fontSize?: number | string // 标准化类型：支持 string | number
     fontWeight?: number | string
-    borderRadius?: number
+    borderRadius?: number | string // 标准化类型
   }>(),
   {
     text: '按钮',
@@ -58,6 +58,7 @@ const props = withDefaults(
     circle: false,
     disabled: false,
     loading: false,
+    // 样式默认值保持 undefined 由 CSS 控制，或显式指定
   },
 )
 
@@ -82,12 +83,12 @@ const buttonStyle = computed<CSSProperties>(() => {
     style.borderColor = props.backgroundColor
   }
 
-  if (props.textColor) {
-    style.color = props.textColor
+  if (props.color) {
+    style.color = props.color
   }
 
   if (props.fontSize !== undefined) {
-    style.fontSize = `${props.fontSize}px`
+    style.fontSize = typeof props.fontSize === 'number' ? `${props.fontSize}px` : props.fontSize
   }
 
   if (props.fontWeight !== undefined) {
@@ -95,7 +96,8 @@ const buttonStyle = computed<CSSProperties>(() => {
   }
 
   if (props.borderRadius !== undefined) {
-    style.borderRadius = `${props.borderRadius}px`
+    style.borderRadius =
+      typeof props.borderRadius === 'number' ? `${props.borderRadius}px` : props.borderRadius
   }
 
   return style

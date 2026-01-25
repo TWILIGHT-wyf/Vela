@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type CSSProperties, type StyleValue } from 'vue'
 import type { NodeSchema } from '@vela/core'
 
 const props = defineProps<{
@@ -30,47 +30,57 @@ const handleMouseDown = (e: MouseEvent) => {
   emit('select', props.node.id)
 }
 
-const wrapperStyle = computed(() => {
-  const layout = props.node.style
+// Helper to format style values
+const formatValue = (
+  val: string | number | undefined,
+  defaultValue: number | string = 0,
+): string => {
+  if (val === undefined || val === null) {
+    return typeof defaultValue === 'number' ? `${defaultValue}px` : defaultValue
+  }
+  if (typeof val === 'number') {
+    return `${val}px`
+  }
+  // Check if string has unit
+  if (/^\d+(\.\d+)?(px|%|em|rem|vw|vh)$/.test(val) || val === 'auto') {
+    return val
+  }
+  // If string is a number without unit, assume px
+  if (!isNaN(parseFloat(val))) {
+    return `${val}px`
+  }
+  return val
+}
+
+const wrapperStyle = computed<StyleValue>(() => {
+  const layout = props.node.style || {}
 
   if (props.layoutMode === 'free') {
     // 自由布局模式：绝对定位
-    // 注意：单位默认 px，也可以支持 %
     return {
       position: 'absolute',
-      left: `${layout?.x ?? 0}px`,
-      top: `${layout?.y ?? 0}px`,
-      width: `${layout?.width ?? 100}px`,
-      height: `${layout?.height ?? 32}px`,
-      transform: layout?.rotate ? `rotate(${layout.rotate}deg)` : undefined,
-      zIndex: layout?.zIndex ?? 0,
-
-      // 调试用边框 (选中时)
-      // outline: props.selected ? '2px solid #409eff' : undefined
-    }
+      left: formatValue(layout.x as string | number | undefined, 0),
+      top: formatValue(layout.y as string | number | undefined, 0),
+      width: formatValue(layout.width as string | number | undefined, 'auto'),
+      height: formatValue(layout.height as string | number | undefined, 'auto'),
+      transform: layout.rotate ? `rotate(${layout.rotate}deg)` : undefined,
+      zIndex: (layout.zIndex as number | undefined) ?? 0,
+    } as CSSProperties
   } else {
     // 流式布局模式：文档流
     return {
       position: 'relative',
-      width: layout?.width
-        ? typeof layout.width === 'number'
-          ? `${layout.width}px`
-          : layout.width
-        : '100%',
-      height: layout?.height
-        ? typeof layout.height === 'number'
-          ? `${layout.height}px`
-          : layout.height
-        : undefined,
-      marginTop: layout?.marginTop ? `${layout.marginTop}px` : undefined,
-      marginBottom: layout?.marginBottom ? `${layout.marginBottom}px` : undefined,
-      marginLeft: layout?.marginLeft ? `${layout.marginLeft}px` : undefined,
-      marginRight: layout?.marginRight ? `${layout.marginRight}px` : undefined,
+      width: formatValue(layout.width as string | number | undefined, '100%'),
+      height: formatValue(layout.height as string | number | undefined, 'auto'),
+      marginTop: formatValue(layout.marginTop as string | number | undefined),
+      marginBottom: formatValue(layout.marginBottom as string | number | undefined),
+      marginLeft: formatValue(layout.marginLeft as string | number | undefined),
+      marginRight: formatValue(layout.marginRight as string | number | undefined),
 
       // Flex 配置
-      flex: layout?.flex,
-      display: layout?.display || 'block',
-    }
+      flex: layout.flex as string | undefined,
+      display: (layout.display as string) || 'block',
+    } as CSSProperties
   }
 })
 </script>
@@ -78,7 +88,5 @@ const wrapperStyle = computed(() => {
 <style scoped>
 .node-wrapper {
   box-sizing: border-box;
-  /* 确保内容不会溢出 wrapper */
-  /* overflow: hidden; */
 }
 </style>

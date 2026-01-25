@@ -48,10 +48,10 @@ const props = withDefaults(
     placeholder?: string
     errorText?: string
     backgroundColor?: string
-    borderRadius?: number
+    borderRadius?: number | string
     border?: string
     objectFit?: string
-    opacity?: number
+    opacity?: number | string
   }>(),
   {
     url: '',
@@ -66,7 +66,7 @@ const props = withDefaults(
     borderRadius: 0,
     border: 'none',
     objectFit: 'cover',
-    opacity: 100,
+    opacity: 1, // 默认为 1
   },
 )
 
@@ -78,16 +78,17 @@ const containerStyle = computed<CSSProperties>(() => ({
   justifyContent: props.objectFit === 'contain' ? 'center' : 'flex-start',
   alignItems: props.objectFit === 'contain' ? 'center' : 'flex-start',
   backgroundColor: props.backgroundColor,
-  borderRadius: `${props.borderRadius}px`,
+  borderRadius:
+    typeof props.borderRadius === 'number' ? `${props.borderRadius}px` : props.borderRadius,
   overflow: 'hidden',
   border: props.border,
+  opacity: typeof props.opacity === 'number' ? props.opacity : parseFloat(props.opacity || '1'),
 }))
 
 const imageStyle = computed<CSSProperties>(() => ({
   width: '100%',
   height: '100%',
   objectFit: props.objectFit as CSSProperties['objectFit'],
-  opacity: props.opacity / 100,
 }))
 </script>
 

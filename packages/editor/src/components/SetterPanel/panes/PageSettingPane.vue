@@ -74,35 +74,42 @@
     <el-divider />
 
     <div class="section">
-      <div class="section-title">画布设置</div>
+      <div class="section-title">画布尺寸</div>
       <el-form label-position="top" size="default">
-        <el-form-item label="画布尺寸">
+        <el-form-item label="自定义宽高">
           <div class="size-inputs">
             <el-input-number
-              v-model="canvasWidth"
+              v-model="sizeStore.width"
               :min="320"
               :max="3840"
               :step="10"
-              @change="handleCanvasSizeChange"
+              controls-position="right"
+              @change="(val) => sizeStore.setSize(val || 1920, sizeStore.height)"
             />
             <span class="size-separator">x</span>
             <el-input-number
-              v-model="canvasHeight"
+              v-model="sizeStore.height"
               :min="320"
-              :max="2160"
+              :max="3840"
               :step="10"
-              @change="handleCanvasSizeChange"
+              controls-position="right"
+              @change="(val) => sizeStore.setSize(sizeStore.width, val || 1080)"
             />
           </div>
         </el-form-item>
 
-        <el-form-item label="预设尺寸">
-          <el-select v-model="selectedPreset" placeholder="选择预设" @change="handlePresetChange">
-            <el-option label="桌面 (1920x1080)" value="1920x1080" />
-            <el-option label="笔记本 (1366x768)" value="1366x768" />
-            <el-option label="平板横屏 (1024x768)" value="1024x768" />
-            <el-option label="平板竖屏 (768x1024)" value="768x1024" />
-            <el-option label="手机 (375x812)" value="375x812" />
+        <el-form-item label="设备预设">
+          <el-select
+            v-model="sizeStore.currentPresetKey"
+            placeholder="选择预设尺寸"
+            @change="handlePresetChange"
+          >
+            <el-option
+              v-for="preset in DEVICE_PRESETS"
+              :key="preset.key"
+              :label="`${preset.name} (${preset.width}x${preset.height})`"
+              :value="preset.key"
+            />
           </el-select>
         </el-form-item>
       </el-form>
@@ -116,21 +123,19 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { InfoFilled, Rank, List } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/project'
 import { useUIStore } from '@/stores/ui'
+import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
 import { storeToRefs } from 'pinia'
 import type { LayoutMode } from '@/utils/layoutConverter'
 
 const projectStore = useProjectStore()
 const uiStore = useUIStore()
+const sizeStore = useSizeStore()
 
-const { currentPage, currentPageId: activePageId } = storeToRefs(projectStore)
-const { canvasWidth: storeCanvasWidth, canvasHeight: storeCanvasHeight } = storeToRefs(uiStore)
+const { currentPage } = storeToRefs(projectStore)
 
 // 本地状态
 const pageName = ref('')
 const pagePath = ref('')
-const canvasWidth = ref(1920)
-const canvasHeight = ref(1080)
-const selectedPreset = ref('')
 
 // 当前布局模式
 const currentLayout = computed(() => currentPage.value?.config?.layout || 'free')
@@ -147,18 +152,6 @@ watch(
   { immediate: true },
 )
 
-// 同步画布尺寸
-watch(
-  [storeCanvasWidth, storeCanvasHeight],
-  ([w, h]) => {
-    canvasWidth.value = w
-    canvasHeight.value = h
-    // 尝试匹配预设
-    selectedPreset.value = `${w}x${h}`
-  },
-  { immediate: true },
-)
-
 // 处理名称变更
 function handleNameChange(value: string) {
   if (currentPage.value) {
@@ -170,7 +163,6 @@ function handleNameChange(value: string) {
 // 处理路径变更
 function handlePathChange(value: string) {
   if (currentPage.value) {
-    // 确保路径以 / 开头
     currentPage.value.path = value.startsWith('/') ? value : `/${value}`
     projectStore.saveStatus = 'unsaved'
   }
@@ -193,31 +185,17 @@ async function handleLayoutChange(mode: LayoutMode) {
       },
     )
 
-    // 用户确认，执行切换
     projectStore.updatePageConfig({ layout: mode })
-
-    // 同步更新 UI store 的 canvasMode
     uiStore.setCanvasMode(mode)
     ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
   } catch {
-    // 用户取消
     console.log('[PageSettingPane] Layout change cancelled')
   }
 }
 
-// 处理画布尺寸变更
-function handleCanvasSizeChange() {
-  uiStore.setCanvasSize(canvasWidth.value, canvasHeight.value)
-}
-
 // 处理预设选择
-function handlePresetChange(preset: string) {
-  const [w, h] = preset.split('x').map(Number)
-  if (w && h) {
-    canvasWidth.value = w
-    canvasHeight.value = h
-    uiStore.setCanvasSize(w, h)
-  }
+function handlePresetChange(key: string) {
+  sizeStore.setPreset(key)
 }
 </script>
 
@@ -311,7 +289,7 @@ function handlePresetChange(preset: string) {
 }
 
 .size-inputs :deep(.el-input-number) {
-  width: 100px;
+  width: 130px; /* Wider for 4 digits */
 }
 
 /* Element Plus 表单微调 */

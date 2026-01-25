@@ -49,11 +49,17 @@
             v-if="!hasAllCustomStyles(['width', 'height'])"
           >
             <el-form-item label="宽度" v-if="!hasCustomStyle('width')">
-              <el-input v-model="nodeStyle.width" placeholder="auto / 100px / 50%" />
+              <SizeInput
+                v-model="nodeStyle.width"
+                @update:model-value="() => updateStyle('width')"
+              />
             </el-form-item>
 
             <el-form-item label="高度" v-if="!hasCustomStyle('height')">
-              <el-input v-model="nodeStyle.height" placeholder="auto / 100px / 50%" />
+              <SizeInput
+                v-model="nodeStyle.height"
+                @update:model-value="() => updateStyle('height')"
+              />
             </el-form-item>
           </el-collapse-item>
 
@@ -169,6 +175,7 @@ import type { PropConfig } from '@vela/core/types/material'
 import { materialList } from '@vela/materials'
 import { Select } from '@element-plus/icons-vue'
 import { useComponent } from '@/stores/component'
+import SizeInput from '@/components/common/SizeInput.vue'
 
 // 导入所有 Setters
 import StringSetter from '../setters/StringSetter.vue'

@@ -1,16 +1,18 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Container',
   componentName: 'Container',
   title: '容器',
+  version: '1.0.0',
   category: '布局容器',
   isContainer: true,
-  props: {
-    // Container 组件本身没有特殊的 props，都是通过 style 控制
-  },
+  props: {},
   styles: {
     // 尺寸
     width: {
+      name: 'width',
+      label: '宽度',
       title: '宽度',
       setter: 'StringSetter',
       defaultValue: '100%',
@@ -18,6 +20,8 @@ const meta: MaterialMeta = {
       group: '尺寸',
     },
     height: {
+      name: 'height',
+      label: '高度',
       title: '高度',
       setter: 'StringSetter',
       defaultValue: 'auto',
@@ -25,6 +29,8 @@ const meta: MaterialMeta = {
       group: '尺寸',
     },
     minHeight: {
+      name: 'minHeight',
+      label: '最小高度',
       title: '最小高度',
       setter: 'StringSetter',
       defaultValue: '100px',
@@ -32,6 +38,8 @@ const meta: MaterialMeta = {
       group: '尺寸',
     },
     maxWidth: {
+      name: 'maxWidth',
+      label: '最大宽度',
       title: '最大宽度',
       setter: 'StringSetter',
       defaultValue: '',
@@ -41,6 +49,8 @@ const meta: MaterialMeta = {
 
     // 布局
     display: {
+      name: 'display',
+      label: '显示模式',
       title: '显示模式',
       setter: 'SelectSetter',
       setterProps: {
@@ -56,6 +66,8 @@ const meta: MaterialMeta = {
       group: '布局',
     },
     flexDirection: {
+      name: 'flexDirection',
+      label: 'Flex方向',
       title: 'Flex方向',
       setter: 'SelectSetter',
       setterProps: {
@@ -71,6 +83,8 @@ const meta: MaterialMeta = {
       group: '布局',
     },
     justifyContent: {
+      name: 'justifyContent',
+      label: '主轴对齐',
       title: '主轴对齐',
       setter: 'SelectSetter',
       setterProps: {
@@ -88,6 +102,8 @@ const meta: MaterialMeta = {
       group: '布局',
     },
     alignItems: {
+      name: 'alignItems',
+      label: '交叉轴对齐',
       title: '交叉轴对齐',
       setter: 'SelectSetter',
       setterProps: {
@@ -104,6 +120,8 @@ const meta: MaterialMeta = {
       group: '布局',
     },
     flexWrap: {
+      name: 'flexWrap',
+      label: '换行',
       title: '换行',
       setter: 'SelectSetter',
       setterProps: {
@@ -118,6 +136,8 @@ const meta: MaterialMeta = {
       group: '布局',
     },
     gap: {
+      name: 'gap',
+      label: '间距',
       title: '间距',
       setter: 'StringSetter',
       defaultValue: '0',
@@ -127,6 +147,8 @@ const meta: MaterialMeta = {
 
     // 间距
     padding: {
+      name: 'padding',
+      label: '内边距',
       title: '内边距',
       setter: 'StringSetter',
       defaultValue: '16px',
@@ -134,6 +156,8 @@ const meta: MaterialMeta = {
       group: '间距',
     },
     margin: {
+      name: 'margin',
+      label: '外边距',
       title: '外边距',
       setter: 'StringSetter',
       defaultValue: '0',
@@ -143,6 +167,8 @@ const meta: MaterialMeta = {
 
     // 外观
     backgroundColor: {
+      name: 'backgroundColor',
+      label: '背景颜色',
       title: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: 'transparent',
@@ -150,6 +176,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     backgroundImage: {
+      name: 'backgroundImage',
+      label: '背景图片',
       title: '背景图片',
       setter: 'StringSetter',
       defaultValue: '',
@@ -157,6 +185,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     backgroundSize: {
+      name: 'backgroundSize',
+      label: '背景尺寸',
       title: '背景尺寸',
       setter: 'SelectSetter',
       setterProps: {
@@ -170,6 +200,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     borderRadius: {
+      name: 'borderRadius',
+      label: '圆角',
       title: '圆角',
       setter: 'StringSetter',
       defaultValue: '0',
@@ -177,6 +209,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     borderWidth: {
+      name: 'borderWidth',
+      label: '边框宽度',
       title: '边框宽度',
       setter: 'StringSetter',
       defaultValue: '0',
@@ -184,6 +218,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     borderColor: {
+      name: 'borderColor',
+      label: '边框颜色',
       title: '边框颜色',
       setter: 'ColorSetter',
       defaultValue: '#dcdfe6',
@@ -191,6 +227,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     borderStyle: {
+      name: 'borderStyle',
+      label: '边框样式',
       title: '边框样式',
       setter: 'SelectSetter',
       setterProps: {
@@ -206,6 +244,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     boxShadow: {
+      name: 'boxShadow',
+      label: '阴影',
       title: '阴影',
       setter: 'StringSetter',
       defaultValue: '',
@@ -213,6 +253,8 @@ const meta: MaterialMeta = {
       group: '外观',
     },
     opacity: {
+      name: 'opacity',
+      label: '透明度',
       title: '透明度',
       setter: 'NumberSetter',
       setterProps: {
@@ -227,6 +269,8 @@ const meta: MaterialMeta = {
 
     // 定位
     position: {
+      name: 'position',
+      label: '定位方式',
       title: '定位方式',
       setter: 'SelectSetter',
       setterProps: {
@@ -243,6 +287,8 @@ const meta: MaterialMeta = {
       group: '定位',
     },
     zIndex: {
+      name: 'zIndex',
+      label: 'Z轴层级',
       title: 'Z轴层级',
       setter: 'NumberSetter',
       defaultValue: 0,
@@ -252,6 +298,8 @@ const meta: MaterialMeta = {
 
     // 溢出
     overflow: {
+      name: 'overflow',
+      label: '溢出处理',
       title: '溢出处理',
       setter: 'SelectSetter',
       setterProps: {

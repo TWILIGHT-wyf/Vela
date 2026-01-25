@@ -1,21 +1,29 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Image',
   componentName: 'Image',
   title: '图片',
+  version: '1.0.0',
   category: '基础组件',
   props: {
     url: {
+      name: 'url',
+      label: '图片地址',
       title: '图片地址',
-      setter: 'StringSetter',
+      setter: 'ImageSetter',
       defaultValue: 'https://via.placeholder.com/300x200?text=Image',
     },
     alt: {
+      name: 'alt',
+      label: '替代文本',
       title: '替代文本',
       setter: 'StringSetter',
       defaultValue: '',
     },
     fit: {
+      name: 'fit',
+      label: '适应方式',
       title: '适应方式',
       setter: 'SelectSetter',
       setterProps: {
@@ -30,9 +38,42 @@ const meta: MaterialMeta = {
       defaultValue: 'cover',
     },
     lazy: {
+      name: 'lazy',
+      label: '懒加载',
       title: '懒加载',
       setter: 'BooleanSetter',
       defaultValue: false,
+    },
+  },
+  styles: {
+    backgroundColor: {
+      name: 'backgroundColor',
+      label: '背景颜色',
+      title: '背景颜色',
+      setter: 'ColorSetter',
+      defaultValue: 'transparent',
+      group: '外观',
+    },
+    borderRadius: {
+      name: 'borderRadius',
+      label: '圆角',
+      title: '圆角',
+      setter: 'StringSetter',
+      defaultValue: 0,
+      group: '外观',
+    },
+    opacity: {
+      name: 'opacity',
+      label: '透明度',
+      title: '透明度',
+      setter: 'SliderSetter',
+      setterProps: {
+        min: 0,
+        max: 1,
+        step: 0.1,
+      },
+      defaultValue: 1,
+      group: '外观',
     },
   },
   events: ['onLoad', 'onError'],

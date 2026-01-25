@@ -149,7 +149,8 @@ watch(
   () => props.node?.style?.opacity,
   (val) => {
     if (val !== undefined) {
-      opacityValue.value = parseFloat(val as string) * 100
+      // Cast to unknown first to avoid TS error about overlapping types
+      opacityValue.value = parseFloat(val as unknown as string) * 100
     }
   },
   { immediate: true },

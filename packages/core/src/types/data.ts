@@ -1,5 +1,4 @@
 import { JSExpression } from './expression'
-import { NodeSchema } from './schema'
 
 export type { JSExpression } from './expression'
 export type { PropValue } from './expression'
@@ -41,44 +40,4 @@ export interface ApiSchema {
 
   /** 失败回调动作ID */
   onError?: string
-}
-
-/**
- * 页面配置接口
- */
-export interface PageConfig {
-  /** 页面布局模式: 'free' 自由布局(绝对定位) | 'flow' 流式布局(文档流) */
-  layout: 'free' | 'flow'
-  theme?: string
-  [key: string]: unknown
-}
-
-/**
- * 页面全局配置 (完整定义)
- */
-export interface PageSchema {
-  id: string
-  name: string // 页面名称
-  path?: string // 路由路径
-  title?: string // 页面标题
-
-  /** 页面配置 */
-  config?: PageConfig
-
-  /** 页面根节点 (通常是一个名为 'Page' 的容器) */
-  children: NodeSchema
-
-  /** ================= Data Protocol ================= */
-
-  // 全局变量
-  state: VariableSchema[]
-
-  // API 数据源
-  apis: ApiSchema[]
-
-  // 页面生命周期
-  lifecycle?: {
-    onLoad?: string // Action ID
-    onUnload?: string // Action ID
-  }
 }
