@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <SankeyChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { sankeyChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { sankeyChart as SankeyChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(sankeyChart, {
+  name: 'SankeyChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

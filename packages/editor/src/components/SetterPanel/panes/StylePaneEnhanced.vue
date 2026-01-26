@@ -20,13 +20,13 @@
               <el-form-item
                 v-for="style in group.styles"
                 :key="style.name"
-                :label="style.title || style.name"
+                :label="translate(style.title) || style.label || style.name"
               >
                 <component
                   :is="getSetterComponent(style.setter)"
-                  v-model="nodeStyle[style.name]"
+                  :model-value="getMetaStyleValue(style)"
                   v-bind="style.setterProps || {}"
-                  @update:model-value="() => updateStyle(style.name)"
+                  @update:model-value="(val: any) => setMetaStyleValue(style, val)"
                 />
                 <div v-if="style.description" class="style-description">
                   {{ style.description }}
@@ -50,15 +50,15 @@
           >
             <el-form-item label="宽度" v-if="!hasCustomStyle('width')">
               <SizeInput
-                v-model="nodeStyle.width"
-                @update:model-value="() => updateStyle('width')"
+                :model-value="getStyleValue('width')"
+                @update:model-value="(val) => setStyleValue('width', val)"
               />
             </el-form-item>
 
             <el-form-item label="高度" v-if="!hasCustomStyle('height')">
               <SizeInput
-                v-model="nodeStyle.height"
-                @update:model-value="() => updateStyle('height')"
+                :model-value="getStyleValue('height')"
+                @update:model-value="(val) => setStyleValue('height', val)"
               />
             </el-form-item>
           </el-collapse-item>
@@ -70,7 +70,11 @@
             v-if="!hasAllCustomStyles(['position', 'left', 'top'])"
           >
             <el-form-item label="定位方式" v-if="!hasCustomStyle('position')">
-              <el-select v-model="nodeStyle.position" clearable>
+              <el-select
+                :model-value="getStyleValue('position')"
+                @update:model-value="(val: string) => setStyleValue('position', val)"
+                clearable
+              >
                 <el-option label="相对定位" value="relative" />
                 <el-option label="绝对定位" value="absolute" />
                 <el-option label="固定定位" value="fixed" />
@@ -78,12 +82,20 @@
               </el-select>
             </el-form-item>
 
-            <template v-if="nodeStyle.position === 'absolute' || nodeStyle.position === 'fixed'">
+            <template v-if="currentPosition === 'absolute' || currentPosition === 'fixed'">
               <el-form-item label="Left" v-if="!hasCustomStyle('left')">
-                <el-input v-model="nodeStyle.left" placeholder="0px" />
+                <el-input
+                  :model-value="getStyleValue('left')"
+                  placeholder="0px"
+                  @update:model-value="(val: string) => setStyleValue('left', val)"
+                />
               </el-form-item>
               <el-form-item label="Top" v-if="!hasCustomStyle('top')">
-                <el-input v-model="nodeStyle.top" placeholder="0px" />
+                <el-input
+                  :model-value="getStyleValue('top')"
+                  placeholder="0px"
+                  @update:model-value="(val: string) => setStyleValue('top', val)"
+                />
               </el-form-item>
             </template>
           </el-collapse-item>
@@ -97,23 +109,46 @@
             "
           >
             <el-form-item label="背景色" v-if="!hasCustomStyle('backgroundColor')">
-              <el-color-picker v-model="nodeStyle.backgroundColor" show-alpha />
+              <el-color-picker
+                :model-value="getStyleValue('backgroundColor')"
+                show-alpha
+                @update:model-value="
+                  (val: string | null) => setStyleValue('backgroundColor', val)
+                "
+              />
             </el-form-item>
 
             <el-form-item label="文字颜色" v-if="!hasCustomStyle('color')">
-              <el-color-picker v-model="nodeStyle.color" show-alpha />
+              <el-color-picker
+                :model-value="getStyleValue('color')"
+                show-alpha
+                @update:model-value="(val: string | null) => setStyleValue('color', val)"
+              />
             </el-form-item>
 
             <el-form-item label="边框" v-if="!hasCustomStyle('border')">
-              <el-input v-model="nodeStyle.border" placeholder="1px solid #ddd" />
+              <el-input
+                :model-value="getStyleValue('border')"
+                placeholder="1px solid #ddd"
+                @update:model-value="(val: string) => setStyleValue('border', val)"
+              />
             </el-form-item>
 
             <el-form-item label="圆角" v-if="!hasCustomStyle('borderRadius')">
-              <el-input v-model="nodeStyle.borderRadius" placeholder="4px" />
+              <el-input
+                :model-value="getStyleValue('borderRadius')"
+                placeholder="4px"
+                @update:model-value="(val: string) => setStyleValue('borderRadius', val)"
+              />
             </el-form-item>
 
             <el-form-item label="透明度" v-if="!hasCustomStyle('opacity')">
-              <el-slider v-model="opacityValue" :min="0" :max="100" @input="updateOpacity" />
+              <el-slider
+                :model-value="opacityPercent"
+                :min="0"
+                :max="100"
+                @update:model-value="setOpacity"
+              />
             </el-form-item>
           </el-collapse-item>
 
@@ -124,11 +159,19 @@
             v-if="!hasAllCustomStyles(['margin', 'padding'])"
           >
             <el-form-item label="外边距 (Margin)" v-if="!hasCustomStyle('margin')">
-              <el-input v-model="nodeStyle.margin" placeholder="10px 20px" />
+              <el-input
+                :model-value="getStyleValue('margin')"
+                placeholder="10px 20px"
+                @update:model-value="(val: string) => setStyleValue('margin', val)"
+              />
             </el-form-item>
 
             <el-form-item label="内边距 (Padding)" v-if="!hasCustomStyle('padding')">
-              <el-input v-model="nodeStyle.padding" placeholder="10px 20px" />
+              <el-input
+                :model-value="getStyleValue('padding')"
+                placeholder="10px 20px"
+                @update:model-value="(val: string) => setStyleValue('padding', val)"
+              />
             </el-form-item>
           </el-collapse-item>
 
@@ -139,11 +182,19 @@
             v-if="!hasAllCustomStyles(['fontSize', 'fontWeight', 'textAlign'])"
           >
             <el-form-item label="字体大小" v-if="!hasCustomStyle('fontSize')">
-              <el-input v-model="nodeStyle.fontSize" placeholder="14px" />
+              <el-input
+                :model-value="getStyleValue('fontSize')"
+                placeholder="14px"
+                @update:model-value="(val: string) => setStyleValue('fontSize', val)"
+              />
             </el-form-item>
 
             <el-form-item label="字体粗细" v-if="!hasCustomStyle('fontWeight')">
-              <el-select v-model="nodeStyle.fontWeight" clearable>
+              <el-select
+                :model-value="getStyleValue('fontWeight')"
+                clearable
+                @update:model-value="(val: string) => setStyleValue('fontWeight', val)"
+              >
                 <el-option label="正常" value="normal" />
                 <el-option label="粗体" value="bold" />
                 <el-option label="100" value="100" />
@@ -154,7 +205,11 @@
             </el-form-item>
 
             <el-form-item label="文本对齐" v-if="!hasCustomStyle('textAlign')">
-              <el-select v-model="nodeStyle.textAlign" clearable>
+              <el-select
+                :model-value="getStyleValue('textAlign')"
+                clearable
+                @update:model-value="(val: string) => setStyleValue('textAlign', val)"
+              >
                 <el-option label="左对齐" value="left" />
                 <el-option label="居中" value="center" />
                 <el-option label="右对齐" value="right" />
@@ -168,9 +223,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import type { Component } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import { type NodeSchema, translate } from '@vela/core'
 import type { PropConfig } from '@vela/core/types/material'
 import { materialList } from '@vela/materials'
 import { Select } from '@element-plus/icons-vue'
@@ -183,10 +238,12 @@ import NumberSetter from '../setters/NumberSetter.vue'
 import SelectSetter from '../setters/SelectSetter.vue'
 import ColorSetter from '../setters/ColorSetter.vue'
 import BooleanSetter from '../setters/BooleanSetter.vue'
+import ObjectSetter from '../setters/ObjectSetter.vue'
+import JsonSetter from '../setters/JsonSetter.vue'
 
 // Extended style config with name field for iteration
 interface NamedStyleConfig extends PropConfig {
-  name: string
+  isProp?: boolean
 }
 
 interface Props {
@@ -199,18 +256,45 @@ const componentStore = useComponent()
 
 const activeGroups = ref<string[]>(['尺寸', '布局', '外观'])
 const activeNames = ref(['size', 'appearance'])
-const opacityValue = ref(100)
 
-// 获取当前组件的 Meta 样式配置
+// 获取当前组件的 Meta 样式配置（包含 styles 和 group='样式' 的 props）
 const metaStyles = computed<NamedStyleConfig[]>(() => {
   if (!props.node) return []
   const meta = materialList.find((m) => m.componentName === props.node!.componentName)
-  if (!meta?.styles) return []
 
-  return Object.entries(meta.styles).map(([name, config]) => ({
-    name,
-    ...config,
-  }))
+  const styles: NamedStyleConfig[] = []
+
+  // 1. Native Styles
+  if (meta?.styles) {
+    styles.push(
+      ...Object.entries(meta.styles).map(([name, config]) => {
+        const { name: _n, ...rest } = config
+        return {
+          name,
+          ...rest,
+          isProp: false,
+        }
+      }),
+    )
+  }
+
+  // 2. Style Props (group === '样式')
+  if (meta?.props) {
+    styles.push(
+      ...Object.entries(meta.props)
+        .filter(([_, config]) => config.group === '样式')
+        .map(([name, config]) => {
+          const { name: _n, ...rest } = config
+          return {
+            name,
+            ...rest,
+            isProp: true,
+          }
+        }),
+    )
+  }
+
+  return styles
 })
 
 // 按 group 分组样式
@@ -233,58 +317,101 @@ const groupedStyles = computed(() => {
   }))
 })
 
-// 响应式样式对象
-const nodeStyle = computed(() => {
-  if (!props.node) {
-    return {}
-  }
-  if (!props.node.style) {
-    props.node.style = {}
-  }
-  return props.node.style as Record<string, any>
-})
+// ========== 响应式双向绑定（改进后的核心逻辑）==========
 
-// 更新样式时通知 store
-function updateStyle(styleName: string) {
-  if (!props.node) return
-  componentStore.updateStyle(props.node.id, {
-    [styleName]: nodeStyle.value[styleName],
-  })
+/**
+ * 获取样式值（响应式读取）
+ * 通过订阅 styleVersion 实现响应式更新
+ */
+function getStyleValue(styleName: string, defaultValue?: unknown): unknown {
+  if (!props.node) return defaultValue
+
+  // 订阅版本号变化以触发响应式更新
+  const _v = componentStore.styleVersion[props.node.id]
+
+  const nodeStyle = props.node.style || {}
+  const value = nodeStyle[styleName as keyof typeof nodeStyle]
+  return value !== undefined ? value : defaultValue
 }
 
-// 映射 Setter 字符串到组件
+/**
+ * 设置样式值（直接更新 store）
+ * 无需本地状态副本，直接写入 store
+ */
+function setStyleValue(styleName: string, value: unknown): void {
+  if (!props.node) return
+  componentStore.updateStyle(props.node.id, { [styleName]: value })
+}
+
+/**
+ * 获取 Meta 定义的样式/属性值
+ */
+function getMetaStyleValue(style: NamedStyleConfig): unknown {
+  if (!props.node) return style.defaultValue
+
+  // 订阅版本号变化以触发响应式更新
+  const _v = componentStore.styleVersion[props.node.id]
+
+  if (style.isProp) {
+    const nodeProps = props.node.props || {}
+    const value = nodeProps[style.name]
+    return value !== undefined ? value : style.defaultValue
+  } else {
+    const nodeStyle = props.node.style || {}
+    const value = nodeStyle[style.name as keyof typeof nodeStyle]
+    return value !== undefined ? value : style.defaultValue
+  }
+}
+
+/**
+ * 设置 Meta 定义的样式/属性值
+ */
+function setMetaStyleValue(style: NamedStyleConfig, value: unknown): void {
+  if (!props.node) return
+
+  if (style.isProp) {
+    componentStore.updateProps(props.node.id, { [style.name]: value })
+  } else {
+    componentStore.updateStyle(props.node.id, { [style.name]: value })
+  }
+}
+
+// 当前定位方式（用于条件渲染）
+const currentPosition = computed(() => {
+  return getStyleValue('position') as string | undefined
+})
+
+// 透明度百分比值
+const opacityPercent = computed(() => {
+  const opacity = getStyleValue('opacity')
+  if (opacity === undefined) return 100
+  return Math.round(parseFloat(String(opacity)) * 100)
+})
+
+// 设置透明度
+function setOpacity(val: number | number[]): void {
+  const opacity = Array.isArray(val) ? val[0] : val
+  setStyleValue('opacity', (opacity / 100).toString())
+}
+
+// Setter 组件映射（包含回退）
 const setterMap: Record<string, Component> = {
   StringSetter,
   NumberSetter,
   SelectSetter,
   ColorSetter,
   BooleanSetter,
+  ObjectSetter,
+  JsonSetter,
+  // 回退映射：使用现有组件处理缺失的 Setter
+  SliderSetter: NumberSetter,
+  ImageSetter: StringSetter,
+  TextAreaSetter: StringSetter,
 }
 
 const getSetterComponent = (setterName?: string): Component => {
   if (!setterName) return StringSetter
   return setterMap[setterName] || StringSetter
-}
-
-// 监听透明度值
-watch(
-  () => props.node?.style?.opacity,
-  (val) => {
-    if (val !== undefined) {
-      opacityValue.value = parseFloat(val as string) * 100
-    }
-  },
-  { immediate: true },
-)
-
-const updateOpacity = (val: number | number[]) => {
-  const opacity = Array.isArray(val) ? val[0] : val
-  if (props.node && props.node.style) {
-    props.node.style.opacity = (opacity / 100).toString()
-    componentStore.updateStyle(props.node.id, {
-      opacity: (opacity / 100).toString(),
-    })
-  }
 }
 
 // Helper functions for template
@@ -337,6 +464,10 @@ const hasAllCustomStyles = (names: string[]) => {
   font-size: 13px;
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
+}
+
+.style-form :deep(.el-form-item__content) {
+  width: 100%;
 }
 
 .style-description {

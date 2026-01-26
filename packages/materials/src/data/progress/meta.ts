@@ -1,17 +1,22 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Progress',
   componentName: 'Progress',
   title: '进度条',
+  version: '1.0.0',
   category: '数据',
   props: {
     percentage: {
-      title: '进度百分比',
+      name: 'percentage',
+      label: '进度百分比',
       setter: 'NumberSetter',
       defaultValue: 50,
+      group: '数据',
     },
     type: {
-      title: '类型',
+      name: 'type',
+      label: '类型',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -21,9 +26,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'line',
+      group: '样式',
     },
     status: {
-      title: '状态',
+      name: 'status',
+      label: '状态',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -34,44 +41,127 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: '',
+      group: '样式',
     },
     strokeWidth: {
-      title: '进度条高度/宽度',
+      name: 'strokeWidth',
+      label: '进度条高度/宽度',
       setter: 'NumberSetter',
       defaultValue: 20,
+      group: '尺寸',
     },
     textInside: {
-      title: '内置文字',
+      name: 'textInside',
+      label: '内置文字',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '显示',
     },
     showText: {
-      title: '显示文字',
+      name: 'showText',
+      label: '显示文字',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '显示',
+    },
+    textFormat: {
+      name: 'textFormat',
+      label: '文本格式',
+      setter: 'StringSetter',
+      defaultValue: '{value}%',
+      description: '使用 {value} 占位',
+      group: '显示',
+    },
+    showStripe: {
+      name: 'showStripe',
+      label: '显示条纹',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '显示',
+    },
+    animateStripe: {
+      name: 'animateStripe',
+      label: '条纹动画',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '显示',
+    },
+    strokeLinecap: {
+      name: 'strokeLinecap',
+      label: '端点形状',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '圆形', value: 'round' },
+          { label: '方形', value: 'square' },
+          { label: '平头', value: 'butt' },
+        ],
+      },
+      defaultValue: 'round',
+      group: '样式',
     },
     circleWidth: {
-      title: '圆形进度条宽度',
+      name: 'circleWidth',
+      label: '圆形进度条宽度',
       setter: 'NumberSetter',
       defaultValue: 126,
+      group: '尺寸',
     },
     trackColor: {
-      title: '轨道颜色',
+      name: 'trackColor',
+      label: '轨道颜色',
       setter: 'ColorSetter',
       defaultValue: '#e4e7ed',
+      group: '样式',
     },
     barColor: {
-      title: '进度条颜色',
+      name: 'barColor',
+      label: '进度条颜色',
       setter: 'ColorSetter',
       defaultValue: '#409eff',
+      group: '样式',
     },
     textColor: {
-      title: '文字颜色',
+      name: 'textColor',
+      label: '文字颜色',
       setter: 'ColorSetter',
       defaultValue: '#606266',
+      group: '样式',
+    },
+    successColor: {
+      name: 'successColor',
+      label: '成功颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#67c23a',
+      group: '样式',
+    },
+    warningColor: {
+      name: 'warningColor',
+      label: '警告颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#e6a23c',
+      group: '样式',
+    },
+    exceptionColor: {
+      name: 'exceptionColor',
+      label: '异常颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#f56c6c',
+      group: '样式',
+    },
+    useGradient: {
+      name: 'useGradient',
+      label: '使用渐变',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '样式',
     },
   },
   events: [],
+  defaultSize: {
+    width: 300,
+    height: 30,
+  },
 }
 
 export default meta

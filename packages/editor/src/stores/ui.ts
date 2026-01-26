@@ -87,13 +87,13 @@ export const useUIStore = defineStore('ui', () => {
    * 当用户切换到不同页面时，画布模式应该跟随该页面的配置
    */
   const projectStore = useProjectStore()
-  const { currentPageLayout } = storeToRefs(projectStore)
+  const { currentPage } = storeToRefs(projectStore)
 
   watch(
-    currentPageLayout,
+    () => currentPage.value?.config?.layout,
     (newLayout) => {
       if (newLayout && newLayout !== canvasMode.value) {
-        canvasMode.value = newLayout
+        canvasMode.value = newLayout as 'free' | 'flow'
         console.log(`[UIStore] Synced canvasMode to page layout: ${newLayout}`)
       }
     },

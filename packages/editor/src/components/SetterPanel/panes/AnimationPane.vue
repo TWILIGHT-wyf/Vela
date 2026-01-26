@@ -280,6 +280,10 @@ function handleUpdate() {
   padding-bottom: 6px;
 }
 
+.modern-form :deep(.el-form-item__content) {
+  width: 100%;
+}
+
 .modern-input :deep(.el-input__wrapper),
 .modern-select :deep(.el-input__wrapper) {
   background-color: white;

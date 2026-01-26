@@ -1,20 +1,10 @@
-<template>
-  <div class="progress-wrapper">
-    <vProgress v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vProgress } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vProgress, {
+  name: 'Progress',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.progress-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

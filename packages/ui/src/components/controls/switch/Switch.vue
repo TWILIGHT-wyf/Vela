@@ -12,6 +12,7 @@
       :inline-prompt="inlinePrompt"
       :active-icon="activeIcon"
       :inactive-icon="inactiveIcon"
+      :width="width"
       @change="handleChange"
     />
   </div>
@@ -40,6 +41,7 @@ const props = withDefaults(
     activeColor?: string
     inactiveColor?: string
     borderColor?: string
+    width?: number | string
   }>(),
   {
     modelValue: false,

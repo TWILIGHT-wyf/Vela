@@ -1,67 +1,96 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Col',
   componentName: 'Col',
   title: '列容器',
+  version: '1.0.0',
   category: '布局容器',
+  isContainer: true,
   props: {
     span: {
-      title: '栅格占位',
+      name: 'span',
+      label: '栅格占位',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '布局',
     },
     offset: {
-      title: '左偏移',
+      name: 'offset',
+      label: '左偏移',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '布局',
     },
     push: {
-      title: '向右推',
+      name: 'push',
+      label: '向右推',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '布局',
     },
     pull: {
-      title: '向左拉',
+      name: 'pull',
+      label: '向左拉',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '布局',
     },
     xs: {
-      title: '<768px',
+      name: 'xs',
+      label: '<768px',
       setter: 'NumberSetter',
       defaultValue: 24,
+      group: '响应式',
     },
     sm: {
-      title: '≥768px',
+      name: 'sm',
+      label: '>=768px',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '响应式',
     },
     md: {
-      title: '≥992px',
+      name: 'md',
+      label: '>=992px',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '响应式',
     },
     lg: {
-      title: '≥1200px',
+      name: 'lg',
+      label: '>=1200px',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '响应式',
     },
     xl: {
-      title: '≥1920px',
+      name: 'xl',
+      label: '>=1920px',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '响应式',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#ffffff',
+      group: '样式',
     },
     minHeight: {
-      title: '最小高度(px)',
+      name: 'minHeight',
+      label: '最小高度(px)',
       setter: 'NumberSetter',
       defaultValue: 100,
+      group: '尺寸',
     },
   },
   events: [],
+  defaultSize: {
+    width: 300,
+    height: 100,
+  },
 }
 
 export default meta

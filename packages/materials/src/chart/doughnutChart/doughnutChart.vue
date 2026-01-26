@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <DoughnutChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { doughnutChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { doughnutChart as DoughnutChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(doughnutChart, {
+  name: 'DoughnutChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

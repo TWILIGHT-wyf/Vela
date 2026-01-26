@@ -8,6 +8,8 @@
       :disabled="disabled"
       :show-stops="showStops"
       :show-tooltip="showTooltip"
+      :show-input="showInput"
+      :show-input-controls="showInputControls"
       :format-tooltip="formatTooltipFn"
       :range="range"
       :vertical="vertical"
@@ -36,6 +38,8 @@ const props = withDefaults(
     disabled?: boolean
     showStops?: boolean
     showTooltip?: boolean
+    showInput?: boolean
+    showInputControls?: boolean
     range?: boolean
     vertical?: boolean
     height?: string
@@ -59,6 +63,8 @@ const props = withDefaults(
     disabled: false,
     showStops: false,
     showTooltip: true,
+    showInput: false,
+    showInputControls: true,
     range: false,
     vertical: false,
     height: '200px',

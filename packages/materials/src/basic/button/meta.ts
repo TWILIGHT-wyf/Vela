@@ -196,6 +196,10 @@ const meta: MaterialMeta = {
     },
   },
   events: ['onClick'],
+  defaultSize: {
+    width: 100,
+    height: 36,
+  },
 }
 
 export default meta

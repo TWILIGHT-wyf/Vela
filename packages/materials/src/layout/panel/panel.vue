@@ -1,22 +1,10 @@
-<template>
-  <div class="panel-wrapper">
-    <vPanel v-bind="$attrs">
-      <slot />
-    </vPanel>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vPanel } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vPanel, {
+  name: 'Panel',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.panel-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

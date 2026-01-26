@@ -1,20 +1,10 @@
-<template>
-  <div class="switch-wrapper">
-    <vSwitch v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vSwitch } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vSwitch, {
+  name: 'Switch',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.switch-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

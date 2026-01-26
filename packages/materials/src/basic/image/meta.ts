@@ -13,6 +13,7 @@ const meta: MaterialMeta = {
       title: '图片地址',
       setter: 'ImageSetter',
       defaultValue: 'https://via.placeholder.com/300x200?text=Image',
+      group: '基础',
     },
     alt: {
       name: 'alt',
@@ -20,6 +21,7 @@ const meta: MaterialMeta = {
       title: '替代文本',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     fit: {
       name: 'fit',
@@ -36,6 +38,7 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'cover',
+      group: '基础',
     },
     lazy: {
       name: 'lazy',
@@ -43,6 +46,23 @@ const meta: MaterialMeta = {
       title: '懒加载',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '交互',
+    },
+    preview: {
+      name: 'preview',
+      label: '开启预览',
+      title: '开启预览',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '交互',
+    },
+    placeholder: {
+      name: 'placeholder',
+      label: '占位文本',
+      title: '占位文本',
+      setter: 'StringSetter',
+      defaultValue: '请设置图片地址',
+      group: '基础',
     },
   },
   styles: {
@@ -77,6 +97,10 @@ const meta: MaterialMeta = {
     },
   },
   events: ['onLoad', 'onError'],
+  defaultSize: {
+    width: 300,
+    height: 200,
+  },
 }
 
 export default meta

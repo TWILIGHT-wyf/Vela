@@ -1,69 +1,148 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'PieChart',
   componentName: 'PieChart',
   title: '饼图',
+  version: '1.0.0',
   category: '图表',
   props: {
     title: {
-      title: '图表标题',
+      name: 'title',
+      label: '图表标题',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
-    showLegend: {
-      title: '显示图例',
-      setter: 'BooleanSetter',
-      defaultValue: true,
-    },
-    legendPosition: {
-      title: '图例位置',
+    titleAlign: {
+      name: 'titleAlign',
+      label: '标题对齐',
       setter: 'SelectSetter',
       setterProps: {
         options: [
-          { label: '顶部', value: 'top' },
-          { label: '底部', value: 'bottom' },
-          { label: '左侧', value: 'left' },
-          { label: '右侧', value: 'right' },
+          { label: '左对齐', value: 'left' },
+          { label: '居中', value: 'center' },
+          { label: '右对齐', value: 'right' },
         ],
       },
-      defaultValue: 'top',
+      defaultValue: 'center',
+      group: '基础',
     },
-    showTooltip: {
-      title: '显示提示',
+    titleSize: {
+      name: 'titleSize',
+      label: '标题字号',
+      setter: 'NumberSetter',
+      defaultValue: 16,
+      group: '基础',
+    },
+    titleColor: {
+      name: 'titleColor',
+      label: '标题颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#333',
+      group: '基础',
+    },
+    seriesName: {
+      name: 'seriesName',
+      label: '系列名称',
+      setter: 'StringSetter',
+      defaultValue: 'Data',
+      group: '基础',
+    },
+    showLegend: {
+      name: 'showLegend',
+      label: '显示图例',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '图例',
+    },
+    legendOrient: {
+      name: 'legendOrient',
+      label: '图例方向',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '水平', value: 'horizontal' },
+          { label: '垂直', value: 'vertical' },
+        ],
+      },
+      defaultValue: 'horizontal',
+      group: '图例',
+    },
+    legendLeft: {
+      name: 'legendLeft',
+      label: '图例水平位置',
+      setter: 'StringSetter',
+      defaultValue: 'center',
+      group: '图例',
+    },
+    legendTop: {
+      name: 'legendTop',
+      label: '图例垂直位置',
+      setter: 'StringSetter',
+      defaultValue: 'bottom',
+      group: '图例',
     },
     showLabel: {
-      title: '显示标签',
+      name: 'showLabel',
+      label: '显示标签',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '标签',
+    },
+    labelFormatter: {
+      name: 'labelFormatter',
+      label: '标签格式',
+      setter: 'StringSetter',
+      defaultValue: '{b}: {c}',
+      description: '支持 {a}系列名 {b}数据名 {c}数值 {d}百分比',
+      group: '标签',
     },
     radius: {
-      title: '饼图半径',
+      name: 'radius',
+      label: '饼图半径',
+      setter: 'StringSetter',
+      defaultValue: '60%',
+      group: '样式',
+    },
+    centerX: {
+      name: 'centerX',
+      label: '中心X位置',
       setter: 'StringSetter',
       defaultValue: '50%',
+      group: '样式',
     },
-    roseType: {
-      title: '南丁格尔图',
-      setter: 'BooleanSetter',
-      defaultValue: false,
+    centerY: {
+      name: 'centerY',
+      label: '中心Y位置',
+      setter: 'StringSetter',
+      defaultValue: '50%',
+      group: '样式',
     },
     data: {
-      title: '数据',
+      name: 'data',
+      label: '数据',
       setter: 'JsonSetter',
       defaultValue: [
         { name: '类型A', value: 335 },
         { name: '类型B', value: 234 },
         { name: '类型C', value: 154 },
       ],
+      group: '数据',
     },
     option: {
-      title: '高级配置(JSON)',
+      name: 'option',
+      label: '高级配置(JSON)',
       setter: 'JsonSetter',
       defaultValue: {},
+      group: '高级',
     },
   },
   events: [],
+  defaultSize: {
+    width: 400,
+    height: 300,
+  },
 }
 
 export default meta

@@ -1,12 +1,16 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Group',
   componentName: 'Group',
   title: '组合容器',
+  version: '1.0.0',
   category: '布局容器',
+  isContainer: true,
   props: {
     opacity: {
-      title: '透明度',
+      name: 'opacity',
+      label: '透明度',
       setter: 'NumberSetter',
       setterProps: {
         min: 0,
@@ -14,39 +18,56 @@ const meta: MaterialMeta = {
         step: 0.1,
       },
       defaultValue: 1,
+      group: '样式',
     },
     rotation: {
-      title: '旋转角度',
+      name: 'rotation',
+      label: '旋转角度',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '变换',
     },
     borderRadius: {
-      title: '圆角',
+      name: 'borderRadius',
+      label: '圆角',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '样式',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: 'transparent',
+      group: '样式',
     },
     border: {
-      title: '边框',
+      name: 'border',
+      label: '边框',
       setter: 'StringSetter',
       defaultValue: 'none',
+      group: '样式',
     },
     showPlaceholder: {
-      title: '显示占位符',
+      name: 'showPlaceholder',
+      label: '显示占位符',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '显示',
     },
     placeholder: {
-      title: '占位符文本',
+      name: 'placeholder',
+      label: '占位符文本',
       setter: 'StringSetter',
       defaultValue: '组合',
+      group: '显示',
     },
   },
   events: ['onToggle'],
+  defaultSize: {
+    width: 300,
+    height: 200,
+  },
 }
 
 export default meta

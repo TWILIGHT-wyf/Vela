@@ -1,44 +1,22 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'SankeyChart',
   componentName: 'SankeyChart',
   title: '桑基图',
+  version: '1.0.0',
   category: '图表',
   props: {
     title: {
-      title: '图表标题',
+      name: 'title',
+      label: '图表标题',
       setter: 'StringSetter',
       defaultValue: '',
-    },
-    showLabel: {
-      title: '显示标签',
-      setter: 'BooleanSetter',
-      defaultValue: true,
-    },
-    nodeWidth: {
-      title: '节点宽度',
-      setter: 'NumberSetter',
-      defaultValue: 20,
-    },
-    nodeGap: {
-      title: '节点间距',
-      setter: 'NumberSetter',
-      defaultValue: 8,
-    },
-    nodeAlign: {
-      title: '对齐方式',
-      setter: 'SelectSetter',
-      setterProps: {
-        options: [
-          { label: '靠左', value: 'left' },
-          { label: '靠右', value: 'right' },
-          { label: '居中', value: 'justify' },
-        ],
-      },
-      defaultValue: 'justify',
+      group: '基础',
     },
     orient: {
-      title: '布局方向',
+      name: 'orient',
+      label: '布局方向',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -47,9 +25,142 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'horizontal',
+      group: '布局',
+    },
+    left: {
+      name: 'left',
+      label: '左侧位置',
+      setter: 'StringSetter',
+      defaultValue: '5%',
+      group: '布局',
+    },
+    top: {
+      name: 'top',
+      label: '顶部位置',
+      setter: 'StringSetter',
+      defaultValue: '10%',
+      group: '布局',
+    },
+    right: {
+      name: 'right',
+      label: '右侧位置',
+      setter: 'StringSetter',
+      defaultValue: '20%',
+      group: '布局',
+    },
+    bottom: {
+      name: 'bottom',
+      label: '底部位置',
+      setter: 'StringSetter',
+      defaultValue: '10%',
+      group: '布局',
+    },
+    nodeWidth: {
+      name: 'nodeWidth',
+      label: '节点宽度',
+      setter: 'NumberSetter',
+      defaultValue: 20,
+      group: '节点',
+    },
+    nodeGap: {
+      name: 'nodeGap',
+      label: '节点间距',
+      setter: 'NumberSetter',
+      defaultValue: 8,
+      group: '节点',
+    },
+    layoutIterations: {
+      name: 'layoutIterations',
+      label: '布局迭代次数',
+      setter: 'NumberSetter',
+      defaultValue: 32,
+      group: '节点',
+    },
+    nodeAlign: {
+      name: 'nodeAlign',
+      label: '节点对齐',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '靠左', value: 'left' },
+          { label: '靠右', value: 'right' },
+          { label: '两端对齐', value: 'justify' },
+        ],
+      },
+      defaultValue: 'justify',
+      group: '节点',
+    },
+    showLabel: {
+      name: 'showLabel',
+      label: '显示标签',
+      setter: 'BooleanSetter',
+      defaultValue: true,
+      group: '标签',
+    },
+    labelPosition: {
+      name: 'labelPosition',
+      label: '标签位置',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '左侧', value: 'left' },
+          { label: '右侧', value: 'right' },
+          { label: '顶部', value: 'top' },
+          { label: '底部', value: 'bottom' },
+        ],
+      },
+      defaultValue: 'right',
+      group: '标签',
+    },
+    labelFontSize: {
+      name: 'labelFontSize',
+      label: '标签字号',
+      setter: 'NumberSetter',
+      defaultValue: 12,
+      group: '标签',
+    },
+    labelColor: {
+      name: 'labelColor',
+      label: '标签颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#000',
+      group: '标签',
+    },
+    lineColor: {
+      name: 'lineColor',
+      label: '连线颜色',
+      setter: 'StringSetter',
+      defaultValue: 'source',
+      description: '可设置为 source、target 或具体颜色值',
+      group: '连线',
+    },
+    lineOpacity: {
+      name: 'lineOpacity',
+      label: '连线透明度',
+      setter: 'SliderSetter',
+      setterProps: {
+        min: 0,
+        max: 1,
+        step: 0.1,
+      },
+      defaultValue: 0.2,
+      group: '连线',
+    },
+    lineCurveness: {
+      name: 'lineCurveness',
+      label: '连线曲度',
+      setter: 'SliderSetter',
+      setterProps: {
+        min: 0,
+        max: 1,
+        step: 0.1,
+      },
+      defaultValue: 0.5,
+      group: '连线',
     },
     data: {
-      title: '节点数据',
+      name: 'data',
+      label: '节点数据',
       setter: 'JsonSetter',
       defaultValue: [
         { name: 'a' },
@@ -59,9 +170,11 @@ const meta: MaterialMeta = {
         { name: 'e' },
         { name: 'f' },
       ],
+      group: '数据',
     },
     links: {
-      title: '连线数据',
+      name: 'links',
+      label: '连线数据',
       setter: 'JsonSetter',
       defaultValue: [
         { source: 'a', target: 'b', value: 5 },
@@ -72,14 +185,21 @@ const meta: MaterialMeta = {
         { source: 'd', target: 'f', value: 6 },
         { source: 'e', target: 'f', value: 5 },
       ],
+      group: '数据',
     },
     option: {
-      title: '高级配置(JSON)',
+      name: 'option',
+      label: '高级配置(JSON)',
       setter: 'JsonSetter',
       defaultValue: {},
+      group: '高级',
     },
   },
   events: [],
+  defaultSize: {
+    width: 500,
+    height: 350,
+  },
 }
 
 export default meta

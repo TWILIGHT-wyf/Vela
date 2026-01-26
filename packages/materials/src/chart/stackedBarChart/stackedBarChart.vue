@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <StackedBarChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { stackedBarChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { stackedBarChart as StackedBarChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(stackedBarChart, {
+  name: 'StackedBarChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

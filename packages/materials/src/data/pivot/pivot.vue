@@ -1,20 +1,11 @@
-<template>
-  <div class="pivot-wrapper">
-    <vPivot v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vPivot } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vPivot, {
+  name: 'Pivot',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.pivot-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

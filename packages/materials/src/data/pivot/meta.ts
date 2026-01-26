@@ -1,32 +1,43 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Pivot',
   componentName: 'Pivot',
   title: '数据透视表',
+  version: '1.0.0',
   category: '数据展示',
   props: {
     data: {
-      title: '数据源',
+      name: 'data',
+      label: '数据源',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     rows: {
-      title: '行字段',
+      name: 'rows',
+      label: '行字段',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     columns: {
-      title: '列字段',
+      name: 'columns',
+      label: '列字段',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     values: {
-      title: '值字段',
+      name: 'values',
+      label: '值字段',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     aggregator: {
-      title: '聚合函数',
+      name: 'aggregator',
+      label: '聚合函数',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -38,9 +49,14 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'sum',
+      group: '计算',
     },
   },
   events: [],
+  defaultSize: {
+    width: 600,
+    height: 400,
+  },
 }
 
 export default meta

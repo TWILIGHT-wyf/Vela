@@ -1,7 +1,7 @@
 <template>
   <div class="object-setter">
     <!-- 折叠面板风格 -->
-    <template v-if="Object.keys(properties).length > 0">
+    <template v-if="properties && Object.keys(properties).length > 0">
       <div v-for="(propSchema, key) in properties" :key="key" class="object-property-item">
         <div class="property-label">
           <span>{{ propSchema.label || propSchema.title || key }}</span>
@@ -12,9 +12,10 @@
           <!-- 递归渲染 -->
           <component
             :is="getSetterComponent(propSchema.setter)"
-            v-model="internalValue[key]"
+            :model-value="internalValue[key]"
             v-bind="propSchema.setterProps || {}"
             :properties="propSchema.properties"
+            @update:model-value="(val: any) => updateProperty(key, val)"
           />
         </div>
 
@@ -42,6 +43,15 @@ const internalValue = computed({
   get: () => props.modelValue || {},
   set: (val) => emit('update:modelValue', val),
 })
+
+// 更新单个属性，触发整体更新（不可变更新）
+const updateProperty = (key: string, value: any) => {
+  const newValue = {
+    ...internalValue.value,
+    [key]: value,
+  }
+  emit('update:modelValue', newValue)
+}
 
 // 异步加载组件以避免循环依赖（特别是如果 ObjectSetter 需要被 PropsPane 引用）
 // 或者直接静态引用
@@ -71,10 +81,9 @@ function getSetterComponent(setterName?: string) {
 
 <style scoped>
 .object-setter {
-  background-color: var(--el-fill-color-light);
-  border-radius: 4px;
-  padding: 8px;
-  border: 1px solid var(--el-border-color-lighter);
+  padding-left: 10px;
+  border-left: 2px solid var(--el-border-color-lighter);
+  margin-top: 4px;
 }
 
 .object-property-item {

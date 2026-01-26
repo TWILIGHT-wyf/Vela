@@ -1,22 +1,10 @@
-<template>
-  <div class="tabs-wrapper">
-    <vTabs v-bind="$attrs">
-      <slot />
-    </vTabs>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vTabs } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vTabs, {
+  name: 'Tabs',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.tabs-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

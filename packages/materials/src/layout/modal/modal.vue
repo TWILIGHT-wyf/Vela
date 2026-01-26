@@ -1,22 +1,10 @@
-<template>
-  <div class="modal-wrapper">
-    <vModal v-bind="$attrs">
-      <slot />
-    </vModal>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vModal } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vModal, {
+  name: 'Modal',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.modal-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

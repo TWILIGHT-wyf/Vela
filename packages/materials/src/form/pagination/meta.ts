@@ -1,52 +1,74 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Pagination',
   componentName: 'Pagination',
   title: '分页器',
+  version: '1.0.0',
   category: '基础控件',
   props: {
     total: {
-      title: '总条数',
+      name: 'total',
+      label: '总条数',
       setter: 'NumberSetter',
       defaultValue: 100,
+      group: '数据',
     },
     currentPage: {
-      title: '当前页',
+      name: 'currentPage',
+      label: '当前页',
       setter: 'NumberSetter',
       defaultValue: 1,
+      group: '数据',
     },
     pageSize: {
-      title: '每页条数',
+      name: 'pageSize',
+      label: '每页条数',
       setter: 'NumberSetter',
       defaultValue: 10,
+      group: '数据',
     },
     pageSizes: {
-      title: '可选每页条数',
+      name: 'pageSizes',
+      label: '可选每页条数',
       setter: 'JsonSetter',
       defaultValue: [10, 20, 50, 100],
+      group: '数据',
     },
     layout: {
-      title: '布局',
+      name: 'layout',
+      label: '布局',
       setter: 'StringSetter',
       defaultValue: 'prev, pager, next, sizes, total',
+      group: '布局',
     },
     background: {
-      title: '显示背景',
+      name: 'background',
+      label: '显示背景',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '样式',
     },
     small: {
-      title: '小尺寸',
+      name: 'small',
+      label: '小尺寸',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '样式',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: 'transparent',
+      group: '样式',
     },
   },
   events: ['onCurrentChange', 'onSizeChange'],
+  defaultSize: {
+    width: 400,
+    height: 40,
+  },
 }
 
 export default meta

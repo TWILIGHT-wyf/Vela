@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <ScatterChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { scatterChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { scatterChart as ScatterChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(scatterChart, {
+  name: 'ScatterChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

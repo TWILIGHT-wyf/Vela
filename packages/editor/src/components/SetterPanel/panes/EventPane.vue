@@ -297,4 +297,8 @@ function setActionContent(action: ActionSchema, value: string) {
   font-size: 12px;
   font-weight: 500;
 }
+
+.action-item :deep(.el-form-item__content) {
+  width: 100%;
+}
 </style>

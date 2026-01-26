@@ -1,41 +1,36 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
-  name: 'Text', // 必填字段
-  componentName: 'Text', // 兼容字段
+  name: 'Text',
+  componentName: 'Text',
   title: '文本',
-  version: '1.0.0', // 必填字段
+  version: '1.0.0',
   category: '基础组件',
   props: {
     content: {
       name: 'content',
       label: '内容',
-      title: '内容',
       setter: 'StringSetter',
       defaultValue: '文本内容',
+      group: '基础',
     },
-  },
-  styles: {
     fontSize: {
       name: 'fontSize',
       label: '字体大小',
-      title: '字体大小',
-      setter: 'StringSetter',
+      setter: 'NumberSetter',
       defaultValue: 16,
-      group: '文字',
+      group: '样式',
     },
     color: {
       name: 'color',
       label: '文字颜色',
-      title: '文字颜色',
       setter: 'ColorSetter',
       defaultValue: '#000000',
-      group: '文字',
+      group: '样式',
     },
     fontWeight: {
       name: 'fontWeight',
       label: '字体粗细',
-      title: '字体粗细',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -54,12 +49,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'normal',
-      group: '文字',
+      group: '样式',
     },
     textAlign: {
       name: 'textAlign',
       label: '对齐方式',
-      title: '对齐方式',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -70,28 +64,39 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'left',
-      group: '文字',
+      group: '样式',
     },
     lineHeight: {
       name: 'lineHeight',
       label: '行高',
-      title: '行高',
       setter: 'NumberSetter',
       defaultValue: 1.2,
-      group: '文字',
+      group: '样式',
     },
     letterSpacing: {
       name: 'letterSpacing',
       label: '字间距',
-      title: '字间距',
       setter: 'NumberSetter',
       defaultValue: 0,
-      group: '文字',
+      group: '样式',
+    },
+    paddingX: {
+      name: 'paddingX',
+      label: '水平内边距',
+      setter: 'NumberSetter',
+      defaultValue: 0,
+      group: '样式',
+    },
+    paddingY: {
+      name: 'paddingY',
+      label: '垂直内边距',
+      setter: 'NumberSetter',
+      defaultValue: 0,
+      group: '样式',
     },
     opacity: {
       name: 'opacity',
       label: '透明度',
-      title: '透明度',
       setter: 'SliderSetter',
       setterProps: {
         min: 0,
@@ -99,10 +104,14 @@ const meta: MaterialMeta = {
         step: 1,
       },
       defaultValue: 100,
-      group: '外观',
+      group: '样式',
     },
   },
   events: ['onClick'],
+  defaultSize: {
+    width: 120,
+    height: 32,
+  },
 }
 
 export default meta

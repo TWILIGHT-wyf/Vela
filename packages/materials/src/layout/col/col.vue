@@ -1,22 +1,10 @@
-<template>
-  <div class="col-wrapper">
-    <vCol v-bind="$attrs">
-      <slot />
-    </vCol>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vCol } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vCol, {
+  name: 'Col',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.col-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

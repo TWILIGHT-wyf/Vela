@@ -1,20 +1,10 @@
-<template>
-  <div class="stat-wrapper">
-    <vStat v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vStat } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vStat, {
+  name: 'Stat',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.stat-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

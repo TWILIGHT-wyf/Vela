@@ -1,17 +1,22 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Markdown',
   componentName: 'Markdown',
   title: 'Markdown',
+  version: '1.0.0',
   category: '内容',
   props: {
     content: {
-      title: 'Markdown内容',
+      name: 'content',
+      label: 'Markdown内容',
       setter: 'StringSetter',
       defaultValue: '# Hello\n\nThis is **markdown** content.',
+      group: '内容',
     },
     theme: {
-      title: '主题',
+      name: 'theme',
+      label: '主题',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -21,9 +26,14 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'default',
+      group: '样式',
     },
   },
   events: [],
+  defaultSize: {
+    width: 400,
+    height: 300,
+  },
 }
 
 export default meta

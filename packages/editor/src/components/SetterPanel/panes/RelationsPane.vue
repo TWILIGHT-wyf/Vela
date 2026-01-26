@@ -260,6 +260,10 @@ function getComponentIcon(type: string) {
   padding: 16px;
 }
 
+.modern-form :deep(.el-form-item__content) {
+  width: 100%;
+}
+
 .form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,17 +1,23 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Row',
   componentName: 'Row',
   title: '行容器',
+  version: '1.0.0',
   category: '布局容器',
+  isContainer: true,
   props: {
     gutter: {
-      title: '栅格间隔',
+      name: 'gutter',
+      label: '栅格间隔',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '布局',
     },
     justify: {
-      title: '水平排列',
+      name: 'justify',
+      label: '水平排列',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -24,9 +30,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'start',
+      group: '布局',
     },
     align: {
-      title: '垂直对齐',
+      name: 'align',
+      label: '垂直对齐',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -36,24 +44,35 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'top',
+      group: '布局',
     },
     tag: {
-      title: 'HTML标签',
+      name: 'tag',
+      label: 'HTML标签',
       setter: 'StringSetter',
       defaultValue: 'div',
+      group: '基础',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#ffffff',
+      group: '样式',
     },
     minHeight: {
-      title: '最小高度(px)',
+      name: 'minHeight',
+      label: '最小高度(px)',
       setter: 'NumberSetter',
       defaultValue: 100,
+      group: '尺寸',
     },
   },
   events: [],
+  defaultSize: {
+    width: 600,
+    height: 100,
+  },
 }
 
 export default meta

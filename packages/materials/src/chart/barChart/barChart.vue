@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <barChart v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { barChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(barChart, {
+  name: 'BarChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

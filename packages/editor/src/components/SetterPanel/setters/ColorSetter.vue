@@ -4,6 +4,7 @@
     @update:model-value="(val) => $emit('update:modelValue', val || '')"
     v-bind="$attrs"
     show-alpha
+    style="width: 100%"
   />
 </template>
 

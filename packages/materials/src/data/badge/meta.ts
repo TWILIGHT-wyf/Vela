@@ -1,27 +1,36 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Badge',
   componentName: 'Badge',
   title: '徽章',
+  version: '1.0.0',
   category: '数据',
   props: {
     value: {
-      title: '显示值',
+      name: 'value',
+      label: '显示值',
       setter: 'StringSetter',
       defaultValue: '1',
+      group: '基础',
     },
     slotText: {
-      title: '内容文本',
+      name: 'slotText',
+      label: '内容文本',
       setter: 'StringSetter',
       defaultValue: '徽章内容',
+      group: '基础',
     },
     max: {
-      title: '最大值',
+      name: 'max',
+      label: '最大值',
       setter: 'NumberSetter',
       defaultValue: 99,
+      group: '数据',
     },
     type: {
-      title: '类型',
+      name: 'type',
+      label: '类型',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -33,34 +42,49 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'primary',
+      group: '样式',
     },
     isDot: {
-      title: '显示为小圆点',
+      name: 'isDot',
+      label: '显示为小圆点',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '显示',
     },
     hidden: {
-      title: '隐藏徽章',
+      name: 'hidden',
+      label: '隐藏徽章',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '显示',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#409eff',
+      group: '样式',
     },
     textColor: {
-      title: '文字颜色',
+      name: 'textColor',
+      label: '文字颜色',
       setter: 'ColorSetter',
       defaultValue: '#fff',
+      group: '样式',
     },
     fontSize: {
-      title: '字体大小',
+      name: 'fontSize',
+      label: '字体大小',
       setter: 'NumberSetter',
       defaultValue: 12,
+      group: '样式',
     },
   },
   events: [],
+  defaultSize: {
+    width: 100,
+    height: 40,
+  },
 }
 
 export default meta

@@ -1,20 +1,11 @@
-<template>
-  <div class="card-grid-wrapper">
-    <vCardGrid v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vCardGrid } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vCardGrid, {
+  name: 'CardGrid',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.card-grid-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

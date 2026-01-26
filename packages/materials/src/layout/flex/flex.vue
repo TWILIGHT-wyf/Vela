@@ -1,22 +1,10 @@
-<template>
-  <div class="flex-wrapper">
-    <vFlex v-bind="$attrs">
-      <slot />
-    </vFlex>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vFlex } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vFlex, {
+  name: 'Flex',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.flex-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

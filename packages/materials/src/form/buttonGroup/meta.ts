@@ -1,17 +1,22 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'ButtonGroup',
   componentName: 'ButtonGroup',
   title: '按钮组',
+  version: '1.0.0',
   category: '基础控件',
   props: {
     buttons: {
-      title: '按钮配置',
+      name: 'buttons',
+      label: '按钮配置',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     size: {
-      title: '尺寸',
+      name: 'size',
+      label: '尺寸',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -21,9 +26,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'default',
+      group: '样式',
     },
     type: {
-      title: '按钮类型',
+      name: 'type',
+      label: '按钮类型',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -36,9 +43,14 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'primary',
+      group: '样式',
     },
   },
   events: ['onClick'],
+  defaultSize: {
+    width: 200,
+    height: 40,
+  },
 }
 
 export default meta

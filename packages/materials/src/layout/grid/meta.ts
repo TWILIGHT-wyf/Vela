@@ -1,27 +1,37 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Grid',
   componentName: 'Grid',
   title: '网格布局',
+  version: '1.0.0',
   category: '布局容器',
+  isContainer: true,
   props: {
     gridTemplateColumns: {
-      title: '列模板',
+      name: 'gridTemplateColumns',
+      label: '列模板',
       setter: 'StringSetter',
       defaultValue: 'repeat(3, 1fr)',
+      group: '布局',
     },
     gridTemplateRows: {
-      title: '行模板',
+      name: 'gridTemplateRows',
+      label: '行模板',
       setter: 'StringSetter',
       defaultValue: 'auto',
+      group: '布局',
     },
     gridGap: {
-      title: '间距(px)',
+      name: 'gridGap',
+      label: '间距(px)',
       setter: 'NumberSetter',
       defaultValue: 16,
+      group: '布局',
     },
     gridAutoFlow: {
-      title: '自动流动',
+      name: 'gridAutoFlow',
+      label: '自动流动',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -32,19 +42,56 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'row',
+      group: '布局',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#ffffff',
+      group: '外观',
+    },
+    padding: {
+      name: 'padding',
+      label: '内边距',
+      setter: 'NumberSetter',
+      defaultValue: 16,
+      group: '样式',
+    },
+    border: {
+      name: 'border',
+      label: '边框',
+      setter: 'StringSetter',
+      defaultValue: '1px solid #e5e7eb',
+      group: '样式',
+    },
+    borderRadius: {
+      name: 'borderRadius',
+      label: '圆角',
+      setter: 'NumberSetter',
+      defaultValue: 4,
+      group: '样式',
+    },
+    textColor: {
+      name: 'textColor',
+      label: '文字颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#333333',
+      group: '样式',
     },
     minHeight: {
-      title: '最小高度(px)',
+      name: 'minHeight',
+      label: '最小高度(px)',
       setter: 'NumberSetter',
       defaultValue: 200,
+      group: '尺寸',
     },
   },
   events: [],
+  defaultSize: {
+    width: 400,
+    height: 300,
+  },
 }
 
 export default meta

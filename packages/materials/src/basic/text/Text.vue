@@ -1,24 +1,10 @@
-<template>
-  <div class="text-wrapper">
-    <vText v-bind="$attrs">
-      <slot />
-    </vText>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vText } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vText, {
+  name: 'Text',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.text-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-</style>

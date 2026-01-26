@@ -1,20 +1,11 @@
-<template>
-  <div class="table-wrapper">
-    <vTable v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vTable } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vTable, {
+  name: 'Table',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.table-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

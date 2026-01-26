@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm run build:materials:*)",
+      "Bash(pnpm run:*)",
+      "Bash(npx vue-tsc:*)",
+      "Read(//c/c/Users/TWILIGHT/Desktop/Typescript/webgis/**)",
+      "Bash(npm run type-check:*)"
+    ]
+  }
+}

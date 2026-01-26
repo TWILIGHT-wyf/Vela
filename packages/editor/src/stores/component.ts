@@ -714,6 +714,94 @@ export const useComponent = defineStore('component', () => {
     return styleVersion.value[id] || 0
   }
 
+  // ========== 响应式属性引用工厂 ==========
+
+  /**
+   * 创建单个属性的响应式双向绑定引用
+   * @param id 节点 ID
+   * @param propName 属性名
+   * @param defaultValue 默认值
+   * @returns WritableComputedRef - 可直接用于 v-model
+   */
+  function createPropRef<T = unknown>(
+    id: string,
+    propName: string,
+    defaultValue?: T,
+  ): import('vue').WritableComputedRef<T> {
+    return computed({
+      get: () => {
+        // 订阅版本号变化以触发响应式更新
+        const _v = styleVersion.value[id]
+        const node = nodeIndex.get(id)
+        const value = node?.props?.[propName]
+        return (value !== undefined ? value : defaultValue) as T
+      },
+      set: (value: T) => {
+        updateProps(id, { [propName]: value })
+      },
+    })
+  }
+
+  /**
+   * 创建单个样式属性的响应式双向绑定引用
+   * @param id 节点 ID
+   * @param styleName 样式属性名
+   * @param defaultValue 默认值
+   * @returns WritableComputedRef - 可直接用于 v-model
+   */
+  function createStyleRef<T = unknown>(
+    id: string,
+    styleName: string,
+    defaultValue?: T,
+  ): import('vue').WritableComputedRef<T> {
+    return computed({
+      get: () => {
+        // 订阅版本号变化以触发响应式更新
+        const _v = styleVersion.value[id]
+        const node = nodeIndex.get(id)
+        const value = node?.style?.[styleName as keyof typeof node.style]
+        return (value !== undefined ? value : defaultValue) as T
+      },
+      set: (value: T) => {
+        updateStyle(id, { [styleName]: value })
+      },
+    })
+  }
+
+  /**
+   * 批量创建属性的响应式引用映射
+   * @param id 节点 ID
+   * @param propConfigs 属性配置数组 [{name, defaultValue}]
+   * @returns Record<propName, WritableComputedRef>
+   */
+  function createPropRefs(
+    id: string,
+    propConfigs: Array<{ name: string; defaultValue?: unknown }>,
+  ): Record<string, import('vue').WritableComputedRef<unknown>> {
+    const refs: Record<string, import('vue').WritableComputedRef<unknown>> = {}
+    for (const config of propConfigs) {
+      refs[config.name] = createPropRef(id, config.name, config.defaultValue)
+    }
+    return refs
+  }
+
+  /**
+   * 批量创建样式属性的响应式引用映射
+   * @param id 节点 ID
+   * @param styleConfigs 样式配置数组 [{name, defaultValue}]
+   * @returns Record<styleName, WritableComputedRef>
+   */
+  function createStyleRefs(
+    id: string,
+    styleConfigs: Array<{ name: string; defaultValue?: unknown }>,
+  ): Record<string, import('vue').WritableComputedRef<unknown>> {
+    const refs: Record<string, import('vue').WritableComputedRef<unknown>> = {}
+    for (const config of styleConfigs) {
+      refs[config.name] = createStyleRef(id, config.name, config.defaultValue)
+    }
+    return refs
+  }
+
   return {
     // State
     rootNode,
@@ -766,5 +854,11 @@ export const useComponent = defineStore('component', () => {
     updateComponentPosition,
     updateComponentSize,
     updateComponentRotation,
+
+    // 响应式属性引用工厂（推荐使用）
+    createPropRef,
+    createStyleRef,
+    createPropRefs,
+    createStyleRefs,
   }
 })

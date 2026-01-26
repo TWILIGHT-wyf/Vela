@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <RadarChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { radarChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { radarChart as RadarChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(radarChart, {
+  name: 'RadarChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

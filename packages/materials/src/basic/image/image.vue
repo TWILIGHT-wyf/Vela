@@ -1,20 +1,10 @@
-<template>
-  <div class="image-wrapper">
-    <vImage v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vImage } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vImage, {
+  name: 'Image',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.image-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

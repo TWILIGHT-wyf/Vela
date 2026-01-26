@@ -316,6 +316,10 @@ const meta: MaterialMeta = {
     },
   },
   events: [],
+  defaultSize: {
+    width: 300,
+    height: 200,
+  },
 }
 
 export default meta

@@ -32,6 +32,7 @@
         size="small"
         @change="emitValue"
         class="no-border-input"
+        style="width: 100%"
       />
       <el-input
         v-else-if="currentMode === 'relative'"
@@ -39,6 +40,7 @@
         size="small"
         @change="emitValue"
         class="no-border-input"
+        style="width: 100%"
       >
         <template #append>%</template>
       </el-input>

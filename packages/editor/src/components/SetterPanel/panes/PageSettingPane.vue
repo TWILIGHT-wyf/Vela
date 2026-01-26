@@ -302,6 +302,10 @@ function handlePresetChange(key: string) {
   color: var(--el-text-color-primary);
 }
 
+:deep(.el-form-item__content) {
+  width: 100%;
+}
+
 :deep(.el-divider) {
   margin: 20px 0;
 }

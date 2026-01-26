@@ -1,20 +1,11 @@
-<template>
-  <div class="chart-wrapper">
-    <FunnelChartBase v-bind="$attrs" />
-  </div>
-</template>
+<script lang="ts">
+import { funnelChart } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-<script setup lang="ts">
-import { funnelChart as FunnelChartBase } from '@vela/ui'
-
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(funnelChart, {
+  name: 'FunnelChart',
+  connectData: true,
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

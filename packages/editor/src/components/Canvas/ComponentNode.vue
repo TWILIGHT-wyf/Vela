@@ -7,18 +7,23 @@
     @mousedown.stop="handleMouseDown"
     @click.stop="handleClick"
   >
-    <!-- Render the actual component with visual styles -->
-    <UnifiedComponent :node="node" :style="innerStyle">
+    <!-- Render the actual component with visual styles and reactive props -->
+    <component
+      :is="componentType"
+      :id="node.id"
+      v-bind="reactiveProps"
+      :style="innerStyle"
+    >
       <!-- Recursive children rendering -->
       <slot />
-    </UnifiedComponent>
+    </component>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NodeSchema } from '@vela/core'
-import { UnifiedComponent } from '@vela/renderer'
+import { getComponent, hasComponent } from '@vela/materials'
 import { useComponentStyle } from '@/composables/useComponentStyle'
 import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
@@ -33,6 +38,22 @@ const compStore = useComponent()
 const { selectedIds } = storeToRefs(compStore)
 
 const isSelected = computed(() => selectedIds.value.includes(props.node.id))
+
+// 组件解析
+const componentType = computed(() => {
+  const name = props.node.componentName
+  if (hasComponent(name)) {
+    return getComponent(name)
+  }
+  return 'div'
+})
+
+// 响应式 props - 订阅 styleVersion 以触发更新
+const reactiveProps = computed(() => {
+  // 订阅 styleVersion 以触发响应式更新
+  const _v = compStore.styleVersion[props.node.id]
+  return props.node.props || {}
+})
 
 const reactiveStyle = computed(() => {
   // Access styleVersion to trigger reactivity

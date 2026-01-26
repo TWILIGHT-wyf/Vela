@@ -1,37 +1,50 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'CheckboxGroup',
   componentName: 'CheckboxGroup',
   title: '复选框组',
+  version: '1.0.0',
   category: '基础控件',
   props: {
     options: {
-      title: '选项数据',
+      name: 'options',
+      label: '选项数据',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '数据',
     },
     defaultValue: {
-      title: '默认选中值',
+      name: 'defaultValue',
+      label: '默认选中值',
       setter: 'JsonSetter',
       defaultValue: [],
+      group: '基础',
     },
     min: {
-      title: '最少选中数',
+      name: 'min',
+      label: '最少选中数',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '交互',
     },
     max: {
-      title: '最多选中数',
+      name: 'max',
+      label: '最多选中数',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '交互',
     },
     disabled: {
-      title: '禁用',
+      name: 'disabled',
+      label: '禁用',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '交互',
     },
     size: {
-      title: '尺寸',
+      name: 'size',
+      label: '尺寸',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -41,9 +54,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'default',
+      group: '样式',
     },
     direction: {
-      title: '布局方向',
+      name: 'direction',
+      label: '布局方向',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -52,14 +67,21 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'horizontal',
+      group: '布局',
     },
     checkedColor: {
-      title: '选中颜色',
+      name: 'checkedColor',
+      label: '选中颜色',
       setter: 'ColorSetter',
       defaultValue: '#409eff',
+      group: '样式',
     },
   },
   events: ['onChange'],
+  defaultSize: {
+    width: 300,
+    height: 40,
+  },
 }
 
 export default meta

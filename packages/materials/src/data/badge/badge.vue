@@ -1,22 +1,10 @@
-<template>
-  <div class="badge-wrapper">
-    <vBadge v-bind="$attrs">
-      <slot />
-    </vBadge>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vBadge } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vBadge, {
+  name: 'Badge',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.badge-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

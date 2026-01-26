@@ -3,6 +3,7 @@
     <el-image
       v-if="url"
       :src="url"
+      :alt="alt"
       :style="imageStyle"
       :fit="fit"
       :lazy="lazy"
@@ -40,6 +41,7 @@ import { ElImage, ElIcon } from 'element-plus'
 const props = withDefaults(
   defineProps<{
     url?: string
+    alt?: string
     fit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down'
     lazy?: boolean
     preview?: boolean

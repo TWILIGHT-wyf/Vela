@@ -1,20 +1,10 @@
-<template>
-  <div class="slider-wrapper">
-    <vSlider v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vSlider } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vSlider, {
+  name: 'Slider',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.slider-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

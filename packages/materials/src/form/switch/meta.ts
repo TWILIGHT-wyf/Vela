@@ -1,46 +1,71 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Switch',
   componentName: 'Switch',
   title: '开关',
+  version: '1.0.0',
   category: '基础控件',
   props: {
     defaultValue: {
+      name: 'defaultValue',
+      label: '默认值',
       title: '默认值',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '基础',
     },
     activeText: {
+      name: 'activeText',
+      label: '开启时文字',
       title: '开启时文字',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     inactiveText: {
+      name: 'inactiveText',
+      label: '关闭时文字',
       title: '关闭时文字',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     width: {
+      name: 'width',
+      label: '宽度(px)',
       title: '宽度(px)',
       setter: 'NumberSetter',
       defaultValue: 40,
+      group: '尺寸',
     },
     inlinePrompt: {
+      name: 'inlinePrompt',
+      label: '文字内嵌',
       title: '文字内嵌',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '显示',
     },
     disabled: {
+      name: 'disabled',
+      label: '禁用',
       title: '禁用',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '交互',
     },
     loading: {
+      name: 'loading',
+      label: '加载中',
       title: '加载中',
       setter: 'BooleanSetter',
       defaultValue: false,
+      group: '交互',
     },
     size: {
+      name: 'size',
+      label: '尺寸',
       title: '尺寸',
       setter: 'SelectSetter',
       setterProps: {
@@ -51,19 +76,54 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'default',
+      group: '样式',
     },
     activeColor: {
+      name: 'activeColor',
+      label: '开启颜色',
       title: '开启颜色',
       setter: 'ColorSetter',
       defaultValue: '#409eff',
+      group: '样式',
     },
     inactiveColor: {
+      name: 'inactiveColor',
+      label: '关闭颜色',
       title: '关闭颜色',
       setter: 'ColorSetter',
       defaultValue: '#dcdfe6',
+      group: '样式',
+    },
+    padding: {
+      name: 'padding',
+      label: '内边距',
+      title: '内边距',
+      setter: 'NumberSetter',
+      defaultValue: 16,
+      group: '样式',
+    },
+    backgroundColor: {
+      name: 'backgroundColor',
+      label: '背景颜色',
+      title: '背景颜色',
+      setter: 'ColorSetter',
+      defaultValue: 'transparent',
+      group: '样式',
+    },
+    borderColor: {
+      name: 'borderColor',
+      label: '边框颜色',
+      title: '边框颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#dcdfe6',
+      group: '样式',
     },
   },
   events: ['onChange'],
+  defaultSize: {
+    width: 60,
+    height: 32,
+  },
 }
 
 export default meta

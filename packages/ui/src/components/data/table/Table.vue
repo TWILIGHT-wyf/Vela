@@ -2,17 +2,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { ElTable, ElTableColumn } from 'element-plus'
-
-export interface TableColumn {
-  prop: string
-  label: string
-  width?: number | string
-  minWidth?: number | string
-  align?: 'left' | 'center' | 'right'
-  sortable?: boolean
-  fixed?: boolean | 'left' | 'right'
-  type?: 'index' | 'selection'
-}
+import type { TableColumn } from '@vela/core/types'
 
 const props = withDefaults(
   defineProps<{

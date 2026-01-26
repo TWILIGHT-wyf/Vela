@@ -1,20 +1,10 @@
-<template>
-  <div class="countup-wrapper">
-    <vCountUp v-bind="$attrs" />
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vCountUp } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vCountUp, {
+  name: 'CountUp',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.countup-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>

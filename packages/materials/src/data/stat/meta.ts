@@ -1,37 +1,50 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Stat',
   componentName: 'Stat',
   title: '统计指标',
+  version: '1.0.0',
   category: '数据',
   props: {
     title: {
-      title: '标题',
+      name: 'title',
+      label: '标题',
       setter: 'StringSetter',
       defaultValue: '总销售额',
+      group: '基础',
     },
     value: {
-      title: '数值',
+      name: 'value',
+      label: '数值',
       setter: 'NumberSetter',
       defaultValue: 12345,
+      group: '数据',
     },
     precision: {
-      title: '精度',
+      name: 'precision',
+      label: '精度',
       setter: 'NumberSetter',
       defaultValue: 0,
+      group: '数据',
     },
     prefix: {
-      title: '前缀',
+      name: 'prefix',
+      label: '前缀',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     suffix: {
-      title: '后缀',
+      name: 'suffix',
+      label: '后缀',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     trend: {
-      title: '趋势',
+      name: 'trend',
+      label: '趋势',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -41,44 +54,63 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'none',
+      group: '数据',
     },
     trendValue: {
-      title: '趋势值',
+      name: 'trendValue',
+      label: '趋势值',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '数据',
     },
     backgroundColor: {
-      title: '背景颜色',
+      name: 'backgroundColor',
+      label: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#fff',
+      group: '样式',
     },
     borderColor: {
-      title: '边框颜色',
+      name: 'borderColor',
+      label: '边框颜色',
       setter: 'ColorSetter',
       defaultValue: '#e0e0e0',
+      group: '样式',
     },
     borderRadius: {
-      title: '边框圆角',
+      name: 'borderRadius',
+      label: '边框圆角',
       setter: 'NumberSetter',
       defaultValue: 8,
+      group: '样式',
     },
     titleColor: {
-      title: '标题颜色',
+      name: 'titleColor',
+      label: '标题颜色',
       setter: 'ColorSetter',
       defaultValue: '#333',
+      group: '样式',
     },
     valueColor: {
-      title: '数值颜色',
+      name: 'valueColor',
+      label: '数值颜色',
       setter: 'ColorSetter',
       defaultValue: '#3f8600',
+      group: '样式',
     },
     valueFontSize: {
-      title: '数值字体大小',
+      name: 'valueFontSize',
+      label: '数值字体大小',
       setter: 'NumberSetter',
       defaultValue: 24,
+      group: '样式',
     },
   },
   events: [],
+  defaultSize: {
+    width: 200,
+    height: 120,
+  },
 }
 
 export default meta

@@ -1,11 +1,16 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Flex',
   componentName: 'Flex',
   title: '弹性布局',
+  version: '1.0.0',
   category: '布局容器',
+  isContainer: true,
   props: {
     flexDirection: {
+      name: 'flexDirection',
+      label: '主轴方向',
       title: '主轴方向',
       setter: 'SelectSetter',
       setterProps: {
@@ -15,8 +20,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'row',
+      group: '布局',
     },
     justifyContent: {
+      name: 'justifyContent',
+      label: '主轴对齐',
       title: '主轴对齐',
       setter: 'SelectSetter',
       setterProps: {
@@ -30,8 +38,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'flex-start',
+      group: '布局',
     },
     alignItems: {
+      name: 'alignItems',
+      label: '交叉轴对齐',
       title: '交叉轴对齐',
       setter: 'SelectSetter',
       setterProps: {
@@ -44,8 +55,11 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'stretch',
+      group: '布局',
     },
     flexWrap: {
+      name: 'flexWrap',
+      label: '换行',
       title: '换行',
       setter: 'SelectSetter',
       setterProps: {
@@ -56,24 +70,38 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'nowrap',
+      group: '布局',
     },
     gap: {
+      name: 'gap',
+      label: '间距(px)',
       title: '间距(px)',
       setter: 'NumberSetter',
       defaultValue: 16,
+      group: '布局',
     },
     backgroundColor: {
+      name: 'backgroundColor',
+      label: '背景颜色',
       title: '背景颜色',
       setter: 'ColorSetter',
       defaultValue: '#ffffff',
+      group: '外观',
     },
     minHeight: {
+      name: 'minHeight',
+      label: '最小高度(px)',
       title: '最小高度(px)',
       setter: 'NumberSetter',
       defaultValue: 100,
+      group: '尺寸',
     },
   },
   events: [],
+  defaultSize: {
+    width: 400,
+    height: 200,
+  },
 }
 
 export default meta

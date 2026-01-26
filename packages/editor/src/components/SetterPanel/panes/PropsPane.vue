@@ -25,11 +25,12 @@
           <el-form-item
             v-for="prop in group.props"
             :key="prop.name"
-            :label="prop.title || prop.name"
+            :label="translate(prop.title) || prop.label || prop.name"
           >
             <component
               :is="getSetterComponent(prop.setter)"
-              v-model="propValues[prop.name]"
+              :model-value="getPropValue(prop.name, prop.defaultValue)"
+              @update:model-value="setPropValue(prop.name, $event)"
               v-bind="prop.setterProps || {}"
               :properties="prop.properties"
             />
@@ -42,10 +43,15 @@
 
       <!-- 无分组的属性 -->
       <template v-else-if="metaProps.length > 0">
-        <el-form-item v-for="prop in metaProps" :key="prop.name" :label="prop.title || prop.name">
+        <el-form-item
+          v-for="prop in metaProps"
+          :key="prop.name"
+          :label="translate(prop.title) || prop.label || prop.name"
+        >
           <component
             :is="getSetterComponent(prop.setter)"
-            v-model="propValues[prop.name]"
+            :model-value="getPropValue(prop.name, prop.defaultValue)"
+            @update:model-value="setPropValue(prop.name, $event)"
             v-bind="prop.setterProps || {}"
           />
           <div v-if="prop.description" class="prop-description">
@@ -58,9 +64,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { Component } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import { type NodeSchema, translate } from '@vela/core'
 import type { PropConfig } from '@vela/core/types/material'
 import { materialList } from '@vela/materials'
 import { Select } from '@element-plus/icons-vue'
@@ -77,7 +83,7 @@ import ObjectSetter from '../setters/ObjectSetter.vue'
 
 // Extended prop config with name field for iteration
 interface NamedPropConfig extends PropConfig {
-  name: string
+  // name is already in PropConfig
 }
 
 interface Props {
@@ -88,7 +94,7 @@ const props = defineProps<Props>()
 
 const activeGroups = ref<string[]>(['基础', '样式', '状态'])
 
-// 导入所有 Setters
+// Setter 组件映射（包含回退）
 const setterMap: Record<string, Component> = {
   StringSetter,
   NumberSetter,
@@ -97,20 +103,29 @@ const setterMap: Record<string, Component> = {
   BooleanSetter,
   JsonSetter,
   ObjectSetter,
+  // 回退映射：使用现有组件处理缺失的 Setter
+  SliderSetter: NumberSetter,
+  ImageSetter: StringSetter,
+  TextAreaSetter: StringSetter,
 }
 
 // 使用 Component Store 直接更新
 const componentStore = useComponent()
 
-// 获取当前组件的 Meta 定义（只取 props）
+// 获取当前组件的 Meta 定义（只取 props，排除 '样式' 分组）
 const metaProps = computed<NamedPropConfig[]>(() => {
   if (!props.node) return []
   const meta = materialList.find((m) => m.componentName === props.node!.componentName)
   if (!meta?.props) return []
-  return Object.entries(meta.props).map(([name, config]) => ({
-    name,
-    ...config,
-  }))
+  return Object.entries(meta.props)
+    .filter(([_, config]) => config.group !== '样式')
+    .map(([name, config]) => {
+      const { name: _n, ...rest } = config
+      return {
+        name,
+        ...rest,
+      }
+    })
 })
 
 // 按 group 分组属性
@@ -133,63 +148,31 @@ const groupedProps = computed(() => {
   }))
 })
 
-// 属性值映射（用于双向绑定）
-const propValues = ref<Record<string, unknown>>({})
+// ========== 响应式双向绑定（改进后的核心逻辑）==========
 
-// 初始化属性值
-function initPropValues() {
-  if (props.node?.props) {
-    propValues.value = { ...props.node.props }
-  } else {
-    propValues.value = {}
-  }
+/**
+ * 获取属性值（响应式读取）
+ * 通过订阅 styleVersion 实现响应式更新
+ */
+function getPropValue(propName: string, defaultValue?: unknown): unknown {
+  if (!props.node) return defaultValue
+
+  // 订阅版本号变化以触发响应式更新
+  const _v = componentStore.styleVersion[props.node.id]
+
+  const nodeProps = props.node.props || {}
+  const value = nodeProps[propName]
+  return value !== undefined ? value : defaultValue
 }
 
-// 初始化
-initPropValues()
-
-// 监听属性值变化，直接通过 Component Store 更新
-watch(
-  propValues,
-  (newValues, oldValues) => {
-    if (!props.node) return
-
-    Object.entries(newValues).forEach(([propName, newValue]) => {
-      const oldValue = oldValues?.[propName]
-      if (newValue !== oldValue) {
-        // 直接使用 updateProps 更新单个属性
-        componentStore.updateProps(props.node!.id, { [propName]: newValue })
-        console.log(`[PropsPane] Updated ${propName}:`, newValue)
-      }
-    })
-  },
-  { deep: true },
-)
-
-// 监听节点变化，重置属性值
-watch(
-  () => props.node?.id,
-  () => {
-    initPropValues()
-  },
-  { immediate: true },
-)
-
-// 监听节点 props 变化（外部更新时同步）
-watch(
-  () => props.node?.props,
-  (newProps) => {
-    if (newProps) {
-      // 只更新有变化的属性，避免触发循环
-      Object.entries(newProps).forEach(([key, value]) => {
-        if (propValues.value[key] !== value) {
-          propValues.value[key] = value
-        }
-      })
-    }
-  },
-  { deep: true },
-)
+/**
+ * 设置属性值（直接更新 store）
+ * 无需本地状态副本，直接写入 store
+ */
+function setPropValue(propName: string, value: unknown): void {
+  if (!props.node) return
+  componentStore.updateProps(props.node.id, { [propName]: value })
+}
 
 // 映射 Setter 字符串到组件
 const getSetterComponent = (setterName?: string): Component => {
@@ -239,6 +222,10 @@ const getSetterComponent = (setterName?: string): Component => {
   color: var(--el-text-color-primary);
   margin-bottom: 8px;
   font-size: 13px;
+}
+
+.props-form :deep(.el-form-item__content) {
+  width: 100%;
 }
 
 .prop-description {

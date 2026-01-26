@@ -23,6 +23,7 @@ import {
   extractSankeyNodes,
   extractSankeyLinks,
 } from '@vela/ui'
+import { useComponent } from '@/stores/component'
 
 /**
  * 数据源配置接口（扩展 NodeSchema 的 dataSource）
@@ -264,6 +265,8 @@ const defaultAdapter: ChartDataAdapter = (props) => props
  * @returns resolvedProps - 合并数据源后的最终 props
  */
 export function useDataSourceAdapter(node: Ref<NodeSchema>) {
+  const componentStore = useComponent()
+
   // 获取数据源配置
   const dataSourceConfig = computed(() => node.value.dataSource as DataSourceConfig | undefined)
 
@@ -285,6 +288,10 @@ export function useDataSourceAdapter(node: Ref<NodeSchema>) {
 
   // 计算最终的 props
   const resolvedProps = computed(() => {
+    // 订阅 styleVersion 以触发响应式更新
+    // 当 props 或 style 通过 store 更新时，styleVersion 会递增
+    const _v = componentStore.styleVersion[node.value.id]
+
     const baseProps = { ...node.value.props }
 
     // 处理 option 字段（可能是 JSON 字符串）

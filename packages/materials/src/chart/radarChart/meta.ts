@@ -1,22 +1,29 @@
 import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'RadarChart',
   componentName: 'RadarChart',
   title: '雷达图',
+  version: '1.0.0',
   category: '图表',
   props: {
     title: {
-      title: '图表标题',
+      name: 'title',
+      label: '图表标题',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
-    showLegend: {
-      title: '显示图例',
-      setter: 'BooleanSetter',
-      defaultValue: true,
+    seriesName: {
+      name: 'seriesName',
+      label: '系列名称',
+      setter: 'StringSetter',
+      defaultValue: 'Radar',
+      group: '基础',
     },
     radarShape: {
-      title: '雷达形状',
+      name: 'radarShape',
+      label: '雷达形状',
       setter: 'SelectSetter',
       setterProps: {
         options: [
@@ -25,14 +32,44 @@ const meta: MaterialMeta = {
         ],
       },
       defaultValue: 'polygon',
+      group: '样式',
+    },
+    splitNumber: {
+      name: 'splitNumber',
+      label: '分割段数',
+      setter: 'NumberSetter',
+      defaultValue: 5,
+      group: '样式',
+    },
+    axisNameColor: {
+      name: 'axisNameColor',
+      label: '轴名称颜色',
+      setter: 'ColorSetter',
+      defaultValue: '#333',
+      group: '样式',
     },
     showArea: {
-      title: '显示区域填充',
+      name: 'showArea',
+      label: '显示区域填充',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '样式',
+    },
+    areaOpacity: {
+      name: 'areaOpacity',
+      label: '填充透明度',
+      setter: 'SliderSetter',
+      setterProps: {
+        min: 0,
+        max: 1,
+        step: 0.1,
+      },
+      defaultValue: 0.3,
+      group: '样式',
     },
     indicators: {
-      title: '指标',
+      name: 'indicators',
+      label: '指标',
       setter: 'JsonSetter',
       defaultValue: [
         { name: '销售', max: 100 },
@@ -40,9 +77,11 @@ const meta: MaterialMeta = {
         { name: '技术', max: 100 },
         { name: '客服', max: 100 },
       ],
+      group: '数据',
     },
     seriesData: {
-      title: '系列数据',
+      name: 'seriesData',
+      label: '系列数据',
       setter: 'JsonSetter',
       defaultValue: [
         {
@@ -54,14 +93,21 @@ const meta: MaterialMeta = {
           value: [70, 80, 90, 60],
         },
       ],
+      group: '数据',
     },
     option: {
-      title: '高级配置(JSON)',
+      name: 'option',
+      label: '高级配置(JSON)',
       setter: 'JsonSetter',
       defaultValue: {},
+      group: '高级',
     },
   },
   events: [],
+  defaultSize: {
+    width: 400,
+    height: 300,
+  },
 }
 
 export default meta

@@ -1,32 +1,46 @@
-﻿import type { MaterialMeta } from '@vela/core/types'
+import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
+  name: 'Iframe',
   componentName: 'Iframe',
   title: 'IFrame',
+  version: '1.0.0',
   category: '内容',
   props: {
     src: {
-      title: '网页地址',
+      name: 'src',
+      label: '网页地址',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     title: {
-      title: '标题',
+      name: 'title',
+      label: '标题',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '基础',
     },
     sandbox: {
-      title: '沙箱模式',
+      name: 'sandbox',
+      label: '沙箱模式',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '安全',
     },
     allow: {
-      title: '权限策略',
+      name: 'allow',
+      label: '权限策略',
       setter: 'StringSetter',
       defaultValue: '',
+      group: '安全',
     },
   },
   events: ['onLoad'],
+  defaultSize: {
+    width: 600,
+    height: 400,
+  },
 }
 
 export default meta

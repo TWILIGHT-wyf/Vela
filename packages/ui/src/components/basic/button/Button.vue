@@ -48,6 +48,7 @@ const props = withDefaults(
     fontSize?: number | string // 标准化类型：支持 string | number
     fontWeight?: number | string
     borderRadius?: number | string // 标准化类型
+    padding?: string
   }>(),
   {
     text: '按钮',
@@ -98,6 +99,10 @@ const buttonStyle = computed<CSSProperties>(() => {
   if (props.borderRadius !== undefined) {
     style.borderRadius =
       typeof props.borderRadius === 'number' ? `${props.borderRadius}px` : props.borderRadius
+  }
+
+  if (props.padding) {
+    style.padding = props.padding
   }
 
   return style

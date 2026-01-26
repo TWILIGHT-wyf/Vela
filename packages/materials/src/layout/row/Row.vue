@@ -1,22 +1,10 @@
-<template>
-  <div class="row-wrapper">
-    <vRow v-bind="$attrs">
-      <slot />
-    </vRow>
-  </div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts">
 import { vRow } from '@vela/ui'
+import { defineMaterial } from '../../utils'
 
-defineOptions({
-  inheritAttrs: false,
+export default defineMaterial(vRow, {
+  name: 'Row',
+  connectEvent: true,
+  fillContainer: true,
 })
 </script>
-
-<style scoped>
-.row-wrapper {
-  width: 100%;
-  height: 100%;
-}
-</style>
