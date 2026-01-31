@@ -15,6 +15,10 @@ export default defineConfig({
       '@vela/generator': fileURLToPath(new URL('../generator/src', import.meta.url)),
     },
   },
+  define: {
+    // Babel 需要 process.env 在浏览器环境中可用
+    'process.env': {},
+  },
   server: {
     port: 5173,
     proxy: {

@@ -1,4 +1,4 @@
-import type { Component, ActionConfig } from './components'
+import type { Component, ActionConfig, JSExpression, LoopConfig } from './components'
 
 /**
  * 组件类型到库导出名的映射
@@ -134,6 +134,74 @@ function generateTemplate(
 }
 
 /**
+ * 编译 JSExpression 或字符串为模板表达式
+ */
+function compileExpression(expr: boolean | string | JSExpression | undefined): string {
+  if (expr === undefined || expr === null) return ''
+  if (typeof expr === 'boolean') return String(expr)
+  if (typeof expr === 'string') return expr
+  if (typeof expr === 'object' && expr.type === 'JSExpression') {
+    return expr.value
+  }
+  return String(expr)
+}
+
+/**
+ * 生成 v-if 指令
+ */
+function generateVIfDirective(comp: Component, indentStr: string): string {
+  if (comp.condition === undefined) return ''
+
+  const condition = compileExpression(comp.condition)
+  if (!condition || condition === 'true') return ''
+  if (condition === 'false') return `${indentStr}  v-if="false"\n`
+
+  return `${indentStr}  v-if="${condition}"\n`
+}
+
+/**
+ * 生成 v-show 指令
+ */
+function generateVShowDirective(comp: Component, indentStr: string): string {
+  if (comp.visible === undefined) return ''
+
+  const visible = compileExpression(comp.visible)
+  if (!visible || visible === 'true') return ''
+  if (visible === 'false') return `${indentStr}  v-show="false"\n`
+
+  return `${indentStr}  v-show="${visible}"\n`
+}
+
+/**
+ * 生成 v-for 指令
+ */
+function generateVForDirective(comp: Component, indentStr: string): string {
+  if (!comp.loop) return ''
+
+  const { data, itemArg = 'item', indexArg = 'index' } = comp.loop
+
+  // 编译数据源表达式
+  let dataExpr: string
+  if (Array.isArray(data)) {
+    // 静态数组 - 直接使用 JSON
+    dataExpr = JSON.stringify(data)
+  } else if (typeof data === 'object' && (data as JSExpression).type === 'JSExpression') {
+    // JSExpression
+    dataExpr = (data as JSExpression).value
+  } else if (typeof data === 'string') {
+    dataExpr = data
+  } else {
+    return ''
+  }
+
+  // 生成 v-for 和 :key
+  let result = `${indentStr}  v-for="(${itemArg}, ${indexArg}) in ${dataExpr}"\n`
+  result += `${indentStr}  :key="${indexArg}"\n`
+
+  return result
+}
+
+/**
  * 生成单个组件的模板
  */
 function generateComponentTemplate(
@@ -152,9 +220,22 @@ function generateComponentTemplate(
   const tagName = getComponentTagName(comp.type)
 
   let html = `${indentStr}<${tagName}\n`
+
+  // === 新增：添加 v-if/v-show/v-for 指令 ===
+  html += generateVIfDirective(comp, indentStr)
+  html += generateVShowDirective(comp, indentStr)
+  html += generateVForDirective(comp, indentStr)
+
   // 添加组件 ID 属性（用于事件执行器定位元素）
-  html += `${indentStr}  :id="'${comp.id}'"\n`
-  html += `${indentStr}  :data-component-id="'${comp.id}'"\n`
+  // 如果有 v-for，ID 需要动态化
+  if (comp.loop) {
+    const { indexArg = 'index' } = comp.loop
+    html += `${indentStr}  :id="\`${comp.id}-\${${indexArg}}\`"\n`
+    html += `${indentStr}  :data-component-id="\`${comp.id}-\${${indexArg}}\`"\n`
+  } else {
+    html += `${indentStr}  :id="'${comp.id}'"\n`
+    html += `${indentStr}  :data-component-id="'${comp.id}'"\n`
+  }
   // 使用辅助函数设置 ref，避免模板中的类型问题
   html += `${indentStr}  :ref="setComponentRef('${comp.id}')"\n`
 
@@ -192,9 +273,18 @@ function generateComponentTemplate(
     html += events
   }
 
-  // 核心修改：处理嵌套关系
-  if (children.length > 0) {
+  // 核心修改：处理嵌套关系和插槽
+  const hasSlots = comp.slots && comp.slots.length > 0
+
+  if (children.length > 0 || hasSlots) {
     html += `${indentStr}>\n` // 闭合开始标签 >
+
+    // 生成命名插槽内容
+    if (hasSlots) {
+      for (const slot of comp.slots!) {
+        html += generateSlotTemplate(slot, allComponents, indent + 2)
+      }
+    }
 
     // 递归渲染子组件
     children.forEach((child) => {
@@ -204,10 +294,60 @@ function generateComponentTemplate(
     html += `${indentStr}</${tagName}>\n` // 闭合标签
   } else if (comp.type === 'Text' && comp.props?.text) {
     html += `${indentStr}>\n`
-    html += `${indentStr}  {{ ${JSON.stringify(comp.props.text)} }}\n`
+    // 如果有 v-for，text 可能需要动态绑定
+    if (comp.loop) {
+      const textValue = comp.props.text
+      if (typeof textValue === 'string' && textValue.includes('${')) {
+        // 模板字符串形式
+        html += `${indentStr}  {{ ${textValue.replace(/\$\{/g, '').replace(/\}/g, '')} }}\n`
+      } else {
+        html += `${indentStr}  {{ ${JSON.stringify(comp.props.text)} }}\n`
+      }
+    } else {
+      html += `${indentStr}  {{ ${JSON.stringify(comp.props.text)} }}\n`
+    }
     html += `${indentStr}</${tagName}>\n`
   } else {
     html += `${indentStr}/>\n` // 自闭合
+  }
+
+  return html
+}
+
+/**
+ * 生成插槽模板
+ */
+function generateSlotTemplate(
+  slot: { name: string; slotProps?: string[]; children?: Component[] },
+  allComponents: Component[],
+  indent: number,
+): string {
+  const indentStr = ' '.repeat(indent)
+  const slotName = slot.name || 'default'
+
+  // 作用域插槽参数
+  const scopeAttr = slot.slotProps && slot.slotProps.length > 0
+    ? `="{ ${slot.slotProps.join(', ')} }"`
+    : ''
+
+  let html = ''
+
+  if (slotName === 'default' && !scopeAttr) {
+    // 默认插槽不需要 template 包装
+    if (slot.children) {
+      for (const child of slot.children) {
+        html += generateComponentTemplate(child, allComponents, indent)
+      }
+    }
+  } else {
+    // 命名插槽或作用域插槽需要 template 包装
+    html += `${indentStr}<template #${slotName}${scopeAttr}>\n`
+    if (slot.children) {
+      for (const child of slot.children) {
+        html += generateComponentTemplate(child, allComponents, indent + 2)
+      }
+    }
+    html += `${indentStr}</template>\n`
   }
 
   return html
@@ -492,6 +632,8 @@ const componentsData = reactive(${JSON.stringify(
       props: c.props || {},
       style: c.style || {},
       dataBindings: c.dataBindings || [],
+      condition: c.condition,
+      loop: c.loop,
     })),
     null,
     2,
@@ -500,6 +642,20 @@ const componentsData = reactive(${JSON.stringify(
   // 生成组件索引 Map
   dataStr += `// 组件索引 Map
 const compById = new Map(componentsData.map((c: { id: string }) => [c.id, c] as const))\n\n`
+
+  // v-for 循环数据源
+  const componentsWithLoop = components.filter((c) => c.loop)
+  if (componentsWithLoop.length > 0) {
+    dataStr += `// v-for 循环数据源\n`
+    for (const comp of componentsWithLoop) {
+      const { data } = comp.loop!
+      // 如果是静态数组，生成响应式数据
+      if (Array.isArray(data)) {
+        dataStr += `const loopData_${comp.id} = ref(${JSON.stringify(data, null, 2)})\n`
+      }
+    }
+    dataStr += '\n'
+  }
 
   // 数据源相关配置和 Hook 调用
   const componentsWithDataSource = components.filter((c) => c.dataSource?.enabled)

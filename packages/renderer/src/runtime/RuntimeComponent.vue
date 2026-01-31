@@ -93,6 +93,7 @@ const componentType = computed(() => {
     Text: 'div',
     Group: 'div',
     Container: 'div',
+    Page: 'div', // Root container for pages
   }
 
   // Try material registry first

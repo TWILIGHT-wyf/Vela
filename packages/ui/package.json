@@ -1,35 +1,73 @@
 {
-  "name": "@vela/ui",
-  "version": "1.0.0",
-  "main": "index.ts",
-  "module": "index.ts",
-  "types": "index.ts",
-  "exports": {
-    ".": "./index.ts",
-    "./*": "./src/*"
+  "name": "@vela-studio/ui",
+  "version": "1.0.1",
+  "description": "Vela LowCode UI Component Library - Data visualization components for Vue 3",
+  "keywords": [
+    "vue3",
+    "ui",
+    "components",
+    "lowcode",
+    "echarts",
+    "data-visualization",
+    "dashboard"
+  ],
+  "author": "twi1i9ht",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor.git",
+    "directory": "packages/ui"
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./src/*",
-        "./index.ts"
-      ]
+  "bugs": {
+    "url": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor/issues"
+  },
+  "homepage": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "dist",
+    "index.ts",
+    "src"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dist/style.css": "./dist/style.css",
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.mjs",
+      "require": "./dist/*.js"
     }
   },
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "prepublishOnly": "pnpm build:lib"
   },
   "peerDependencies": {
-    "vue": "^3.0.0",
-    "element-plus": "^2.0.0"
+    "element-plus": "^2.0.0",
+    "vue": "^3.0.0"
   },
   "dependencies": {
-    "@vela/core": "workspace:*",
     "dompurify": "^3.3.1",
     "echarts": "^6.0.0",
     "highlight.js": "^11.11.1",
     "marked": "^17.0.1",
-    "vue": "^3.5.22",
     "vue-echarts": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.2.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vue": "^3.5.22"
   }
 }

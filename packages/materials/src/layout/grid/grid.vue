@@ -1,118 +1,74 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import type { CSSProperties } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useComponent } from '@vela/editor/stores/component'
 import { vGrid as BaseGrid } from '@vela/ui'
-import { componentRegistry } from '@vela/materials/registry'
-import Shape from '@vela/editor/components/Canvas/modes/Free/Shape/Shape.vue'
 
-const props = defineProps<{
-  id: string
-}>()
+/**
+ * Grid 布局容器组件
+ *
+ * 在新的 NodeSchema 架构中，子组件通过 slot 传入，
+ * 由 RuntimeRenderer 或 UniversalRenderer 负责渲染
+ */
+const props = withDefaults(
+  defineProps<{
+    gridTemplateColumns?: string
+    gridTemplateRows?: string
+    gridGap?: number | string
+    gridAutoFlow?: string
+    padding?: number | string
+    backgroundColor?: string
+    border?: string
+    borderRadius?: number | string
+    minHeight?: number | string
+    textColor?: string
+    content?: string
+  }>(),
+  {
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateRows: 'auto',
+    gridGap: 16,
+    gridAutoFlow: 'row',
+    padding: 16,
+    backgroundColor: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 4,
+    minHeight: 200,
+    textColor: '#333333',
+  },
+)
 
-const { componentStore } = storeToRefs(useComponent())
-
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
+const slots = useSlots()
+const hasChildren = computed(() => !!slots.default)
 
 // 聚合所有 Props 传递给 Base 组件
 const gridProps = computed((): Record<string, unknown> => {
-  const s = comp.value?.style || {}
-  const p = comp.value?.props || {}
   return {
     // Grid 布局属性
-    gridTemplateColumns: s.gridTemplateColumns ?? 'repeat(3, 1fr)',
-    gridTemplateRows: s.gridTemplateRows ?? 'auto',
-    gridGap: s.gridGap ?? 16,
-    gridAutoFlow: s.gridAutoFlow ?? 'row',
+    gridTemplateColumns: props.gridTemplateColumns,
+    gridTemplateRows: props.gridTemplateRows,
+    gridGap: props.gridGap,
+    gridAutoFlow: props.gridAutoFlow,
     // 容器样式
-    padding: s.padding ?? 16,
-    backgroundColor: s.backgroundColor ?? '#ffffff',
-    border: s.border ?? '1px solid #e5e7eb',
-    borderRadius: s.borderRadius ?? 4,
-    minHeight: s.minHeight ?? 200,
-    textColor: s.textColor ?? '#333333',
+    padding: props.padding,
+    backgroundColor: props.backgroundColor,
+    border: props.border,
+    borderRadius: props.borderRadius,
+    minHeight: props.minHeight,
+    textColor: props.textColor,
     // 占位内容（仅当没有子组件时显示）
-    content: hasChildren.value ? undefined : (p.content ?? undefined),
+    content: hasChildren.value ? undefined : props.content,
     placeholderItems: hasChildren.value ? [] : undefined,
   }
 })
-
-// 子组件相关
-const hasChildren = computed(() => {
-  return comp.value?.children && comp.value.children.length > 0
-})
-
-const getChildComponent = (childId: string) => {
-  return componentStore.value.find((c) => c.id === childId)
-}
-
-const getComponentByType = (type: string) => {
-  return componentRegistry[type] || 'div'
-}
-
-// 子组件项样式
-const getChildItemStyle = (childId: string): CSSProperties => {
-  const layout = comp.value?.layout
-  const mode = layout?.mode || 'absolute'
-  const child = getChildComponent(childId)
-
-  if (mode === 'absolute' && child) {
-    return {
-      position: 'absolute',
-      left: `${child.position.x}px`,
-      top: `${child.position.y}px`,
-      width: `${child.size.width}px`,
-      height: `${child.size.height}px`,
-    }
-  }
-
-  return {}
-}
-
-// 子组件内部样式
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getChildComponentStyle = (_childId: string): CSSProperties => {
-  return {
-    width: '100%',
-    height: '100%',
-  }
-}
 </script>
 
 <template>
   <BaseGrid v-bind="gridProps">
-    <!-- 子组件渲染 -->
-    <template v-if="hasChildren">
-      <template v-if="comp?.layout?.mode === 'absolute'">
-        <Shape v-for="childId in comp?.children" :key="childId" :id="childId">
-          <component
-            :is="getComponentByType(getChildComponent(childId)?.type || '')"
-            :id="childId"
-            :style="{ width: '100%', height: '100%' }"
-          />
-        </Shape>
-      </template>
-      <template v-else>
-        <div
-          v-for="childId in comp?.children"
-          :key="childId"
-          class="child-item"
-          :style="getChildItemStyle(childId)"
-        >
-          <component
-            :is="getComponentByType(getChildComponent(childId)?.type || '')"
-            :id="childId"
-            :style="getChildComponentStyle(childId)"
-          />
-        </div>
-      </template>
-    </template>
+    <!-- 子组件通过 slot 渲染（由 RuntimeRenderer/UniversalRenderer 处理） -->
+    <slot />
   </BaseGrid>
 </template>
 
 <style scoped>
-.child-item {
-  box-sizing: border-box;
-}
+/* Grid 容器基础样式由 vGrid 组件提供 */
 </style>

@@ -6,9 +6,10 @@ import { I18nString } from './i18n'
  * 布局模式
  * - free: 自由布局 (Absolute Position)
  * - flex: 弹性布局 (Flexbox)
- * - grid: 网格布局 (Grid, 预留)
+ * - grid: 网格布局 (CSS Grid)
+ * - flow: 文档流布局 (Normal Flow)
  */
-export type LayoutMode = 'free' | 'flex' | 'grid'
+export type LayoutMode = 'free' | 'flex' | 'grid' | 'flow'
 
 /**
  * 数据绑定配置

@@ -23,6 +23,12 @@ const CONTAINER_COMPONENTS = [
 ]
 
 /**
+ * 最大嵌套深度限制
+ * 防止过深嵌套导致性能问题
+ */
+const MAX_NESTING_DEPTH = 10
+
+/**
  * 检查节点是否为容器类型
  */
 function isContainerNode(node: NodeSchema): boolean {
@@ -82,6 +88,43 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   const indicator = computed(() => indicatorState.value)
 
   // ========== Internal Helpers ==========
+
+  /**
+   * 计算节点的嵌套深度
+   * @param nodeId 节点 ID
+   * @returns 嵌套深度（0 表示根节点）
+   */
+  function getNodeDepth(nodeId: string): number {
+    let depth = 0
+    let currentId: string | null = nodeId
+
+    while (currentId) {
+      const parentId = componentStore.getParentId(currentId)
+      if (!parentId) break
+      depth++
+      currentId = parentId
+    }
+
+    return depth
+  }
+
+  /**
+   * 检查是否可以放入目标容器
+   * @param targetId 目标容器 ID
+   * @param position 放置位置
+   * @returns 是否允许放置
+   */
+  function canDropIntoTarget(targetId: string, position: DropPosition): boolean {
+    // 如果是 inside 位置，检查目标容器深度
+    if (position === 'inside') {
+      const depth = getNodeDepth(targetId)
+      if (depth >= MAX_NESTING_DEPTH - 1) {
+        console.warn(`[useFlowDrop] Nesting depth limit reached: ${depth}`)
+        return false
+      }
+    }
+    return true
+  }
 
   /**
    * 计算插入位置
@@ -264,6 +307,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     if (!targetNode) {
       console.warn('[useFlowDrop] Target node not found')
+      return false
+    }
+
+    // 检查嵌套深度
+    if (!canDropIntoTarget(state.targetId, state.position)) {
+      console.warn('[useFlowDrop] Nesting depth limit exceeded')
       return false
     }
 
@@ -454,6 +503,11 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     // Utilities
     isContainerNode,
+    getNodeDepth,
+    canDropIntoTarget,
+
+    // Constants
+    MAX_NESTING_DEPTH,
   }
 }
 

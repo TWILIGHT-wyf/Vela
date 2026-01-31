@@ -1,14 +1,26 @@
 // TODO: 代码生成器功能开发中 - 暂时注释以让编辑器正常运行
 // import JSZip from 'jszip'
 // import { saveAs } from 'file-saver'
-// import { transform } from 'sucrase'
+// @babel/core 在浏览器中不可用，改为动态导入或使用简单的类型剥离
 import { generateVueCode } from './toCode'
+
+// Babel 实例缓存（仅在 Node.js 环境中使用）
+let babelCore: typeof import('@babel/core') | null = null
+
+/**
+ * 检测是否在浏览器环境
+ */
+function isBrowser(): boolean {
+  return typeof window !== 'undefined' && typeof window.document !== 'undefined'
+}
+import type { Component as ToCodeComponent } from './components'
 import type { NodeSchema } from '@vela/core'
 import useEventExecutorSource from '../../renderer/src/runtime/useEventExecutor.ts?raw'
 import useDataBindingEngineSource from '../../renderer/src/runtime/useDataBindingEngine.ts?raw'
 
 /**
  * Component type for code generation (flattened from NodeSchema)
+ * This uses componentName which is different from toCode.ts Component which uses type
  */
 export interface Component {
   id: string
@@ -17,6 +29,35 @@ export interface Component {
   style?: Record<string, unknown>
   children?: Component[]
   events?: Record<string, unknown[]>
+}
+
+/**
+ * 转换本地 Component 格式为 toCode.ts 期望的格式
+ */
+function convertToCodeComponent(comp: Component): ToCodeComponent {
+  // 从 style 中提取位置和尺寸信息
+  const style = comp.style || {}
+  const x = typeof style.x === 'number' ? style.x : (typeof style.left === 'number' ? style.left : 0)
+  const y = typeof style.y === 'number' ? style.y : (typeof style.top === 'number' ? style.top : 0)
+  const width = typeof style.width === 'number' ? style.width : 100
+  const height = typeof style.height === 'number' ? style.height : 100
+
+  return {
+    id: comp.id,
+    type: comp.componentName,
+    position: { x, y },
+    size: { width, height },
+    props: comp.props,
+    style: comp.style,
+    events: comp.events as ToCodeComponent['events'],
+  }
+}
+
+/**
+ * 批量转换组件列表
+ */
+function convertComponents(components: Component[]): ToCodeComponent[] {
+  return components.map(convertToCodeComponent)
 }
 
 /**
@@ -171,7 +212,9 @@ function createPageArtifact(page: Page, index: number, usedNames: Set<string>): 
   const routePath = normalizeRoutePath(page.route, componentName, index)
   const routeName = componentName
   const components: Component[] = Array.isArray(page.components) ? page.components : []
-  const source = generateVueCode(components)
+  // 转换为 toCode.ts 期望的格式
+  const toCodeComponents = convertComponents(components)
+  const source = generateVueCode(toCodeComponents)
 
   return { fileName, routePath, routeName, source }
 }
@@ -743,27 +786,81 @@ ${transformed.trim()}\n</script>`
 }
 
 /**
- * 转换 TypeScript 代码片段
+ * 简单的 TypeScript 类型剥离（浏览器兼容）
+ * 只移除最常见的类型注解，不处理复杂情况
+ * @param code TypeScript 代码
+ * @returns 移除类型注解后的代码
+ */
+function simpleTypeStrip(code: string): string {
+  // 移除类型导入 (import type { ... } from ...)
+  let result = code.replace(/import\s+type\s+\{[^}]*\}\s+from\s+['"][^'"]+['"];?\n?/g, '')
+
+  // 移除类型注解 (: Type)，但保留对象字面量中的冒号
+  // 这是一个简化的处理，可能不完美但对大多数情况有效
+  result = result.replace(/:\s*(?:string|number|boolean|any|void|null|undefined|never|unknown|object)\b/g, '')
+  result = result.replace(/:\s*(?:Array|Promise|Record|Map|Set|Partial|Required|Readonly|Pick|Omit)<[^>]+>/g, '')
+
+  // 移除泛型参数定义 (<T, U, ...>)
+  result = result.replace(/<[A-Z][A-Za-z0-9_]*(?:\s*,\s*[A-Z][A-Za-z0-9_]*)*>/g, '')
+
+  // 移除 as 类型断言
+  result = result.replace(/\s+as\s+[A-Za-z][A-Za-z0-9_<>,\s|&\[\]]+(?=[,;)\]])/g, '')
+
+  // 移除接口和类型定义
+  result = result.replace(/^(?:export\s+)?interface\s+[A-Za-z][A-Za-z0-9_]*\s*(?:<[^>]+>)?\s*\{[^}]*\}\n?/gm, '')
+  result = result.replace(/^(?:export\s+)?type\s+[A-Za-z][A-Za-z0-9_]*\s*(?:<[^>]+>)?\s*=\s*[^;\n]+;?\n?/gm, '')
+
+  return result
+}
+
+/**
+ * 转换 TypeScript 代码片段为 JavaScript
+ * 在 Node.js 环境使用 Babel，在浏览器环境使用简单的类型剥离
  * @param snippet TypeScript 代码片段
  * @returns JavaScript 代码片段
  */
 function transformTsSnippet(snippet: string): string {
-  // TODO: 重新启用 sucrase 转换
-  console.warn('TS to JS 转换功能暂未启用，直接返回原代码')
-  return snippet
-
-  /*
   const trimmed = snippet.trim()
   if (!trimmed) {
     return snippet
   }
 
+  // 浏览器环境：使用简单的类型剥离
+  if (isBrowser()) {
+    try {
+      return simpleTypeStrip(snippet)
+    } catch (error) {
+      console.warn('[projectGenerator] 浏览器环境类型剥离失败，返回原代码', error)
+      return snippet
+    }
+  }
+
+  // Node.js 环境：使用 Babel 进行完整的 TypeScript 转换
   try {
-    const { code } = transform(snippet, { transforms: ['typescript'] })
-    return code
+    // 动态加载 Babel（仅在 Node.js 环境）
+    if (!babelCore) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      babelCore = require('@babel/core')
+    }
+
+    const result = babelCore!.transformSync(snippet, {
+      presets: [],
+      plugins: [
+        ['@babel/plugin-transform-typescript', { isTSX: false }],
+      ],
+      // 保留格式
+      retainLines: true,
+      // 不生成 sourcemap
+      sourceMaps: false,
+    })
+
+    if (result && result.code) {
+      return result.code
+    }
+
+    return snippet
   } catch (error) {
-    console.warn('[projectGenerator] 通过 sucrase 转换代码片段失败', error)
+    console.warn('[projectGenerator] TypeScript 转换失败，返回原代码', error)
     return snippet
   }
-  */
 }

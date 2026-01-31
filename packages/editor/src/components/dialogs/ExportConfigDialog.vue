@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     class="export-config-dialog"
-    width="480px"
+    width="520px"
     append-to-body
     align-center
     :close-on-click-modal="false"
@@ -13,17 +13,41 @@
           <p class="title">导出项目源码</p>
           <p class="subtitle">{{ headerDescription }}</p>
         </div>
-        <el-tag size="small" effect="dark" type="info">{{
-          form.language === 'ts' ? 'TS' : 'JS'
-        }}</el-tag>
+        <div class="header-tags">
+          <el-tag size="small" effect="dark" :type="form.framework === 'vue3' ? 'success' : 'primary'">
+            {{ form.framework === 'vue3' ? 'Vue 3' : 'React' }}
+          </el-tag>
+          <el-tag size="small" effect="dark" type="info">
+            {{ form.language === 'ts' ? 'TS' : 'JS' }}
+          </el-tag>
+        </div>
       </div>
     </template>
 
     <el-form label-position="top" class="export-form">
+      <el-form-item label="目标框架">
+        <el-radio-group v-model="form.framework" class="framework-group">
+          <el-radio-button value="vue3">
+            <div class="framework-option">
+              <span class="framework-icon vue-icon">V</span>
+              <span class="framework-name">Vue 3</span>
+              <span class="framework-desc">Vite + Pinia + Element Plus</span>
+            </div>
+          </el-radio-button>
+          <el-radio-button value="react">
+            <div class="framework-option">
+              <span class="framework-icon react-icon">R</span>
+              <span class="framework-name">React</span>
+              <span class="framework-desc">Vite + Zustand + Ant Design</span>
+            </div>
+          </el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+
       <el-form-item label="语言偏好">
         <el-radio-group v-model="form.language">
-          <el-radio-button label="ts">TypeScript</el-radio-button>
-          <el-radio-button label="js">JavaScript</el-radio-button>
+          <el-radio-button value="ts">TypeScript</el-radio-button>
+          <el-radio-button value="js">JavaScript</el-radio-button>
         </el-radio-group>
       </el-form-item>
 
@@ -36,7 +60,7 @@
         :closable="false"
         show-icon
         class="tip"
-        title="导出内容包含 Vite + Vue 3 工程、路由、Pinia 与 Element Plus"
+        :title="frameworkTip"
       />
     </el-form>
 
@@ -54,11 +78,71 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  exportProjectToZip,
-  type ExportOptions,
-  type Project,
-} from '@vela/generator/projectGenerator'
+// 类型可以静态导入（不会触发运行时代码加载）
+import type {
+  ExportOptions,
+  Framework,
+  Component as GeneratorComponent,
+  Project as GeneratorProject,
+} from '@vela/generator'
+
+// 本地类型定义（与 projectGenerator 兼容）
+interface LocalComponent {
+  id: string
+  componentName: string
+  props?: Record<string, unknown>
+  style?: Record<string, unknown>
+  children?: LocalComponent[]
+  events?: Record<string, unknown[]>
+}
+
+interface Page {
+  id: string
+  name: string
+  route?: string
+  components?: LocalComponent[]
+}
+
+interface Project {
+  id?: string
+  name: string
+  description?: string
+  pages: Page[]
+  cover?: string
+  createdAt?: number
+  updatedAt?: number
+}
+
+// 转换本地 Component 格式为 Generator 需要的格式
+function convertToGeneratorComponent(comp: LocalComponent): GeneratorComponent {
+  return {
+    id: comp.id,
+    type: comp.componentName,
+    position: { x: 0, y: 0 },
+    size: { width: 100, height: 100 },
+    props: comp.props,
+    style: comp.style,
+    events: comp.events as GeneratorComponent['events'],
+  }
+}
+
+// 转换本地 Project 格式为 Generator 需要的格式
+function convertToGeneratorProject(project: Project): GeneratorProject {
+  return {
+    name: project.name,
+    description: project.description,
+    pages: project.pages.map((page) => ({
+      id: page.id,
+      name: page.name,
+      route: page.route,
+      components: (page.components || []).map(convertToGeneratorComponent),
+    })),
+  }
+}
+
+interface ExportFormOptions extends ExportOptions {
+  framework: Framework
+}
 
 const STORAGE_KEY = 'vela-export-preferences'
 
@@ -76,9 +160,10 @@ const dialogVisible = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 })
 
-const form = reactive<ExportOptions>({
+const form = reactive<ExportFormOptions>({
   language: 'ts',
   lint: true,
+  framework: 'vue3',
 })
 
 const isExporting = ref(false)
@@ -91,6 +176,13 @@ const headerDescription = computed(() => {
   return `${props.project.name || '未命名项目'} · ${pageCount} 个页面`
 })
 
+const frameworkTip = computed(() => {
+  if (form.framework === 'vue3') {
+    return '导出内容包含 Vite + Vue 3 工程、路由、Pinia 与 Element Plus'
+  }
+  return '导出内容包含 Vite + React 工程、路由、Zustand 与 Ant Design'
+})
+
 if (typeof window !== 'undefined') {
   const persisted = window.localStorage.getItem(STORAGE_KEY)
   if (persisted) {
@@ -99,6 +191,9 @@ if (typeof window !== 'undefined') {
       if (parsed.language === 'js' || parsed.language === 'ts') {
         form.language = parsed.language
       }
+      if (parsed.framework === 'vue3' || parsed.framework === 'react') {
+        form.framework = parsed.framework
+      }
       form.lint = typeof parsed.lint === 'boolean' ? parsed.lint : form.lint
     } catch (error) {
       console.warn('[ExportConfigDialog] 解析偏好失败', error)
@@ -106,7 +201,7 @@ if (typeof window !== 'undefined') {
   }
 
   watch(
-    () => ({ language: form.language, lint: form.lint }),
+    () => ({ language: form.language, lint: form.lint, framework: form.framework }),
     (preferences) => {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences))
     },
@@ -128,7 +223,30 @@ async function handleConfirm() {
 
   isExporting.value = true
   try {
-    await exportProjectToZip(props.project, { ...form })
+    if (form.framework === 'vue3') {
+      // 动态导入 Vue3 导出函数
+      const { exportProjectToZip } = await import('@vela/generator')
+      await exportProjectToZip(props.project, {
+        language: form.language,
+        lint: form.lint,
+      })
+    } else {
+      // 动态导入 React 项目生成器
+      const { generateProjectFiles } = await import('@vela/generator')
+      const generatorProject = convertToGeneratorProject(props.project)
+      const files = generateProjectFiles(generatorProject, {
+        framework: 'react',
+        typescript: form.language === 'ts',
+        lint: form.lint,
+        router: 'react-router',
+        stateManagement: 'zustand',
+        cssModules: true,
+      })
+
+      // 创建并下载 ZIP
+      await downloadAsZip(props.project.name || 'react-project', files)
+    }
+
     ElMessage.success('源码正在下载，请稍候...')
     dialogVisible.value = false
   } catch (error) {
@@ -137,6 +255,29 @@ async function handleConfirm() {
   } finally {
     isExporting.value = false
   }
+}
+
+/**
+ * 将文件列表打包为 ZIP 并下载
+ */
+async function downloadAsZip(projectName: string, files: { path: string; content: string }[]) {
+  // 动态导入 JSZip
+  const JSZip = (await import('jszip')).default
+  const { saveAs } = await import('file-saver')
+
+  const zip = new JSZip()
+  const root = zip.folder(projectName)
+
+  if (!root) {
+    throw new Error('初始化 ZIP 结构失败')
+  }
+
+  for (const file of files) {
+    root.file(file.path, file.content)
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' })
+  saveAs(blob, `${projectName}.zip`)
 }
 </script>
 
@@ -163,6 +304,11 @@ async function handleConfirm() {
   color: #f0f4ff;
 }
 
+.header-tags {
+  display: flex;
+  gap: 8px;
+}
+
 .header-text .title {
   font-size: 16px;
   font-weight: 600;
@@ -182,6 +328,71 @@ async function handleConfirm() {
 
 .export-form :deep(.el-form-item__label) {
   color: #b8c0d3;
+}
+
+/* 框架选择组 */
+.framework-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.framework-group :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.framework-group :deep(.el-radio-button__inner) {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.03);
+  height: auto;
+}
+
+.framework-group :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: rgba(64, 158, 255, 0.15);
+  border-color: var(--el-color-primary) !important;
+}
+
+.framework-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.framework-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.vue-icon {
+  background: linear-gradient(135deg, #42b883 0%, #35495e 100%);
+  color: #fff;
+}
+
+.react-icon {
+  background: linear-gradient(135deg, #61dafb 0%, #20232a 100%);
+  color: #fff;
+}
+
+.framework-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f4ff;
+}
+
+.framework-desc {
+  font-size: 11px;
+  color: #8a92b2;
 }
 
 .tip {

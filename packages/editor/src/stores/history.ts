@@ -1,157 +1,222 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
-import type { NodeSchema } from '@vela/core'
-import { cloneDeep, debounce } from 'lodash-es'
-import { useComponent } from './component'
+import { ref, computed } from 'vue'
+import type { Command } from './commands/types'
 
 /**
- * 历史记录管理 Store
- * 实现撤销/重做功能 (Snapshot模式)
+ * 历史记录管理 Store（命令模式）
+ *
+ * 实现基于命令的撤销/重做功能
+ * - 相比快照模式，内存占用更小
+ * - 支持命令合并（如连续拖拽）
+ * - 更精确的操作粒度
  */
 export const useHistoryStore = defineStore('history', () => {
-  const componentStore = useComponent()
-
   // ========== State ==========
 
-  const stack = ref<NodeSchema[]>([])
-  const pointer = ref(-1)
-  const MAX_HISTORY = 30
+  /** 撤销栈 */
+  const undoStack = ref<Command[]>([])
 
-  // 锁：当正在撤销/重做时，不应记录新的历史
-  const isLocked = ref(false)
+  /** 重做栈 */
+  const redoStack = ref<Command[]>([])
+
+  /** 最大历史记录数 */
+  const MAX_HISTORY = 50
+
+  /** 是否正在执行撤销/重做（防止递归） */
+  const isExecuting = ref(false)
+
+  /** 是否暂停记录（用于批量操作） */
+  const isPaused = ref(false)
 
   // ========== Getters ==========
 
-  const canUndo = computed(() => pointer.value > 0)
-  const canRedo = computed(() => pointer.value < stack.value.length - 1)
+  /** 是否可以撤销 */
+  const canUndo = computed(() => undoStack.value.length > 0)
+
+  /** 是否可以重做 */
+  const canRedo = computed(() => redoStack.value.length > 0)
+
+  /** 撤销栈长度 */
+  const undoCount = computed(() => undoStack.value.length)
+
+  /** 重做栈长度 */
+  const redoCount = computed(() => redoStack.value.length)
 
   // ========== Actions ==========
 
   /**
-   * 记录新快照
-   * @param state 新的状态树
+   * 执行命令并记录到历史
+   * @param command 要执行的命令
+   * @param skipMerge 是否跳过合并检查
    */
-  function pushState(state: NodeSchema) {
-    if (isLocked.value) return
-
-    // 如果指针不在末尾，丢弃后面的记录 (分叉历史)
-    if (pointer.value < stack.value.length - 1) {
-      stack.value = stack.value.slice(0, pointer.value + 1)
+  function executeCommand(command: Command, skipMerge = false): void {
+    if (isPaused.value) {
+      // 暂停时直接执行，不记录
+      command.execute()
+      return
     }
 
-    stack.value.push(cloneDeep(state))
-    pointer.value++
+    // 执行命令
+    command.execute()
 
-    // 限制历史记录数量
-    if (stack.value.length > MAX_HISTORY) {
-      stack.value.shift()
-      pointer.value--
+    // 检查是否可以与上一个命令合并
+    if (!skipMerge && undoStack.value.length > 0) {
+      const lastCmd = undoStack.value[undoStack.value.length - 1]
+      if (command.canMerge && command.canMerge(lastCmd)) {
+        // 合并命令
+        undoStack.value.pop()
+        const mergedCmd = command.merge!(lastCmd)
+        undoStack.value.push(mergedCmd)
+        console.log(`[History] Merged command: ${command.type}`)
+        return
+      }
     }
 
-    console.log(`[History] Pushed state, pointer: ${pointer.value}`)
-  }
+    // 添加到撤销栈
+    undoStack.value.push(command)
 
-  // 防抖的记录函数，避免拖拽时频繁记录
-  const debouncedPush = debounce((state: NodeSchema) => {
-    if (state) pushState(state)
-  }, 500)
+    // 清空重做栈（新操作会使重做历史失效）
+    redoStack.value = []
 
-  /**
-   * 初始化历史记录 (通常在页面加载完成后调用)
-   */
-  function init() {
-    // 停止之前的 watch（如果有）
-    // 注意：Pinia setup store 中难以直接停止 watch，除非保存 unwatch 函数
-    // 这里简单处理：通过 isLocked 配合
-
-    if (componentStore.rootNode) {
-      stack.value = [cloneDeep(componentStore.rootNode)]
-      pointer.value = 0
-    } else {
-      stack.value = []
-      pointer.value = -1
+    // 限制历史长度
+    while (undoStack.value.length > MAX_HISTORY) {
+      undoStack.value.shift()
     }
 
-    isLocked.value = false
-    console.log('[History] Initialized')
-
-    // 启动监听
-    // deep: true 监听整棵树的变化
-    watch(
-      () => componentStore.rootNode,
-      (newVal) => {
-        if (!isLocked.value && newVal) {
-          debouncedPush(newVal)
-        }
-      },
-      { deep: true },
-    )
+    console.log(`[History] Executed: ${command.type}, stack size: ${undoStack.value.length}`)
   }
 
   /**
-   * 撤销
+   * 撤销上一个命令
    */
-  function undo() {
-    if (!canUndo.value) return
+  function undo(): void {
+    if (!canUndo.value || isExecuting.value) return
 
-    // 加锁，防止 setTree 触发 pushState
-    isLocked.value = true
+    isExecuting.value = true
 
-    pointer.value--
-    const prevState = stack.value[pointer.value]
-
-    // 恢复状态
-    if (prevState) {
-      componentStore.setTree(cloneDeep(prevState))
+    try {
+      const command = undoStack.value.pop()
+      if (command) {
+        command.undo()
+        redoStack.value.push(command)
+        console.log(`[History] Undo: ${command.type}`)
+      }
+    } finally {
+      isExecuting.value = false
     }
-
-    // 恢复完成后解锁 (使用 setTimeout 确保 watch 已执行完毕)
-    setTimeout(() => {
-      isLocked.value = false
-    }, 100) // 稍微增加延迟以确保安全
-
-    console.log(`[History] Undo to: ${pointer.value}`)
   }
 
   /**
-   * 重做
+   * 重做上一个撤销的命令
    */
-  function redo() {
-    if (!canRedo.value) return
+  function redo(): void {
+    if (!canRedo.value || isExecuting.value) return
 
-    isLocked.value = true
+    isExecuting.value = true
 
-    pointer.value++
-    const nextState = stack.value[pointer.value]
-
-    if (nextState) {
-      componentStore.setTree(cloneDeep(nextState))
+    try {
+      const command = redoStack.value.pop()
+      if (command) {
+        command.redo()
+        undoStack.value.push(command)
+        console.log(`[History] Redo: ${command.type}`)
+      }
+    } finally {
+      isExecuting.value = false
     }
-
-    setTimeout(() => {
-      isLocked.value = false
-    }, 100)
-
-    console.log(`[History] Redo to: ${pointer.value}`)
   }
 
   /**
-   * 手动提交当前状态到历史 (由 Command 系统调用)
+   * 清空所有历史记录
    */
-  function commit() {
-    if (componentStore.rootNode) {
-      pushState(componentStore.rootNode)
+  function clear(): void {
+    undoStack.value = []
+    redoStack.value = []
+    console.log('[History] Cleared')
+  }
+
+  /**
+   * 暂停历史记录
+   * 用于批量操作时避免记录中间状态
+   */
+  function pause(): void {
+    isPaused.value = true
+  }
+
+  /**
+   * 恢复历史记录
+   */
+  function resume(): void {
+    isPaused.value = false
+  }
+
+  /**
+   * 在暂停状态下执行一组操作
+   * @param fn 要执行的函数
+   */
+  function withoutHistory<T>(fn: () => T): T {
+    pause()
+    try {
+      return fn()
+    } finally {
+      resume()
     }
+  }
+
+  /**
+   * 获取历史记录摘要（用于调试）
+   */
+  function getDebugInfo(): { undo: string[]; redo: string[] } {
+    return {
+      undo: undoStack.value.map((cmd) => `${cmd.type}: ${cmd.description || ''}`),
+      redo: redoStack.value.map((cmd) => `${cmd.type}: ${cmd.description || ''}`),
+    }
+  }
+
+  // ========== 向后兼容 API ==========
+
+  /**
+   * @deprecated Use executeCommand instead
+   * 保留用于向后兼容，现在是空操作
+   */
+  function init(): void {
+    console.log('[History] Initialized (command mode)')
+  }
+
+  /**
+   * @deprecated Use executeCommand instead
+   * 保留用于向后兼容，现在是空操作
+   */
+  function commit(): void {
+    // 命令模式下不需要手动提交
+    console.log('[History] commit() is deprecated in command mode')
   }
 
   return {
-    stack,
-    pointer,
+    // State
+    undoStack,
+    redoStack,
+    isExecuting,
+    isPaused,
+
+    // Getters
     canUndo,
     canRedo,
-    init,
-    commit,
+    undoCount,
+    redoCount,
+
+    // Actions
+    executeCommand,
     undo,
     redo,
+    clear,
+    pause,
+    resume,
+    withoutHistory,
+    getDebugInfo,
+
+    // Compatibility
+    init,
+    commit,
   }
 })

@@ -1,10 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, NodeStyle } from '@vela/core'
 import { generateId } from '@vela/core'
 import { useProjectStore } from './project'
 import { ElMessage } from 'element-plus'
 import { cloneDeep } from 'lodash-es'
+import { useHistoryStore } from './history'
+import {
+  setStoreAccessor,
+  AddComponentCommand,
+  DeleteComponentCommand,
+  MoveComponentCommand,
+  UpdateStyleCommand,
+  UpdatePropsCommand,
+  UpdateDataSourceCommand,
+} from './commands/index'
 
 /**
  * 组件管理 Store
@@ -189,6 +199,197 @@ export const useComponent = defineStore('component', () => {
     return result
   }
 
+  // ========== 命令模式辅助方法 ==========
+
+  /**
+   * 获取节点在父节点中的索引
+   */
+  function getNodeIndex(id: string): number {
+    const parentId = parentIndex.get(id)
+    if (!parentId) return -1
+
+    const parent = nodeIndex.get(parentId)
+    if (!parent?.children) return -1
+
+    return parent.children.findIndex((child) => child.id === id)
+  }
+
+  /**
+   * 获取节点的父节点 ID
+   */
+  function getParentId(id: string): string | null {
+    return parentIndex.get(id) || null
+  }
+
+  // ========== Raw 方法（不记录历史，供命令内部使用）==========
+
+  /**
+   * [Raw] 添加组件 - 不记录历史
+   */
+  function addComponentRaw(parentId: string | null, component: NodeSchema, index?: number): string {
+    if (!rootNode.value) {
+      console.error('[ComponentStore] Root node is null')
+      return ''
+    }
+
+    const newComponent = cloneDeep(component)
+    const effectiveParentId = parentId || rootNode.value.id
+
+    if (!parentId) {
+      if (!rootNode.value.children) {
+        rootNode.value.children = []
+      }
+
+      if (index !== undefined) {
+        rootNode.value.children.splice(index, 0, newComponent)
+      } else {
+        rootNode.value.children.push(newComponent)
+      }
+
+      indexNode(newComponent, rootNode.value.id)
+      syncToProjectStore()
+      return newComponent.id
+    }
+
+    const parentNode = nodeIndex.get(parentId)
+    if (!parentNode) {
+      console.error('[ComponentStore] Parent node not found:', parentId)
+      return ''
+    }
+
+    if (!parentNode.children) {
+      parentNode.children = []
+    }
+
+    if (index !== undefined) {
+      parentNode.children.splice(index, 0, newComponent)
+    } else {
+      parentNode.children.push(newComponent)
+    }
+
+    indexNode(newComponent, parentId)
+    syncToProjectStore()
+    return newComponent.id
+  }
+
+  /**
+   * [Raw] 删除组件 - 不记录历史
+   */
+  function deleteComponentRaw(id: string): void {
+    if (!rootNode.value) return
+
+    if (id === rootNode.value.id) {
+      return
+    }
+
+    const pId = parentIndex.get(id)
+    if (!pId) return
+
+    const parent = nodeIndex.get(pId)
+    if (!parent?.children) return
+
+    const idx = parent.children.findIndex((child) => child.id === id)
+    if (idx !== -1) {
+      unindexNode(id)
+      parent.children.splice(idx, 1)
+
+      if (selectedId.value === id) {
+        selectedId.value = null
+      }
+      selectedIds.value = selectedIds.value.filter((sid) => sid !== id)
+
+      syncToProjectStore()
+    }
+  }
+
+  /**
+   * [Raw] 移动组件 - 不记录历史
+   */
+  function moveComponentRaw(id: string, newParentId: string, newIndex: number): void {
+    if (!rootNode.value) return
+
+    if (id === rootNode.value.id) return
+
+    const node = nodeIndex.get(id)
+    const oldParentId = parentIndex.get(id)
+
+    if (!node || !oldParentId) return
+
+    const oldParent = nodeIndex.get(oldParentId)
+    if (!oldParent?.children) return
+
+    const oldIndex = oldParent.children.findIndex((child) => child.id === id)
+    if (oldIndex === -1) return
+
+    oldParent.children.splice(oldIndex, 1)
+
+    const newParent = nodeIndex.get(newParentId)
+    if (!newParent) {
+      oldParent.children.splice(oldIndex, 0, node)
+      return
+    }
+
+    if (!newParent.children) {
+      newParent.children = []
+    }
+
+    newParent.children.splice(newIndex, 0, node)
+    parentIndex.set(id, newParentId)
+
+    syncToProjectStore()
+  }
+
+  /**
+   * [Raw] 更新样式 - 不记录历史
+   */
+  function updateStyleRaw(id: string, style: Partial<NodeStyle>): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.style = {
+      ...(node.style || {}),
+      ...style,
+    }
+
+    styleVersion.value = {
+      ...styleVersion.value,
+      [id]: (styleVersion.value[id] || 0) + 1,
+    }
+
+    syncToProjectStore()
+  }
+
+  /**
+   * [Raw] 更新属性 - 不记录历史
+   */
+  function updatePropsRaw(id: string, props: Record<string, any>): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.props = {
+      ...(node.props || {}),
+      ...props,
+    }
+
+    styleVersion.value = {
+      ...styleVersion.value,
+      [id]: (styleVersion.value[id] || 0) + 1,
+    }
+
+    syncToProjectStore()
+  }
+
+  /**
+   * [Raw] 更新数据源 - 不记录历史
+   */
+  function updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.dataSource = { ...node.dataSource, ...dataSource }
+    syncToProjectStore()
+  }
+
   // ========== Actions ==========
 
   /**
@@ -213,7 +414,7 @@ export const useComponent = defineStore('component', () => {
   }
 
   /**
-   * 添加组件到指定父节点
+   * 添加组件到指定父节点（通过命令执行，支持撤销）
    * @param parentId 父节点 ID，null 表示添加到根节点的 children
    * @param component 新组件节点
    * @param index 插入位置，默认末尾
@@ -224,58 +425,16 @@ export const useComponent = defineStore('component', () => {
       return ''
     }
 
-    const newComponent = cloneDeep(component)
-    const effectiveParentId = parentId || rootNode.value.id
+    const historyStore = useHistoryStore()
+    const cmd = new AddComponentCommand(parentId, component, index)
+    historyStore.executeCommand(cmd)
 
-    // 如果没有 parentId，添加到根节点
-    if (!parentId) {
-      if (!rootNode.value.children) {
-        rootNode.value.children = []
-      }
-
-      if (index !== undefined) {
-        rootNode.value.children.splice(index, 0, newComponent)
-      } else {
-        rootNode.value.children.push(newComponent)
-      }
-
-      // 更新索引
-      indexNode(newComponent, rootNode.value.id)
-
-      console.log(`[ComponentStore] Added component to root:`, newComponent.id)
-      syncToProjectStore()
-      return newComponent.id
-    }
-
-    // 查找父节点（O(1)）
-    const parentNode = nodeIndex.get(parentId)
-    if (!parentNode) {
-      console.error('[ComponentStore] Parent node not found:', parentId)
-      return ''
-    }
-
-    // 初始化 children
-    if (!parentNode.children) {
-      parentNode.children = []
-    }
-
-    // 插入组件
-    if (index !== undefined) {
-      parentNode.children.splice(index, 0, newComponent)
-    } else {
-      parentNode.children.push(newComponent)
-    }
-
-    // 更新索引
-    indexNode(newComponent, parentId)
-
-    console.log(`[ComponentStore] Added component:`, newComponent.id, 'to parent:', parentId)
-    syncToProjectStore()
-    return newComponent.id
+    console.log(`[ComponentStore] Added component via command:`, cmd.getAddedId())
+    return cmd.getAddedId() || ''
   }
 
   /**
-   * 更新组件的 props
+   * 更新组件的 props（通过命令执行，支持撤销）
    * 使用版本号触发特定组件的响应式更新，避免全树重渲染
    */
   function updateProps(id: string, props: Record<string, any>) {
@@ -285,23 +444,13 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    // 使用对象展开创建新对象
-    node.props = {
-      ...(node.props || {}),
-      ...props,
-    }
-
-    // 递增该节点的版本号，触发订阅该节点的组件更新
-    styleVersion.value = {
-      ...styleVersion.value,
-      [id]: (styleVersion.value[id] || 0) + 1,
-    }
-
-    syncToProjectStore()
+    const historyStore = useHistoryStore()
+    const cmd = new UpdatePropsCommand(id, props)
+    historyStore.executeCommand(cmd)
   }
 
   /**
-   * 更新组件的 style
+   * 更新组件的 style（通过命令执行，支持撤销）
    * 使用版本号触发特定组件的响应式更新，避免全树重渲染
    */
   function updateStyle(id: string, style: Record<string, any>) {
@@ -312,23 +461,13 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    // 使用对象展开创建新对象
-    node.style = {
-      ...(node.style || {}),
-      ...style,
-    }
-
-    // 递增该节点的版本号，触发订阅该节点的组件更新
-    styleVersion.value = {
-      ...styleVersion.value,
-      [id]: (styleVersion.value[id] || 0) + 1,
-    }
-
-    syncToProjectStore()
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateStyleCommand(id, style)
+    historyStore.executeCommand(cmd)
   }
 
   /**
-   * 更新组件的 dataSource
+   * 更新组件的 dataSource（通过命令执行，支持撤销）
    */
   function updateDataSource(id: string, dataSource: Record<string, any>) {
     const node = nodeIndex.get(id)
@@ -337,12 +476,13 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    node.dataSource = { ...node.dataSource, ...dataSource }
-    syncToProjectStore()
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateDataSourceCommand(id, dataSource)
+    historyStore.executeCommand(cmd)
   }
 
   /**
-   * 删除组件
+   * 删除组件（通过命令执行，支持撤销）
    */
   function deleteComponent(id: string) {
     if (!rootNode.value) return
@@ -353,36 +493,11 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    // O(1) 查找父节点
-    const parentId = parentIndex.get(id)
-    if (!parentId) {
-      console.warn(`[ComponentStore] Parent not found for: ${id}`)
-      return
-    }
+    const historyStore = useHistoryStore()
+    const cmd = new DeleteComponentCommand(id)
+    historyStore.executeCommand(cmd)
 
-    const parentNode = nodeIndex.get(parentId)
-    if (!parentNode || !parentNode.children) {
-      console.warn(`[ComponentStore] Parent node invalid for: ${id}`)
-      return
-    }
-
-    const index = parentNode.children.findIndex((child) => child.id === id)
-    if (index !== -1) {
-      // 先从索引中移除（包括子节点）
-      unindexNode(id)
-
-      // 从父节点中移除
-      parentNode.children.splice(index, 1)
-
-      // 清空选中状态
-      if (selectedId.value === id) {
-        selectedId.value = null
-      }
-      selectedIds.value = selectedIds.value.filter((sid) => sid !== id)
-
-      console.log(`[ComponentStore] Deleted component: ${id}`)
-      syncToProjectStore()
-    }
+    console.log(`[ComponentStore] Deleted component via command: ${id}`)
   }
 
   /**
@@ -393,7 +508,7 @@ export const useComponent = defineStore('component', () => {
   }
 
   /**
-   * 移动组件到新位置
+   * 移动组件到新位置（通过命令执行，支持撤销）
    * @param id 要移动的组件 ID
    * @param newParentId 新父节点 ID
    * @param newIndex 新位置索引
@@ -407,51 +522,13 @@ export const useComponent = defineStore('component', () => {
       return
     }
 
-    // O(1) 查找节点和父节点
-    const node = nodeIndex.get(id)
-    const oldParentId = parentIndex.get(id)
-
-    if (!node || !oldParentId) {
-      console.warn(`[ComponentStore] Cannot find node or parent for: ${id}`)
-      return
-    }
-
-    const oldParent = nodeIndex.get(oldParentId)
-    if (!oldParent || !oldParent.children) {
-      console.warn(`[ComponentStore] Old parent invalid for: ${id}`)
-      return
-    }
-
-    // 从原位置移除
-    const oldIndex = oldParent.children.findIndex((child) => child.id === id)
-    if (oldIndex === -1) return
-
-    oldParent.children.splice(oldIndex, 1)
-
-    // 查找新父节点
-    const newParent = nodeIndex.get(newParentId)
-    if (!newParent) {
-      console.warn(`[ComponentStore] New parent not found: ${newParentId}`)
-      // 恢复到原位置
-      oldParent.children.splice(oldIndex, 0, node)
-      return
-    }
-
-    // 初始化新父节点的 children
-    if (!newParent.children) {
-      newParent.children = []
-    }
-
-    // 插入到新位置
-    newParent.children.splice(newIndex, 0, node)
-
-    // 更新父节点索引
-    parentIndex.set(id, newParentId)
+    const historyStore = useHistoryStore()
+    const cmd = new MoveComponentCommand(id, newParentId, newIndex)
+    historyStore.executeCommand(cmd)
 
     console.log(
-      `[ComponentStore] Moved component ${id} to parent ${newParentId} at index ${newIndex}`,
+      `[ComponentStore] Moved component ${id} via command to parent ${newParentId} at index ${newIndex}`,
     )
-    syncToProjectStore()
   }
 
   /**
@@ -563,8 +640,8 @@ export const useComponent = defineStore('component', () => {
   /**
    * Update component rotation
    */
-  function updateComponentRotation(id: string, rotation: number) {
-    updateStyle(id, { rotation })
+  function updateComponentRotation(id: string, rotate: number) {
+    updateStyle(id, { rotate })
   }
 
   // ========== Clipboard ==========
@@ -802,6 +879,21 @@ export const useComponent = defineStore('component', () => {
     return refs
   }
 
+  // ========== 初始化 Store Accessor（供命令使用）==========
+
+  // 设置 store accessor，供命令类访问 store 方法
+  setStoreAccessor({
+    findNodeById,
+    getNodeIndex,
+    getParentId,
+    addComponentRaw,
+    deleteComponentRaw,
+    moveComponentRaw,
+    updateStyleRaw,
+    updatePropsRaw,
+    updateDataSourceRaw,
+  })
+
   return {
     // State
     rootNode,
@@ -809,6 +901,7 @@ export const useComponent = defineStore('component', () => {
     selectedIds,
     hoveredId,
     styleVersion,
+    parentIndex, // 暴露给外部使用（如深度检查）
 
     // Getters
     selectedNode,
@@ -820,6 +913,8 @@ export const useComponent = defineStore('component', () => {
     findNodeById,
     findParentNode,
     getComponentById,
+    getNodeIndex,
+    getParentId,
     traverse,
 
     // Actions
@@ -839,6 +934,14 @@ export const useComponent = defineStore('component', () => {
     setHovered,
     clearSelection,
     syncToProjectStore,
+
+    // Raw 方法（供命令内部使用）
+    addComponentRaw,
+    deleteComponentRaw,
+    moveComponentRaw,
+    updateStyleRaw,
+    updatePropsRaw,
+    updateDataSourceRaw,
 
     // Clipboard
     clipboard,

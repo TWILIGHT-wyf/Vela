@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd.exe /c \"taskkill /f /im node.exe 2>nul & echo Processes stopped\")"
+    ]
+  }
+}

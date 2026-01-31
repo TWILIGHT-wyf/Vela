@@ -70,3 +70,42 @@ jobs:
         run: pnpm run test:e2e
         env:
           CI: true
+
+  publish-ui:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: "github.event_name == 'push' && github.ref == 'refs/heads/master'"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Configure npm auth
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "Missing NPM_TOKEN secret";
+            exit 1;
+          fi
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @vela-studio/ui
+        run: pnpm -w -F @vela-studio/ui run build:lib
+
+      - name: Publish @vela-studio/ui to npm
+        run: |
+          cd packages/ui
+          npm publish --access public

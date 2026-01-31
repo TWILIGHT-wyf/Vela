@@ -9,7 +9,23 @@
       "Bash(pnpm run:*)",
       "Bash(npx vue-tsc:*)",
       "Read(//c/c/Users/TWILIGHT/Desktop/Typescript/webgis/**)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(pnpm --filter @vela/core build:*)",
+      "Bash(git -C /c/Users/TWILIGHT/Desktop/Typescript/webgis diff --name-only)",
+      "Bash(git -C /c/Users/TWILIGHT/Desktop/Typescript/webgis status --short)",
+      "Bash(git -C /c/Users/TWILIGHT/Desktop/Typescript/webgis log --oneline -20)",
+      "Bash(pnpm --filter @vela/editor dev)",
+      "Bash(powershell -Command:*)",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\editor\\\\node_modules\\\\.vite\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\node_modules\\\\.vite\" -ErrorAction SilentlyContinue)",
+      "Bash(cmd.exe /c \"rmdir /s /q c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\editor\\\\node_modules\\\\.vite 2>nul & rmdir /s /q c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\node_modules\\\\.vite 2>nul & echo Cache cleared\")",
+      "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\editor && pnpm dev\")",
+      "Bash(pnpm dev)",
+      "Bash(pnpm exec vue-tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npm publish:*)"
     ]
   }
 }
