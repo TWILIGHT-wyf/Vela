@@ -123,22 +123,31 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { InfoFilled, Rank, List } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/project'
 import { useUIStore } from '@/stores/ui'
+import { useComponent } from '@/stores/component'
 import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
 import { storeToRefs } from 'pinia'
-import type { LayoutMode } from '@/utils/layoutConverter'
+import { convertLayout, type LayoutMode } from '@/utils/layoutConverter'
 
 const projectStore = useProjectStore()
 const uiStore = useUIStore()
+const componentStore = useComponent()
 const sizeStore = useSizeStore()
 
 const { currentPage } = storeToRefs(projectStore)
+const { rootNode } = storeToRefs(componentStore)
 
 // 本地状态
 const pageName = ref('')
 const pagePath = ref('')
 
 // 当前布局模式
-const currentLayout = computed(() => currentPage.value?.config?.layout || 'free')
+const currentLayout = computed<LayoutMode>(() => {
+  return (
+    (rootNode.value?.layoutMode as LayoutMode | undefined) ||
+    (currentPage.value?.config?.layout as LayoutMode | undefined) ||
+    'flow'
+  )
+})
 
 // 同步页面信息
 watch(
@@ -147,6 +156,18 @@ watch(
     if (page) {
       pageName.value = page.name
       pagePath.value = page.path.replace(/^\//, '')
+    }
+  },
+  { immediate: true },
+)
+
+// 确保根节点布局模式与页面配置一致
+watch(
+  [currentPage, rootNode],
+  ([page, root]) => {
+    if (!page || !root) return
+    if (!root.layoutMode && page.config?.layout) {
+      componentStore.updateLayoutModeRaw(root.id, page.config.layout as LayoutMode)
     }
   },
   { immediate: true },
@@ -187,6 +208,12 @@ async function handleLayoutChange(mode: LayoutMode) {
 
     projectStore.updatePageConfig({ layout: mode })
     uiStore.setCanvasMode(mode)
+
+    if (rootNode.value) {
+      const converted = convertLayout(rootNode.value, mode)
+      componentStore.setTree(converted)
+      componentStore.syncToProjectStore()
+    }
     ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
   } catch {
     console.log('[PageSettingPane] Layout change cancelled')

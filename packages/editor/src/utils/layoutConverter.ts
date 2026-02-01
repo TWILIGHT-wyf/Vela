@@ -8,6 +8,8 @@ export type LayoutMode = 'free' | 'flow'
  */
 const FREE_ONLY_STYLES = [
   'position',
+  'x',
+  'y',
   'left',
   'top',
   'right',
@@ -43,17 +45,14 @@ function parseStyleValue(value: string | number | undefined): number {
 export function convertToFlow(root: NodeSchema): NodeSchema {
   const cloned = cloneDeep(root)
 
-  function processNode(node: NodeSchema): void {
-    // 清理 Free 模式特有的样式
-    if (node.style) {
+  function processNode(node: NodeSchema, parentLayout: LayoutMode = 'flow'): void {
+    if (parentLayout === 'flow' && node.style) {
       for (const prop of FREE_ONLY_STYLES) {
         delete node.style[prop]
       }
 
-      // 块级组件重置为 100% 宽度
       if (BLOCK_COMPONENTS.includes(node.componentName)) {
         node.style.width = '100%'
-        // 移除固定高度，让内容撑开
         if (node.style.height && node.children && node.children.length > 0) {
           node.style.minHeight = node.style.height
           delete node.style.height
@@ -61,23 +60,23 @@ export function convertToFlow(root: NodeSchema): NodeSchema {
       }
     }
 
-    // 处理子节点
+    const childLayout = (node.layoutMode as LayoutMode | undefined) || parentLayout
     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-      // 先根据原来的 top 值排序，保持视觉顺序
-      node.children.sort((a, b) => {
-        const topA = parseStyleValue(a.style?.top)
-        const topB = parseStyleValue(b.style?.top)
-        return topA - topB
-      })
+      if (childLayout === 'flow') {
+        node.children.sort((a, b) => {
+          const topA = parseStyleValue(a.style?.y ?? a.style?.top)
+          const topB = parseStyleValue(b.style?.y ?? b.style?.top)
+          return topA - topB
+        })
+      }
 
-      // 递归处理子节点
       for (const child of node.children) {
-        processNode(child)
+        processNode(child, childLayout)
       }
     }
   }
 
-  processNode(cloned)
+  processNode(cloned, 'flow')
 
   console.log('[LayoutConverter] Converted to Flow mode:', cloned)
   return cloned
@@ -101,7 +100,11 @@ export function convertToFree(root: NodeSchema): NodeSchema {
   const DEFAULT_WIDTH = 200
   const DEFAULT_HEIGHT = 100
 
-  function processNode(node: NodeSchema, depth: number = 0): void {
+  function processNode(
+    node: NodeSchema,
+    parentLayout: LayoutMode = 'flow',
+    depth: number = 0,
+  ): void {
     // 初始化 style
     if (!node.style) {
       node.style = {}
@@ -109,46 +112,46 @@ export function convertToFree(root: NodeSchema): NodeSchema {
 
     // Page 根节点不需要绝对定位
     if (node.componentName === 'Page') {
-      node.style.position = 'relative'
       node.style.width = '100%'
       node.style.height = '100%'
-    } else {
-      // 添加绝对定位
-      node.style.position = 'absolute'
     }
 
     // 处理子节点
+    const childLayout = (node.layoutMode as LayoutMode | undefined) || parentLayout
+
     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
       node.children.forEach((child, index) => {
         if (!child.style) {
           child.style = {}
         }
 
-        // 设置绝对定位
-        child.style.position = 'absolute'
+        if (childLayout === 'free') {
+          if (child.style.x === undefined) {
+            child.style.x = OFFSET_X + index * OFFSET_X
+          }
+          if (child.style.y === undefined) {
+            child.style.y = OFFSET_Y + index * OFFSET_Y
+          }
 
-        // 根据索引错开位置，避免重叠
-        child.style.left = `${OFFSET_X + index * OFFSET_X}px`
-        child.style.top = `${OFFSET_Y + index * OFFSET_Y}px`
+          if (!child.style.width) {
+            child.style.width = DEFAULT_WIDTH
+          }
+          if (!child.style.height) {
+            child.style.height = DEFAULT_HEIGHT
+          }
 
-        // 设置默认宽高（如果没有的话）
-        if (!child.style.width) {
-          child.style.width = `${DEFAULT_WIDTH}px`
+          if (child.style.zIndex === undefined) {
+            child.style.zIndex = index + 1
+          }
         }
-        if (!child.style.height) {
-          child.style.height = `${DEFAULT_HEIGHT}px`
-        }
-
-        // 设置 zIndex
-        child.style.zIndex = String(index + 1)
 
         // 递归处理
-        processNode(child, depth + 1)
+        processNode(child, childLayout, depth + 1)
       })
     }
   }
 
-  processNode(cloned)
+  processNode(cloned, 'free')
 
   console.log('[LayoutConverter] Converted to Free mode:', cloned)
   return cloned
@@ -158,11 +161,9 @@ export function convertToFree(root: NodeSchema): NodeSchema {
  * 根据目标模式转换布局
  */
 export function convertLayout(root: NodeSchema, targetMode: LayoutMode): NodeSchema {
-  if (targetMode === 'flow') {
-    return convertToFlow(root)
-  } else {
-    return convertToFree(root)
-  }
+  const converted = targetMode === 'flow' ? convertToFlow(root) : convertToFree(root)
+  converted.layoutMode = targetMode
+  return converted
 }
 
 /**
@@ -171,9 +172,7 @@ export function convertLayout(root: NodeSchema, targetMode: LayoutMode): NodeSch
 export function hasFreeLayoutStyles(node: NodeSchema): boolean {
   if (!node.style) return false
   return (
-    node.style.position === 'absolute' ||
-    node.style.left !== undefined ||
-    node.style.top !== undefined
+    node.style.x !== undefined || node.style.y !== undefined || node.style.left || node.style.top
   )
 }
 

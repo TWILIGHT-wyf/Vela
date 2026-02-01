@@ -69,10 +69,10 @@ export const useUIStore = defineStore('ui', () => {
 
   /**
    * 画布模式
-   * - 'free': 自由画布模式 (绝对定位，支持 Snap/Shape/ContextMenu)
-   * - 'flow': 流式画布模式 (文档流)
+   * - 'flow': 流式画布模式 (文档流) - 默认
+   * - 'free': 自由画布模式 (绝对定位，作为可选扩展)
    */
-  const canvasMode = ref<'free' | 'flow'>('free')
+  const canvasMode = ref<'free' | 'flow'>('flow')
 
   /**
    * 模拟运行模式

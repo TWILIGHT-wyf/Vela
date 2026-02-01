@@ -18,16 +18,7 @@
 
       <div class="divider-line"></div>
 
-      <!-- 画布模式切换 -->
-      <div class="canvas-mode-toggle">
-        <el-segmented
-          :model-value="canvasMode"
-          @update:model-value="handleCanvasModeChange"
-          :options="canvasModeOptions"
-          size="small"
-          class="vela-segmented"
-        />
-      </div>
+      <!-- 画布模式切换已收敛为默认流式布局 -->
     </div>
 
     <div class="right-section">
@@ -98,10 +89,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/stores/project'
-import { useUIStore } from '@/stores/ui'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import PageNavigator from './PageNavigator.vue'
 import SaveStatusIndicator from './SaveStatusIndicator.vue'
 import ExportConfigDialog from '@/components/dialogs/ExportConfigDialog.vue'
@@ -117,51 +106,11 @@ import {
 
 const router = useRouter()
 const projectStore = useProjectStore()
-const uiStore = useUIStore()
-
-const { canvasMode } = storeToRefs(uiStore)
-const { activePageId } = storeToRefs(projectStore)
 
 // 状态
 const saving = ref(false)
 const exportDialogVisible = ref(false)
 const isDark = ref(false)
-
-// Canvas mode options
-const canvasModeOptions = [
-  { label: '自由布局', value: 'free' },
-  { label: '流式布局', value: 'flow' },
-]
-
-// Handle canvas mode change with confirmation
-async function handleCanvasModeChange(newMode: 'free' | 'flow') {
-  if (newMode === canvasMode.value) return
-
-  try {
-    await ElMessageBox.confirm(
-      newMode === 'flow'
-        ? '切换到流式布局将移除所有组件的位置坐标，并按原Y坐标顺序重新排列。此操作可能导致布局变化，是否继续？'
-        : '切换到自由布局将为所有组件添加绝对定位，并设置初始坐标。此操作可能导致布局变化，是否继续？',
-      '切换布局模式',
-      {
-        confirmButtonText: '确认切换',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
-
-    // 用户确认，执行切换
-    const success = projectStore.changePageLayout(activePageId.value, newMode)
-
-    if (success) {
-      // UI store 会通过 watcher 自动同步
-      ElMessage.success(`已切换到${newMode === 'free' ? '自由' : '流式'}布局`)
-    }
-  } catch {
-    // 用户取消，不做任何操作
-    console.log('[Header] Layout change cancelled')
-  }
-}
 
 // 返回首页
 function goHome() {
@@ -329,14 +278,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-/* Segmented Control 覆盖 */
-.vela-segmented {
-  --el-segmented-item-selected-bg-color: #fff;
-  --el-segmented-bg-color: rgba(0, 0, 0, 0.05);
-  box-shadow: none !important;
-  padding: 2px;
 }
 
 .icon-left {

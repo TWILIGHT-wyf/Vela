@@ -1,6 +1,7 @@
 <template>
   <div
     class="flow-viewport"
+    :class="{ 'is-embedded': embedded }"
     ref="viewportRef"
     @click="handleBackgroundClick"
     @contextmenu.prevent="handleContextMenu"
@@ -20,6 +21,7 @@
             :key="child.id"
             :node="child"
             :wrapper="NodeWrapper"
+            :parent-layout-mode="rootLayoutMode"
           />
         </template>
 
@@ -72,20 +74,32 @@ import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
+import { useSizeStore } from '@/stores/size'
 import UniversalRenderer from '../../UniversalRenderer.vue'
 import NodeWrapper from './NodeWrapper.vue'
 import DropIndicator from './DropIndicator.vue'
-import ContextMenu from '../Free/ContextMenu/ContextMenu.vue'
+import ContextMenu from './ContextMenu.vue'
 import { useFlowDrop } from './useFlowDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
+
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean
+  }>(),
+  {
+    embedded: false,
+  },
+)
 
 const componentStore = useComponent()
 const { rootNode } = storeToRefs(componentStore)
 const { selectComponent, clearSelection } = componentStore
 
 const uiStore = useUIStore()
-const { canvasWidth, canvasHeight, canvasScale } = storeToRefs(uiStore)
+const sizeStore = useSizeStore()
+const { canvasScale } = storeToRefs(uiStore)
+const { width: canvasWidth, height: canvasHeight } = storeToRefs(sizeStore)
 const { setCanvasScale } = uiStore
 
 const viewportRef = ref<HTMLElement | null>(null)
@@ -106,21 +120,35 @@ provide('flowDrop', flowDrop)
 // ========== Root drag state ==========
 const isRootDragOver = ref(false)
 
+const rootLayoutMode = computed(() =>
+  rootNode.value?.layoutMode === 'free' ? 'free' : 'flow',
+)
+
 /**
  * 页面样式 - 模拟 A4/自定义尺寸的白色页面
  */
-const pageStyle = computed(() => ({
-  width: `${canvasWidth.value}px`,
-  minHeight: `${canvasHeight.value}px`,
-  transform: `scale(${canvasScale.value})`,
-  transformOrigin: 'top center',
-  marginBottom: `${canvasHeight.value * (canvasScale.value - 1)}px`, // Compensate for scale
-}))
+const pageStyle = computed(() => {
+  const base: Record<string, string> = {
+    width: `${canvasWidth.value}px`,
+    minHeight: `${canvasHeight.value}px`,
+  }
 
-const workspaceStyle = computed(() => ({
-  minWidth: `${canvasWidth.value * canvasScale.value + 80}px`,
-  minHeight: `${canvasHeight.value * canvasScale.value + 80}px`,
-}))
+  if (!props.embedded) {
+    base.transform = `scale(${canvasScale.value})`
+    base.transformOrigin = 'top center'
+    base.marginBottom = `${canvasHeight.value * (canvasScale.value - 1)}px`
+  }
+
+  return base
+})
+
+const workspaceStyle = computed(() => {
+  if (props.embedded) return {}
+  return {
+    minWidth: `${canvasWidth.value * canvasScale.value + 80}px`,
+    minHeight: `${canvasHeight.value * canvasScale.value + 80}px`,
+  }
+})
 
 /**
  * Ctrl+Wheel Zoom (统一由 UI Store 管理)
@@ -137,11 +165,15 @@ const handleWheel = (e: WheelEvent) => {
 // (Refactored to useEditorShortcuts)
 
 onMounted(() => {
-  window.addEventListener('wheel', handleWheel, { passive: false })
+  if (!props.embedded) {
+    window.addEventListener('wheel', handleWheel, { passive: false })
+  }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('wheel', handleWheel)
+  if (!props.embedded) {
+    window.removeEventListener('wheel', handleWheel)
+  }
 })
 
 // ========== Context Menu ==========
@@ -166,6 +198,8 @@ function handleMenuAction(action: string) {
   closeContextMenu()
 
   switch (action) {
+    case 'close':
+      break
     case 'copy':
       componentStore.copySelectedNodes()
       break
@@ -252,12 +286,23 @@ const handleRootDrop = (e: DragEvent) => {
   position: relative;
 }
 
+.flow-viewport.is-embedded {
+  overflow: visible;
+  background: transparent;
+  align-items: flex-start;
+}
+
 /* 工作区 - 提供页面周围的边距 */
 .flow-workspace {
   padding: 40px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+}
+
+.flow-viewport.is-embedded .flow-workspace {
+  padding: 40px;
+  justify-content: flex-start;
 }
 
 /* 模拟页面 - 白色纸张效果 */

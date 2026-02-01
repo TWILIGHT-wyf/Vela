@@ -13,6 +13,7 @@ import {
   UpdateStyleCommand,
   UpdatePropsCommand,
   UpdateDataSourceCommand,
+  UpdateLayoutModeCommand,
 } from '../commands/index'
 
 import { useComponentIndex } from './useComponentIndex'
@@ -116,6 +117,22 @@ export const useComponent = defineStore('component', () => {
 
     const historyStore = useHistoryStore()
     const cmd = new UpdateDataSourceCommand(id, dataSource)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 更新组件的布局模式（通过命令执行，支持撤销）
+   */
+  function updateLayoutMode(id: string, layoutMode: NodeSchema['layoutMode']) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] Node not found: ${id}`)
+      return
+    }
+    if (node.layoutMode === layoutMode) return
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateLayoutModeCommand(id, layoutMode)
     historyStore.executeCommand(cmd)
   }
 
@@ -285,6 +302,7 @@ export const useComponent = defineStore('component', () => {
     updateStyleRaw: styleCtx.updateStyleRaw,
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
+    updateLayoutModeRaw: styleCtx.updateLayoutModeRaw,
   })
 
   return {
@@ -326,6 +344,7 @@ export const useComponent = defineStore('component', () => {
     updateProps,
     updateStyle,
     updateDataSource,
+    updateLayoutMode,
     deleteComponent,
     deleteComponents,
     moveComponent,
@@ -343,6 +362,7 @@ export const useComponent = defineStore('component', () => {
     updateStyleRaw: styleCtx.updateStyleRaw,
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
+    updateLayoutModeRaw: styleCtx.updateLayoutModeRaw,
 
     // Clipboard
     clipboard: clipboardCtx.clipboard,

@@ -15,6 +15,7 @@ export interface ComponentStoreAccessor {
   updateStyleRaw(id: string, style: Partial<NodeStyle>): void
   updatePropsRaw(id: string, props: Record<string, unknown>): void
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
+  updateLayoutModeRaw(id: string, layoutMode: NodeSchema['layoutMode']): void
 }
 
 // Store accessor 将在初始化时设置
@@ -341,6 +342,45 @@ export class UpdateDataSourceCommand implements Command {
   redo(): void {
     const store = getStore()
     store.updateDataSourceRaw(this.id, this.newDataSource)
+  }
+}
+
+/**
+ * 更新布局模式命令
+ */
+export class UpdateLayoutModeCommand implements Command {
+  readonly type: CommandType = 'update-layout-mode'
+  readonly description: string
+
+  private id: string
+  private newLayoutMode: NodeSchema['layoutMode']
+  private oldLayoutMode?: NodeSchema['layoutMode']
+
+  constructor(id: string, layoutMode: NodeSchema['layoutMode']) {
+    this.id = id
+    this.newLayoutMode = layoutMode
+    this.description = `Update layout mode of ${id}`
+  }
+
+  execute(): void {
+    const store = getStore()
+    const node = store.findNodeById(null, this.id)
+
+    if (node) {
+      this.oldLayoutMode = node.layoutMode
+    }
+
+    store.updateLayoutModeRaw(this.id, this.newLayoutMode)
+  }
+
+  undo(): void {
+    const store = getStore()
+    store.updateLayoutModeRaw(this.id, this.oldLayoutMode)
+  }
+
+  redo(): void {
+    const store = getStore()
+    store.updateLayoutModeRaw(this.id, this.newLayoutMode)
   }
 }
 

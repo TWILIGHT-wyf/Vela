@@ -78,6 +78,21 @@ export function useComponentStyle(
   }
 
   /**
+   * [Raw] 更新布局模式 - 不记录历史
+   */
+  function updateLayoutModeRaw(
+    id: string,
+    layoutMode: NodeSchema['layoutMode'],
+  ): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.layoutMode = layoutMode
+    incrementVersion(id)
+    syncToProjectStore()
+  }
+
+  /**
    * 创建单个属性的响应式双向绑定引用
    * @param id 节点 ID
    * @param propName 属性名
@@ -172,6 +187,7 @@ export function useComponentStyle(
     updateStyleRaw,
     updatePropsRaw,
     updateDataSourceRaw,
+    updateLayoutModeRaw,
 
     // Ref Factories
     createPropRef,

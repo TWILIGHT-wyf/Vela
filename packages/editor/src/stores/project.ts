@@ -33,6 +33,7 @@ export const useProjectStore = defineStore('project', () => {
   function initProject(schema?: ProjectSchema) {
     if (schema) {
       project.value = schema
+      normalizePageLayouts()
       if (project.value.pages.length > 0) {
         currentPageId.value = project.value.pages[0].id
       }
@@ -43,6 +44,7 @@ export const useProjectStore = defineStore('project', () => {
     if (saved) {
       try {
         project.value = JSON.parse(saved)
+        normalizePageLayouts()
         if (project.value.pages.length > 0) {
           currentPageId.value = project.value.pages[0].id
         }
@@ -55,6 +57,19 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  function normalizePageLayouts() {
+    if (!Array.isArray(project.value.pages)) return
+    for (const page of project.value.pages) {
+      if (!page.config) page.config = { layout: 'flow' }
+      if (page.config.layout !== 'flow' && page.config.layout !== 'free') {
+        page.config.layout = 'flow'
+      }
+      if (page.children) {
+        page.children.layoutMode = page.config.layout
+      }
+    }
+  }
+
   function createDefaultProject() {
     const pageId = nanoid()
     const defaultPage: PageSchema = {
@@ -62,13 +77,14 @@ export const useProjectStore = defineStore('project', () => {
       name: 'Home',
       path: '/',
       config: {
-        layout: 'free',
+        layout: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: 'root',
         componentName: 'Page', // Using 'Page' as root container
+        layoutMode: 'flow',
         props: {},
         style: {
           width: '100%',
@@ -99,13 +115,14 @@ export const useProjectStore = defineStore('project', () => {
       name,
       path: `/${name.toLowerCase()}`,
       config: {
-        layout: 'free',
+        layout: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: `root_${pageId}`,
         componentName: 'Page',
+        layoutMode: 'flow',
         props: {},
         style: {
           width: '100%',
@@ -136,6 +153,9 @@ export const useProjectStore = defineStore('project', () => {
   function updatePageConfig(config: Partial<PageSchema['config']>) {
     if (currentPage.value && currentPage.value.config) {
       Object.assign(currentPage.value.config, config)
+      if (config.layout && currentPage.value.children) {
+        currentPage.value.children.layoutMode = config.layout
+      }
     }
   }
 
@@ -143,6 +163,9 @@ export const useProjectStore = defineStore('project', () => {
     const page = project.value.pages.find((p) => p.id === pageId)
     if (page && page.config) {
       page.config.layout = layout
+      if (page.children) {
+        page.children.layoutMode = layout
+      }
       return true
     }
     return false

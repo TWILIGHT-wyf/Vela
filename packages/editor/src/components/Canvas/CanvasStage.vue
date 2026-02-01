@@ -145,6 +145,7 @@ const handleDrop = (e: DragEvent) => {
     0 2px 12px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   border-radius: 2px;
-  overflow: hidden;
+  /* 移除 overflow: hidden，避免裁剪图表等组件的标题、轴名称等内容 */
+  overflow: visible;
 }
 </style>

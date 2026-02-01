@@ -1,6 +1,13 @@
 <template>
   <!-- Wrapper Component (Shape or NodeWrapper) -->
-  <component :is="wrapper" v-if="node" :node="node" v-bind="$attrs">
+  <component
+    :is="wrapper"
+    v-if="node"
+    :node="node"
+    :node-id="node.id"
+    :parent-layout-mode="effectiveParentLayoutMode"
+    v-bind="$attrs"
+  >
     <!-- Actual Component -->
     <component
       v-if="isResolved"
@@ -18,6 +25,7 @@
           :key="child.id"
           :node="child"
           :wrapper="wrapper"
+          :parent-layout-mode="selfChildrenLayoutMode"
           v-bind="$attrs"
         />
       </template>
@@ -39,6 +47,7 @@
           :key="child.id"
           :node="child"
           :wrapper="wrapper"
+          :parent-layout-mode="selfChildrenLayoutMode"
           v-bind="$attrs"
         />
       </template>
@@ -47,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, watch, type Component } from 'vue'
+import { computed, toRef, type Component } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
@@ -60,6 +69,7 @@ defineOptions({
 const props = defineProps<{
   node: NodeSchema
   wrapper: Component
+  parentLayoutMode?: 'flow' | 'free'
 }>()
 
 // Component Resolution
@@ -73,6 +83,11 @@ const componentRef = computed(() => {
 // Data Source Adapter
 const nodeRef = toRef(props, 'node')
 const { resolvedProps } = useDataSourceAdapter(nodeRef)
+
+const effectiveParentLayoutMode = computed(() => props.parentLayoutMode || 'flow')
+const selfChildrenLayoutMode = computed(
+  () => (props.node.layoutMode as 'free' | 'flow' | undefined) || effectiveParentLayoutMode.value,
+)
 
 // Style Logic: Strip layout styles handled by wrapper
 const innerStyle = computed(() => {
@@ -97,6 +112,11 @@ const innerStyle = computed(() => {
 
   // Other
   delete style.locked
+
+  // Free layout containers need a positioning context for absolute children
+  if (props.node.layoutMode === 'free' && !style.position) {
+    style.position = 'relative'
+  }
 
   return style
 })

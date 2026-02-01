@@ -1,24 +1,50 @@
 <template>
   <div class="canvas-board-wrapper">
-    <!-- Free 模式画布 (绝对定位 + Snap/Shape) -->
-    <FreeCanvas v-if="canvasMode === 'free'" />
+    <!-- Infinite canvas viewport (Figma-like) -->
+    <CanvasViewport>
+      <!-- Flow 画布嵌入在无限画布内 -->
+      <FlowCanvas embedded />
 
-    <!-- Flow 模式画布 (文档流) -->
-    <FlowCanvas v-else-if="canvasMode === 'flow'" />
-
-    <!-- 兜底模式 (使用 Free 模式) -->
-    <FreeCanvas v-else />
+      <template #overlay>
+        <SelectionLayer />
+      </template>
+    </CanvasViewport>
   </div>
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUIStore } from '@/stores/ui'
-import FreeCanvas from './modes/Free/FreeCanvas.vue'
+import { useCanvasStore } from '@/stores/canvas'
+import CanvasViewport from './CanvasViewport.vue'
+import SelectionLayer from './selection/SelectionLayer.vue'
 import FlowCanvas from './modes/Flow/FlowCanvas.vue'
 
 const uiStore = useUIStore()
-const { canvasMode } = storeToRefs(uiStore)
+const canvasStore = useCanvasStore()
+const { canvasScale } = storeToRefs(uiStore)
+
+// Sync zoom scale between legacy canvas store and new UI store
+watch(
+  () => canvasStore.scale,
+  (scale) => {
+    if (Math.abs(scale - canvasScale.value) > 0.001) {
+      uiStore.setCanvasScale(scale)
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  canvasScale,
+  (scale) => {
+    if (Math.abs(scale - canvasStore.scale) > 0.001) {
+      canvasStore.setScale(scale)
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

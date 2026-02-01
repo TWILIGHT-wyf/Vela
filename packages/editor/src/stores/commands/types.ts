@@ -37,6 +37,7 @@ export type CommandType =
   | 'update-props'
   | 'update-style'
   | 'update-data-source'
+  | 'update-layout-mode'
   | 'batch'
 
 /**
@@ -86,6 +87,14 @@ export interface UpdateStylePayload {
 export interface UpdateDataSourcePayload {
   id: string
   dataSource: Record<string, unknown>
+}
+
+/**
+ * 更新布局模式命令的参数
+ */
+export interface UpdateLayoutModePayload {
+  id: string
+  layoutMode: NodeSchema['layoutMode']
 }
 
 /**

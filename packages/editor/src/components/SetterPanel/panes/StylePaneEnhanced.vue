@@ -42,6 +42,19 @@
       <!-- 通用样式面板（总是显示，但在有自定义配置时去重） -->
       <el-form label-position="top" size="default" class="style-form">
         <el-collapse v-model="activeNames" class="style-collapse">
+          <!-- 布局模式 (仅容器组件) -->
+          <el-collapse-item title="布局模式" name="layoutMode" v-if="isContainer">
+            <el-form-item label="子节点布局">
+              <el-radio-group
+                :model-value="layoutModeValue"
+                @update:model-value="(val: 'flow' | 'free') => setLayoutMode(val)"
+              >
+                <el-radio-button label="flow">流式布局</el-radio-button>
+                <el-radio-button label="free">自由布局</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+          </el-collapse-item>
+
           <!-- 尺寸 -->
           <el-collapse-item
             title="尺寸"
@@ -255,7 +268,34 @@ const props = defineProps<Props>()
 const componentStore = useComponent()
 
 const activeGroups = ref<string[]>(['尺寸', '布局', '外观'])
-const activeNames = ref(['size', 'appearance'])
+const activeNames = ref(['layoutMode', 'size', 'appearance'])
+
+const CONTAINER_COMPONENTS = [
+  'Container',
+  'Row',
+  'Col',
+  'Flex',
+  'Grid',
+  'Panel',
+  'Card',
+  'Tabs',
+  'TabPane',
+  'Modal',
+  'Page',
+]
+
+const isContainer = computed(() => {
+  return !!props.node && CONTAINER_COMPONENTS.includes(props.node.componentName)
+})
+
+const layoutModeValue = computed(() => {
+  return (props.node?.layoutMode || 'flow') as 'flow' | 'free'
+})
+
+function setLayoutMode(mode: 'flow' | 'free') {
+  if (!props.node) return
+  componentStore.updateLayoutMode(props.node.id, mode)
+}
 
 // 获取当前组件的 Meta 样式配置（包含 styles 和 group='样式' 的 props）
 const metaStyles = computed<NamedStyleConfig[]>(() => {

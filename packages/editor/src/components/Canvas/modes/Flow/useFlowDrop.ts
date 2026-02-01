@@ -1,4 +1,4 @@
-import { ref, computed, readonly, type Ref } from 'vue'
+import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import type { NodeSchema } from '@vela/core'
 import { useComponent } from '@/stores/component'
@@ -274,6 +274,8 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     e.stopPropagation()
 
     const state = indicatorState.value
+    const clientX = e.clientX
+    const clientY = e.clientY
 
     // 隐藏指示器
     indicatorState.value = {
@@ -321,7 +323,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       return handleMoveComponent(dropData.nodeId, state)
     } else {
       // 添加新组件
-      return handleAddComponent(dropData, state)
+      return handleAddComponent(dropData, state, clientX, clientY)
     }
   }
 
@@ -373,10 +375,24 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   /**
    * 处理新组件添加
    */
-  function handleAddComponent(dropData: any, state: DropIndicatorState): boolean {
+  function handleAddComponent(
+    dropData: any,
+    state: DropIndicatorState,
+    clientX: number,
+    clientY: number,
+  ): boolean {
     if (!rootNode || !state.targetId) return false
 
     const { position, targetId, targetParentId } = state
+    const targetNode = componentStore.findNodeById(rootNode, targetId)
+    const isFreeContainer = position === 'inside' && targetNode?.layoutMode === 'free'
+
+    let x = 0
+    let y = 0
+    if (isFreeContainer && state.rect) {
+      x = Math.max(0, Math.round(clientX - state.rect.left))
+      y = Math.max(0, Math.round(clientY - state.rect.top))
+    }
 
     // 创建新组件
     const newComponent: NodeSchema = {
@@ -384,8 +400,19 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       componentName: dropData.componentName,
       props: dropData.props || {},
       style: {
-        width: dropData.width ? `${dropData.width}px` : '100%',
-        minHeight: dropData.height ? `${dropData.height}px` : 'auto',
+        width: isFreeContainer
+          ? dropData.width ?? dropData.style?.width ?? 120
+          : dropData.width
+            ? `${dropData.width}px`
+            : '100%',
+        minHeight: isFreeContainer
+          ? undefined
+          : dropData.height
+            ? `${dropData.height}px`
+            : 'auto',
+        height: isFreeContainer ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
+        x: isFreeContainer ? x : undefined,
+        y: isFreeContainer ? y : undefined,
         ...(dropData.style || {}),
       },
       children: isContainerNode({ componentName: dropData.componentName } as NodeSchema)
@@ -416,7 +443,10 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     const newId = componentStore.addComponent(parentId, newComponent, index)
 
     if (newId) {
-      componentStore.selectComponent(newId)
+      // 使用 nextTick 确保 DOM 渲染完成后再选中，避免选中框与渲染层不同步
+      nextTick(() => {
+        componentStore.selectComponent(newId)
+      })
       return true
     }
 
@@ -458,6 +488,18 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       return false
     }
 
+    const rootLayoutMode = rootNode?.layoutMode === 'free' ? 'free' : 'flow'
+    let x = 0
+    let y = 0
+    if (rootLayoutMode === 'free') {
+      const target = e.currentTarget as HTMLElement | null
+      const rect = target?.getBoundingClientRect()
+      if (rect) {
+        x = Math.max(0, Math.round(e.clientX - rect.left))
+        y = Math.max(0, Math.round(e.clientY - rect.top))
+      }
+    }
+
     // 如果是移动操作
     if (dropData.nodeId && draggingId.value === dropData.nodeId && rootNode) {
       componentStore.moveComponent(dropData.nodeId, rootNode.id, rootNode.children?.length || 0)
@@ -470,8 +512,21 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       componentName: dropData.componentName,
       props: dropData.props || {},
       style: {
-        width: dropData.width ? `${dropData.width}px` : '100%',
-        minHeight: dropData.height ? `${dropData.height}px` : 'auto',
+        width:
+          rootLayoutMode === 'free'
+            ? dropData.width ?? dropData.style?.width ?? 120
+            : dropData.width
+              ? `${dropData.width}px`
+              : '100%',
+        minHeight:
+          rootLayoutMode === 'free'
+            ? undefined
+            : dropData.height
+              ? `${dropData.height}px`
+              : 'auto',
+        height: rootLayoutMode === 'free' ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
+        x: rootLayoutMode === 'free' ? x : undefined,
+        y: rootLayoutMode === 'free' ? y : undefined,
         ...(dropData.style || {}),
       },
       children: isContainerNode({ componentName: dropData.componentName } as NodeSchema)
@@ -481,7 +536,10 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     const newId = componentStore.addComponent(null, newComponent)
     if (newId) {
-      componentStore.selectComponent(newId)
+      // 使用 nextTick 确保 DOM 渲染完成后再选中，避免选中框与渲染层不同步
+      nextTick(() => {
+        componentStore.selectComponent(newId)
+      })
       return true
     }
 
