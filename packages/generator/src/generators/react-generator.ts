@@ -252,6 +252,13 @@ export class ReactGenerator {
       attrs.push(this.generateProp(prop))
     }
 
+    // 处理 v-model 指令（双向绑定）
+    const modelDirective = node.directives.find((d) => d.type === 'model')
+    if (modelDirective) {
+      const modelProps = this.generateVModelProps(modelDirective, node.type)
+      attrs.push(...modelProps)
+    }
+
     // 生成事件
     for (const event of node.events) {
       attrs.push(this.generateEvent(event))
@@ -316,9 +323,133 @@ export class ReactGenerator {
     return `${prop.name}={${JSON.stringify(prop.value)}}`
   }
 
+  /**
+   * 生成 v-model 转换为 React 受控组件
+   * v-model="value" → value={value} onChange={(e) => setValue(e.target.value)}
+   *
+   * @param modelDirective - v-model 指令信息
+   * @param elementType - 元素类型（用于确定 onChange 的值获取方式）
+   */
+  private generateVModelProps(modelDirective: IRDirective, elementType: string): string[] {
+    if (modelDirective.type !== 'model' || !modelDirective.expression) {
+      return []
+    }
+
+    const expression = modelDirective.expression
+    const setterName = this.generateSetterName(expression)
+    const props: string[] = []
+
+    // 根据元素类型确定 value 属性和 onChange 的处理方式
+    switch (elementType.toLowerCase()) {
+      case 'input':
+      case 'textarea':
+        // 检查是否是 checkbox 或 radio（通过 modelDirective.arg 或其他方式）
+        const inputType = modelDirective.arg || 'text'
+        if (inputType === 'checkbox') {
+          props.push(`checked={${expression}}`)
+          props.push(`onChange={(e) => ${setterName}(e.target.checked)}`)
+        } else if (inputType === 'radio') {
+          props.push(`checked={${expression} === ${JSON.stringify(modelDirective.value)}}`)
+          props.push(`onChange={() => ${setterName}(${JSON.stringify(modelDirective.value)})}`)
+        } else {
+          // 普通文本输入
+          props.push(`value={${expression}}`)
+          props.push(`onChange={(e) => ${setterName}(e.target.value)}`)
+        }
+        break
+
+      case 'select':
+        props.push(`value={${expression}}`)
+        props.push(`onChange={(e) => ${setterName}(e.target.value)}`)
+        break
+
+      default:
+        // 自定义组件，假设使用 value/onChange 或 modelValue/onUpdate:modelValue
+        props.push(`value={${expression}}`)
+        props.push(`onChange={${setterName}}`)
+        break
+    }
+
+    return props
+  }
+
+  /**
+   * 根据表达式生成 setter 函数名
+   * 例如: "form.name" → "setFormName" 或保持原样如果已经是 setter
+   */
+  private generateSetterName(expression: string): string {
+    // 简单变量名
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(expression)) {
+      return `set${expression.charAt(0).toUpperCase()}${expression.slice(1)}`
+    }
+
+    // 对象属性访问 (form.name)
+    if (expression.includes('.')) {
+      const parts = expression.split('.')
+      const capitalized = parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join('')
+      return `set${capitalized}`
+    }
+
+    // 复杂表达式，返回通用 setter
+    return `(v) => { /* update ${expression} */ }`
+  }
+
+  /**
+   * 生成事件处理器，支持修饰符
+   * Vue 修饰符映射:
+   * - .prevent → e.preventDefault()
+   * - .stop → e.stopPropagation()
+   * - .once → 需要特殊处理（React 无原生支持）
+   * - .self → e.target === e.currentTarget
+   * - .capture → 使用 onClickCapture 等
+   */
   private generateEvent(event: IREvent): string {
-    const reactEventName = this.toReactEventName(event.name)
-    return `${reactEventName}={${event.handler}}`
+    const modifiers = event.modifiers || []
+    const reactEventName = this.toReactEventName(event.name, modifiers)
+
+    // 如果没有修饰符，直接返回
+    if (modifiers.length === 0) {
+      return `${reactEventName}={${event.handler}}`
+    }
+
+    // 生成带修饰符的事件处理器
+    const handlerBody = this.generateEventHandlerWithModifiers(event.handler, modifiers)
+    return `${reactEventName}={${handlerBody}}`
+  }
+
+  /**
+   * 生成带修饰符的事件处理函数体
+   */
+  private generateEventHandlerWithModifiers(handler: string, modifiers: string[]): string {
+    const checks: string[] = []
+    const actions: string[] = []
+
+    for (const mod of modifiers) {
+      switch (mod) {
+        case 'prevent':
+          actions.push('e.preventDefault()')
+          break
+        case 'stop':
+          actions.push('e.stopPropagation()')
+          break
+        case 'self':
+          checks.push('if (e.target !== e.currentTarget) return')
+          break
+        case 'once':
+          // React 不支持 once，需要通过 state 实现
+          // 这里简化处理，在注释中提示
+          actions.push('/* TODO: implement once modifier */')
+          break
+      }
+    }
+
+    // 组装处理函数
+    const allStatements = [...checks, ...actions]
+    if (allStatements.length === 0) {
+      return handler
+    }
+
+    return `(e) => { ${allStatements.join('; ')}; ${handler}(e) }`
   }
 
   private generateSlotAsChildren(slot: IRSlot, indent: number): string {
@@ -345,11 +476,20 @@ export class ReactGenerator {
     return REACT_COMPONENT_MAP[type] || type
   }
 
-  private toReactEventName(eventName: string): string {
+  /**
+   * 将 Vue 事件名转换为 React 事件名
+   * 支持 capture 修饰符
+   */
+  private toReactEventName(eventName: string, modifiers: string[] = []): string {
     const map: Record<string, string> = {
       click: 'onClick',
       mouseenter: 'onMouseEnter',
       mouseleave: 'onMouseLeave',
+      mouseover: 'onMouseOver',
+      mouseout: 'onMouseOut',
+      mousedown: 'onMouseDown',
+      mouseup: 'onMouseUp',
+      mousemove: 'onMouseMove',
       dblclick: 'onDoubleClick',
       change: 'onChange',
       input: 'onInput',
@@ -359,8 +499,28 @@ export class ReactGenerator {
       keydown: 'onKeyDown',
       keyup: 'onKeyUp',
       keypress: 'onKeyPress',
+      scroll: 'onScroll',
+      wheel: 'onWheel',
+      touchstart: 'onTouchStart',
+      touchend: 'onTouchEnd',
+      touchmove: 'onTouchMove',
+      drag: 'onDrag',
+      dragstart: 'onDragStart',
+      dragend: 'onDragEnd',
+      dragenter: 'onDragEnter',
+      dragleave: 'onDragLeave',
+      dragover: 'onDragOver',
+      drop: 'onDrop',
     }
-    return map[eventName.toLowerCase()] || `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
+
+    let reactName = map[eventName.toLowerCase()] || `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
+
+    // 支持 capture 修饰符
+    if (modifiers.includes('capture')) {
+      reactName += 'Capture'
+    }
+
+    return reactName
   }
 
   private convertStyleToReact(style: Record<string, unknown>): Record<string, unknown> {
@@ -407,13 +567,22 @@ export class ReactGenerator {
     // Refs
     code += `  const componentRefs = useRef<Record<string, HTMLElement | null>>({})\n\n`
 
-    // State
+    // State - 包括 IR 中定义的响应式状态
     code += `  const [componentsData, setComponentsData] = useState<ComponentData[]>(${this.generateInitialState(ir)})\n\n`
+
+    // 生成自定义响应式状态 (Vue ref/reactive → React useState)
+    code += this.generateReactiveState(ir.script)
+
+    // 生成 computed 属性 (Vue computed → React useMemo)
+    code += this.generateComputedProps(ir.script)
 
     // 生成事件处理函数
     code += this.generateEventHandlers(ir.script)
 
-    // useEffect for data binding
+    // 生成 watch → useEffect
+    code += this.generateWatchers(ir.script)
+
+    // useEffect for data binding (mounted)
     code += `  useEffect(() => {
     // 数据绑定引擎
     console.log('Component mounted, refs:', componentRefs.current)
@@ -426,6 +595,83 @@ export class ReactGenerator {
     code += `}\n`
 
     return code
+  }
+
+  /**
+   * 生成响应式状态 (Vue ref/reactive → React useState)
+   */
+  private generateReactiveState(script: IRScriptContext): string {
+    let code = ''
+
+    for (const state of script.reactiveState) {
+      const initialValue = JSON.stringify(state.initialValue)
+      const capitalizedName = state.name.charAt(0).toUpperCase() + state.name.slice(1)
+
+      code += `  const [${state.name}, set${capitalizedName}] = useState(${initialValue})\n`
+    }
+
+    if (script.reactiveState.length > 0) {
+      code += '\n'
+    }
+
+    return code
+  }
+
+  /**
+   * 生成 computed 属性 (Vue computed → React useMemo)
+   */
+  private generateComputedProps(script: IRScriptContext): string {
+    let code = ''
+
+    for (const computed of script.computedProps) {
+      const deps = computed.deps?.length ? `[${computed.deps.join(', ')}]` : '[]'
+      code += `  const ${computed.name} = useMemo(() => ${computed.getter}, ${deps})\n`
+    }
+
+    if (script.computedProps.length > 0) {
+      code += '\n'
+    }
+
+    return code
+  }
+
+  /**
+   * 生成 watcher (Vue watch → React useEffect)
+   */
+  private generateWatchers(script: IRScriptContext): string {
+    let code = ''
+
+    for (const watcher of script.watchers) {
+      const deps = `[${watcher.sources.join(', ')}]`
+
+      // 处理 immediate 选项
+      if (watcher.options?.immediate) {
+        // immediate: true 需要立即执行一次
+        code += `  // Watcher with immediate: true\n`
+        code += `  const ${this.generateWatcherRefName(watcher.sources)} = useRef(true)\n`
+        code += `  useEffect(() => {\n`
+        code += `    if (${this.generateWatcherRefName(watcher.sources)}.current) {\n`
+        code += `      ${this.generateWatcherRefName(watcher.sources)}.current = false\n`
+        code += `    }\n`
+        code += `    ${watcher.callback}\n`
+        code += `  }, ${deps})\n\n`
+      } else {
+        // 普通 watcher
+        code += `  useEffect(() => {\n`
+        code += `    ${watcher.callback}\n`
+        code += `  }, ${deps})\n\n`
+      }
+    }
+
+    return code
+  }
+
+  /**
+   * 生成 watcher ref 名称
+   */
+  private generateWatcherRefName(sources: string[]): string {
+    const joined = sources.map((s) => s.replace(/\./g, '_')).join('_')
+    return `__watcher_${joined}_init`
   }
 
   private generateInitialState(ir: IRComponent): string {

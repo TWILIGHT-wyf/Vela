@@ -13,6 +13,11 @@ export * from './types'
 
 // Composables
 export { useComponentDataSource } from './runtime/useComponentDataSource'
+export { useDataBindingEngine } from './runtime/useDataBindingEngine'
+export { useComponentStyle } from './composables/useComponentStyle'
+
+// DevTools
+export * from './devtools'
 
 // Legacy exports (deprecated)
 // RecursiveRenderer is no longer exported - use RuntimeComponent instead

@@ -1,4 +1,4 @@
-import { watch, type Ref, type WatchStopHandle, type ComputedRef } from 'vue'
+import { watch, ref, type Ref, type WatchStopHandle, type ComputedRef } from 'vue'
 import { get, isEqual } from 'lodash-es'
 import type { NodeSchema, DataBinding } from '@vela/core'
 
@@ -7,6 +7,8 @@ export interface DataBindingEngine {
   stop: () => void
   isEnabled: boolean
   setEnabled: (enabled: boolean) => void
+  dataCache: Ref<Map<string, unknown>>
+  refreshDataSource: (sourceId: string) => Promise<void>
 }
 
 /**
@@ -14,6 +16,58 @@ export interface DataBindingEngine {
  */
 function normalizeBindings(node: NodeSchema): DataBinding[] {
   return Array.isArray(node.dataBindings) ? node.dataBindings : []
+}
+
+/**
+ * 数据源配置
+ */
+export interface DataSourceConfig {
+  enabled?: boolean
+  url?: string
+  method?: 'GET' | 'POST'
+  headers?: Record<string, string>
+  params?: Record<string, unknown>
+  interval?: number // 自动刷新间隔（毫秒）
+}
+
+/**
+ * 从组件中提取数据源配置
+ */
+function extractDataSources(components: NodeSchema[]): Map<string, DataSourceConfig> {
+  const sources = new Map<string, DataSourceConfig>()
+  for (const comp of components) {
+    if (comp.dataSource?.enabled && comp.dataSource?.url) {
+      sources.set(comp.id, comp.dataSource as DataSourceConfig)
+    }
+  }
+  return sources
+}
+
+/**
+ * 加载数据源
+ */
+async function loadDataSource(config: DataSourceConfig): Promise<unknown> {
+  if (!config.url) return null
+
+  try {
+    const response = await fetch(config.url, {
+      method: config.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config.headers,
+      },
+      body: config.method === 'POST' ? JSON.stringify(config.params) : undefined,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('[DataBindingEngine] Failed to load data source:', error)
+    return null
+  }
 }
 
 /**
@@ -25,6 +79,7 @@ function normalizeBindings(node: NodeSchema): DataBinding[] {
  * 3. 使用锁机制防止循环绑定导致的无限更新
  * 4. 支持数据转换器（表达式/模板）
  * 5. 精确路径监听，避免不必要的 deep watch
+ * 6. 集成数据源加载和缓存
  */
 export function useDataBindingEngine(
   components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>,
@@ -34,14 +89,66 @@ export function useDataBindingEngine(
   const updateLocks = new Set<string>()
   let enabled = true
 
+  // 数据源缓存
+  const dataCache = ref<Map<string, unknown>>(new Map())
+  // 数据源刷新定时器
+  const refreshTimers = new Map<string, number>()
+
   function stop() {
     for (const stopFn of stops) stopFn()
     stops = []
     updateLocks.clear()
+    // 清除数据源刷新定时器
+    for (const timer of refreshTimers.values()) {
+      clearInterval(timer)
+    }
+    refreshTimers.clear()
   }
 
   function setEnabled(value: boolean) {
     enabled = value
+  }
+
+  /**
+   * 刷新指定数据源
+   */
+  async function refreshDataSource(sourceId: string): Promise<void> {
+    const comps = components.value
+    const comp = comps.find((c) => c.id === sourceId)
+    if (!comp?.dataSource?.enabled) return
+
+    const data = await loadDataSource(comp.dataSource as DataSourceConfig)
+    if (data !== null) {
+      dataCache.value.set(sourceId, data)
+      // 触发 Vue 响应式更新
+      dataCache.value = new Map(dataCache.value)
+    }
+  }
+
+  /**
+   * 初始化所有数据源
+   */
+  async function initDataSources(): Promise<void> {
+    const comps = components.value
+    const sources = extractDataSources(comps)
+
+    // 并行加载所有数据源
+    const loadPromises = Array.from(sources.entries()).map(async ([id, config]) => {
+      const data = await loadDataSource(config)
+      if (data !== null) {
+        dataCache.value.set(id, data)
+      }
+
+      // 设置自动刷新
+      if (config.interval && config.interval > 0) {
+        const timer = window.setInterval(() => refreshDataSource(id), config.interval)
+        refreshTimers.set(id, timer)
+      }
+    })
+
+    await Promise.all(loadPromises)
+    // 触发 Vue 响应式更新
+    dataCache.value = new Map(dataCache.value)
   }
 
   function start() {
@@ -49,6 +156,9 @@ export function useDataBindingEngine(
 
     const comps = components.value
     if (!Array.isArray(comps) || comps.length === 0) return
+
+    // 初始化数据源（异步）
+    initDataSources()
 
     // 使用 Map 建立组件索引，O(1) 查找复杂度
     const compById = new Map(comps.map((c) => [c.id, c] as const))
@@ -155,5 +265,5 @@ export function useDataBindingEngine(
   // 监听组件数组引用变化，自动重建引擎
   watch(components, () => start(), { deep: false })
 
-  return { start, stop, isEnabled: enabled, setEnabled }
+  return { start, stop, isEnabled: enabled, setEnabled, dataCache, refreshDataSource }
 }

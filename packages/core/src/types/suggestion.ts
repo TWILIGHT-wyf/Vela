@@ -1,8 +1,9 @@
 /**
  * AI Suggestion types for the suggestion/assist feature
+ * V2.0: Uses NodeSchema instead of legacy Component type
  */
 
-import type { Component } from './components'
+import type { NodeSchema } from './schema'
 
 /**
  * Request payload for generating suggestions
@@ -10,7 +11,7 @@ import type { Component } from './components'
 export interface SuggestionRequest {
   prompt: string
   context: {
-    components: Component[]
+    components: NodeSchema[]
     canvasSize: {
       width: number
       height: number
@@ -26,9 +27,9 @@ export interface SuggestionDiff {
   type: 'add' | 'modify' | 'delete'
   targetId?: string
   description: string
-  before?: Partial<Component>
-  after?: Partial<Component>
-  newComponent?: Component
+  before?: Partial<NodeSchema>
+  after?: Partial<NodeSchema>
+  newComponent?: NodeSchema
 }
 
 /**
@@ -78,8 +79,8 @@ export interface AuditRecord {
   appliedDiffs?: string[]
   agentVersion: string
   changeSummary: string
-  beforeSnapshot: Component[]
-  afterSnapshot?: Component[]
+  beforeSnapshot: NodeSchema[]
+  afterSnapshot?: NodeSchema[]
   timestamp: number
   note?: string
 }
@@ -97,7 +98,7 @@ export interface DiffItem {
   componentType: string
   componentId?: string
   description: string
-  component?: Component
+  component?: NodeSchema
   path?: string
   oldValue?: unknown
   newValue?: unknown

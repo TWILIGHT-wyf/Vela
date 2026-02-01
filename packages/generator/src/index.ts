@@ -102,3 +102,27 @@ export {
   type ExportOptions,
   type GeneratedSourceFile,
 } from './projectGenerator'
+
+// 表达式验证工具
+export {
+  validateExpression,
+  validateExpressions,
+  validateOrThrow,
+  checkExpressionSafety,
+  type ValidationResult as ExpressionValidationResult,
+  type ValidateOptions,
+} from './utils/expression-validator'
+
+// 代码验证工具
+export {
+  validateCode,
+  validateVueTemplate,
+  validateVueSFC,
+  validateReactJSX,
+  validateCodeBatch,
+  formatValidationResult,
+  type ValidationResult as CodeValidationResult,
+  type ValidationError,
+  type ValidationWarning,
+  type ValidatorOptions,
+} from './utils/code-validator'

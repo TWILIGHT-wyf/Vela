@@ -129,15 +129,15 @@ export { componentRegistry }
 // 导出 Hooks
 export * from './src/hooks/useDataSource'
 
+// 导出 Composables
+export * from './src/composables'
+
 // 导出工具函数
 export * from './src/utils/dataUtils'
 
 // 导出类型
 export type { TriggerLog } from './src/components/advanced/trigger/Trigger.vue'
 export type { GroupProps } from './src/components/group/Group.vue'
-
-// 导出 GIS 类型
-export * from './src/types/gis'
 
 // 提供 Vue 插件式的安装方法
 export default {

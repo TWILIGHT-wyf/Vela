@@ -1,6 +1,10 @@
 /**
  * Legacy component types for backward compatibility
- * V1.5 uses NodeSchema, but some old code still references Component
+ * @deprecated V2.0 uses NodeSchema - this file is kept only for migration support
+ *
+ * All new code should import from:
+ * - NodeSchema from '@vela/core/types/schema'
+ * - ActionSchema from '@vela/core/types/action'
  */
 
 import type { NodeSchema } from './schema'
@@ -52,7 +56,6 @@ export interface Component {
   }
   groupId?: string
   children?: string[]
-  /** Layout configuration for container components */
   layout?: {
     mode?: 'horizontal' | 'vertical'
     gap?: number
@@ -71,7 +74,8 @@ export interface Component {
 }
 
 /**
- * Event action configuration
+ * Legacy event action configuration
+ * @deprecated Use ActionSchema from '@vela/core/types/action' instead
  */
 export interface EventAction {
   id: string
@@ -89,6 +93,7 @@ export interface EventAction {
 
 /**
  * Convert legacy Component to NodeSchema
+ * @deprecated Migration utility - will be removed in future versions
  */
 export function componentToNodeSchema(comp: Component): NodeSchema {
   return {
@@ -100,7 +105,7 @@ export function componentToNodeSchema(comp: Component): NodeSchema {
       y: comp.position?.y ?? 0,
       width: comp.size?.width ?? 100,
       height: comp.size?.height ?? 100,
-      rotation: comp.rotation ?? 0,
+      rotate: comp.rotation ?? 0,
       zIndex: comp.zindex ?? 0,
       ...comp.style,
     },
@@ -121,18 +126,10 @@ export function componentToNodeSchema(comp: Component): NodeSchema {
 
 /**
  * Convert NodeSchema to legacy Component
+ * @deprecated Migration utility - will be removed in future versions
  */
 export function nodeSchemaToComponent(node: NodeSchema): Component {
-  const {
-    x,
-    y,
-    width,
-    height,
-    rotate,
-    zIndex,
-    // Extract layout properties to exclude them from the style spread
-    ...visualStyles
-  } = node.style || {}
+  const { x, y, width, height, rotate, zIndex, ...visualStyles } = node.style || {}
 
   return {
     id: node.id,
@@ -148,7 +145,6 @@ export function nodeSchemaToComponent(node: NodeSchema): Component {
     rotation: (rotate as number) ?? 0,
     zindex: (zIndex as number) ?? 0,
     props: node.props,
-    // Spread all remaining styles to ensure extensibility (Open-Closed Principle)
     style: visualStyles as Component['style'],
     animation: node.animation
       ? {

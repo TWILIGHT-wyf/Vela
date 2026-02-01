@@ -25,7 +25,8 @@
       "Bash(pnpm dev)",
       "Bash(pnpm exec vue-tsc:*)",
       "Bash(pnpm build:*)",
-      "Bash(npm publish:*)"
+      "Bash(npm publish:*)",
+      "Bash(dir /b \"C:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\ui\\\\src\\\\components\")"
     ]
   }
 }

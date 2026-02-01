@@ -20,18 +20,18 @@
           <div class="property-grid">
             <div class="property-item">
               <span class="prop-label">名称:</span>
-              <span class="prop-value highlight-new">{{ diff.component.name }}</span>
+              <span class="prop-value highlight-new">{{ diff.component.title || diff.component.componentName }}</span>
             </div>
             <div class="property-item">
               <span class="prop-label">位置:</span>
               <span class="prop-value highlight-new">
-                x:{{ diff.component.position?.x }}, y:{{ diff.component.position?.y }}
+                x:{{ diff.component.style?.x }}, y:{{ diff.component.style?.y }}
               </span>
             </div>
             <div class="property-item">
               <span class="prop-label">尺寸:</span>
               <span class="prop-value highlight-new">
-                {{ diff.component.size?.width }} × {{ diff.component.size?.height }}
+                {{ diff.component.style?.width }} × {{ diff.component.style?.height }}
               </span>
             </div>
           </div>

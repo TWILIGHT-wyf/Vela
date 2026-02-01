@@ -1,5 +1,5 @@
-import { computed, toRef, type Ref } from 'vue'
-import type { Component } from '@vela/core/types/components'
+import { computed, type Ref } from 'vue'
+import type { NodeSchema } from '@vela/core/types/schema'
 import {
   useDataSource,
   extractWithFallback,

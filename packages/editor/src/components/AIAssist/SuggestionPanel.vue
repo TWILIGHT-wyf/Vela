@@ -140,7 +140,7 @@ import DiffViewer from './DiffViewer.vue'
 function toDiffItem(suggestionDiff: SuggestionDiff): DiffItem {
   return {
     action: suggestionDiff.type,
-    componentType: suggestionDiff.newComponent?.type || suggestionDiff.after?.type || 'Unknown',
+    componentType: suggestionDiff.newComponent?.componentName || suggestionDiff.after?.componentName || 'Unknown',
     componentId: suggestionDiff.targetId,
     description: suggestionDiff.description,
     component: suggestionDiff.newComponent,

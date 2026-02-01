@@ -1,19 +1,31 @@
 {
   "name": "@vela/materials",
   "version": "1.0.0",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
-  "types": "src/index.ts",
+  "description": "Vela Low-Code Platform Material Components",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*"
-  },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./src/*"
-      ]
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
     }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
   },
   "dependencies": {
     "@vela/core": "workspace:*",
@@ -21,7 +33,23 @@
     "@vueuse/core": "^14.1.0",
     "echarts": "^5.0.0",
     "nanoid": "^5.1.6",
-    "pinia": "^2.3.1",
+    "pinia": "^2.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.5.0",
+    "typescript": "^5.4.0",
     "vue": "^3.4.0"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "lowcode",
+    "materials",
+    "vue",
+    "vela"
+  ],
+  "license": "MIT"
 }

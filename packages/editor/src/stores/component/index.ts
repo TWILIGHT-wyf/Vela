@@ -1,0 +1,375 @@
+import { defineStore } from 'pinia'
+import { computed, watch } from 'vue'
+import type { NodeSchema } from '@vela/core'
+import { ElMessage } from 'element-plus'
+import { cloneDeep } from 'lodash-es'
+import { useProjectStore } from '../project'
+import { useHistoryStore } from '../history'
+import {
+  setStoreAccessor,
+  AddComponentCommand,
+  DeleteComponentCommand,
+  MoveComponentCommand,
+  UpdateStyleCommand,
+  UpdatePropsCommand,
+  UpdateDataSourceCommand,
+} from '../commands/index'
+
+import { useComponentIndex } from './useComponentIndex'
+import { useComponentSelection } from './useComponentSelection'
+import { useComponentStyle } from './useComponentStyle'
+import { useComponentTree } from './useComponentTree'
+import { useComponentClipboard } from './useComponentClipboard'
+
+/**
+ * 组件管理 Store
+ * 管理 NodeSchema 的递归树结构和组件操作
+ *
+ * 架构设计：
+ * - useComponentIndex: O(1) 索引管理
+ * - useComponentSelection: 选中状态管理
+ * - useComponentStyle: 样式和属性管理
+ * - useComponentTree: 树结构管理
+ * - useComponentClipboard: 剪贴板操作
+ */
+export const useComponent = defineStore('component', () => {
+  const projectStore = useProjectStore()
+
+  // ========== 同步函数 ==========
+
+  /**
+   * 同步到 ProjectStore 的当前页面
+   */
+  function syncToProjectStore() {
+    const currentPage = projectStore.currentPage
+    if (currentPage && treeCtx.rootNode.value) {
+      currentPage.children = cloneDeep(treeCtx.rootNode.value)
+      projectStore.saveStatus = 'unsaved'
+    }
+  }
+
+  // ========== 组合各个模块 ==========
+
+  const indexCtx = useComponentIndex()
+  const selectionCtx = useComponentSelection(indexCtx)
+  const styleCtx = useComponentStyle(indexCtx, syncToProjectStore)
+  const treeCtx = useComponentTree(indexCtx, selectionCtx, syncToProjectStore)
+
+  // ========== 命令式 Actions ==========
+
+  /**
+   * 添加组件到指定父节点（通过命令执行，支持撤销）
+   */
+  function addComponent(parentId: string | null, component: NodeSchema, index?: number): string {
+    if (!treeCtx.rootNode.value) {
+      console.error('[ComponentStore] Root node is null')
+      return ''
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new AddComponentCommand(parentId, component, index)
+    historyStore.executeCommand(cmd)
+
+    console.log(`[ComponentStore] Added component via command:`, cmd.getAddedId())
+    return cmd.getAddedId() || ''
+  }
+
+  /**
+   * 更新组件的 props（通过命令执行，支持撤销）
+   */
+  function updateProps(id: string, props: Record<string, unknown>) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] Node not found: ${id}`)
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdatePropsCommand(id, props)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 更新组件的 style（通过命令执行，支持撤销）
+   */
+  function updateStyle(id: string, style: Record<string, unknown>) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] updateStyle - Node not found: ${id}`)
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateStyleCommand(id, style)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 更新组件的 dataSource（通过命令执行，支持撤销）
+   */
+  function updateDataSource(id: string, dataSource: Record<string, unknown>) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] Node not found: ${id}`)
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateDataSourceCommand(id, dataSource)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 删除组件（通过命令执行，支持撤销）
+   */
+  function deleteComponent(id: string) {
+    if (!treeCtx.rootNode.value) return
+
+    if (id === treeCtx.rootNode.value.id) {
+      ElMessage.warning('不能删除根节点')
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new DeleteComponentCommand(id)
+    historyStore.executeCommand(cmd)
+
+    console.log(`[ComponentStore] Deleted component via command: ${id}`)
+  }
+
+  /**
+   * 批量删除组件
+   */
+  function deleteComponents(ids: string[]) {
+    ids.forEach((id) => deleteComponent(id))
+  }
+
+  /**
+   * 移动组件到新位置（通过命令执行，支持撤销）
+   */
+  function moveComponent(id: string, newParentId: string, newIndex: number) {
+    if (!treeCtx.rootNode.value) return
+
+    if (id === treeCtx.rootNode.value.id) {
+      ElMessage.warning('不能移动根节点')
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new MoveComponentCommand(id, newParentId, newIndex)
+    historyStore.executeCommand(cmd)
+
+    console.log(
+      `[ComponentStore] Moved component ${id} via command to parent ${newParentId} at index ${newIndex}`,
+    )
+  }
+
+  // ========== 剪贴板 ==========
+
+  const clipboardCtx = useComponentClipboard(
+    indexCtx,
+    selectionCtx,
+    treeCtx,
+    deleteComponent,
+    syncToProjectStore,
+  )
+
+  // ========== Compatibility Shims ==========
+
+  /**
+   * @deprecated Use rootNode and traverse() instead
+   */
+  const componentStore = computed(() => {
+    if (!treeCtx.rootNode.value) return []
+    return treeCtx.flattenTree(treeCtx.rootNode.value)
+  })
+
+  /**
+   * @deprecated Use selectedNode instead
+   */
+  const selectComponentRef = computed(() => selectionCtx.selectedNode.value)
+
+  /**
+   * @deprecated Use selectedNode instead
+   */
+  const selectedComponent = computed(() => selectionCtx.selectedNode.value)
+
+  /**
+   * @deprecated Use findNodeById(rootNode, id) instead
+   */
+  function getComponentById(id: string): NodeSchema | null {
+    return indexCtx.nodeIndex.get(id) || null
+  }
+
+  /**
+   * Update component position (x, y in style)
+   */
+  function updateComponentPosition(id: string, x: number, y: number) {
+    updateStyle(id, { x, y })
+  }
+
+  /**
+   * Update component size (width, height in style)
+   */
+  function updateComponentSize(id: string, width: number, height: number) {
+    updateStyle(id, { width, height })
+  }
+
+  /**
+   * Update component rotation
+   */
+  function updateComponentRotation(id: string, rotate: number) {
+    updateStyle(id, { rotate })
+  }
+
+  // ========== 响应式属性引用工厂（包装） ==========
+
+  function createPropRef<T = unknown>(
+    id: string,
+    propName: string,
+    defaultValue?: T,
+  ): import('vue').WritableComputedRef<T> {
+    return styleCtx.createPropRef(id, propName, defaultValue, updateProps)
+  }
+
+  function createStyleRef<T = unknown>(
+    id: string,
+    styleName: string,
+    defaultValue?: T,
+  ): import('vue').WritableComputedRef<T> {
+    return styleCtx.createStyleRef(id, styleName, defaultValue, updateStyle)
+  }
+
+  function createPropRefs(
+    id: string,
+    propConfigs: Array<{ name: string; defaultValue?: unknown }>,
+  ): Record<string, import('vue').WritableComputedRef<unknown>> {
+    return styleCtx.createPropRefs(id, propConfigs, updateProps)
+  }
+
+  function createStyleRefs(
+    id: string,
+    styleConfigs: Array<{ name: string; defaultValue?: unknown }>,
+  ): Record<string, import('vue').WritableComputedRef<unknown>> {
+    return styleCtx.createStyleRefs(id, styleConfigs, updateStyle)
+  }
+
+  // ========== Watchers ==========
+
+  /**
+   * 监听页面切换，自动加载新页面的组件树
+   */
+  watch(
+    () => projectStore.currentPage,
+    (newPage) => {
+      if (newPage && newPage.children) {
+        treeCtx.loadTree(newPage.children)
+        console.log(`[ComponentStore] Loaded tree for page: ${newPage.name}`)
+      } else {
+        treeCtx.rootNode.value = null
+        indexCtx.rebuildIndex(null)
+      }
+    },
+    { immediate: true },
+  )
+
+  // ========== 初始化 Store Accessor ==========
+
+  setStoreAccessor({
+    findNodeById: (_node: NodeSchema | null, id: string) => indexCtx.findNodeById(id),
+    getNodeIndex: indexCtx.getNodeIndex,
+    getParentId: indexCtx.getParentId,
+    addComponentRaw: treeCtx.addComponentRaw,
+    deleteComponentRaw: treeCtx.deleteComponentRaw,
+    moveComponentRaw: treeCtx.moveComponentRaw,
+    updateStyleRaw: styleCtx.updateStyleRaw,
+    updatePropsRaw: styleCtx.updatePropsRaw,
+    updateDataSourceRaw: styleCtx.updateDataSourceRaw,
+  })
+
+  return {
+    // State
+    rootNode: treeCtx.rootNode,
+    selectedId: selectionCtx.selectedId,
+    selectedIds: selectionCtx.selectedIds,
+    hoveredId: selectionCtx.hoveredId,
+    styleVersion: styleCtx.styleVersion,
+    parentIndex: indexCtx.parentIndex,
+
+    // Getters
+    selectedNode: selectionCtx.selectedNode,
+    selectedNodes: selectionCtx.selectedNodes,
+    hoveredNode: selectionCtx.hoveredNode,
+    getStyleVersion: styleCtx.getStyleVersion,
+
+    // Utilities
+    findNodeById: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
+      // Support both old API (node, targetId) and simplified API (targetId)
+      const id = typeof nodeOrId === 'string' ? nodeOrId : targetId!
+      return indexCtx.findNodeById(id)
+    },
+    findParentNode: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
+      // Support both old API (node, targetId) and simplified API (targetId)
+      const id = typeof nodeOrId === 'string' ? nodeOrId : targetId!
+      return indexCtx.findParentNode(id)
+    },
+    getComponentById,
+    getNodeIndex: indexCtx.getNodeIndex,
+    getParentId: indexCtx.getParentId,
+    traverse: indexCtx.traverse,
+
+    // Actions
+    loadTree: treeCtx.loadTree,
+    setTree: treeCtx.setTree,
+    flattenTree: treeCtx.flattenTree,
+    addComponent,
+    updateProps,
+    updateStyle,
+    updateDataSource,
+    deleteComponent,
+    deleteComponents,
+    moveComponent,
+    selectComponent: selectionCtx.selectComponent,
+    selectComponents: selectionCtx.selectComponents,
+    toggleSelection: selectionCtx.toggleSelection,
+    setHovered: selectionCtx.setHovered,
+    clearSelection: selectionCtx.clearSelection,
+    syncToProjectStore,
+
+    // Raw 方法（供命令内部使用）
+    addComponentRaw: treeCtx.addComponentRaw,
+    deleteComponentRaw: treeCtx.deleteComponentRaw,
+    moveComponentRaw: treeCtx.moveComponentRaw,
+    updateStyleRaw: styleCtx.updateStyleRaw,
+    updatePropsRaw: styleCtx.updatePropsRaw,
+    updateDataSourceRaw: styleCtx.updateDataSourceRaw,
+
+    // Clipboard
+    clipboard: clipboardCtx.clipboard,
+    canPaste: clipboardCtx.canPaste,
+    copySelectedNodes: clipboardCtx.copySelectedNodes,
+    cutSelectedNodes: clipboardCtx.cutSelectedNodes,
+    pasteNodes: clipboardCtx.pasteNodes,
+
+    // Compatibility (deprecated)
+    componentStore,
+    selectedComponent,
+    isSelected: selectionCtx.isSelected,
+    updateComponentPosition,
+    updateComponentSize,
+    updateComponentRotation,
+
+    // 响应式属性引用工厂
+    createPropRef,
+    createStyleRef,
+    createPropRefs,
+    createStyleRefs,
+  }
+})
+
+// 重新导出类型
+export type { ComponentIndexContext } from './useComponentIndex'
+export type { ComponentSelectionContext } from './useComponentSelection'
+export type { ComponentStyleContext } from './useComponentStyle'
+export type { ComponentTreeContext } from './useComponentTree'
+export type { ComponentClipboardContext } from './useComponentClipboard'

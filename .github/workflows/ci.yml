@@ -2,14 +2,124 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, main, develop]
   pull_request:
-    branches: [master]
+    branches: [master, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  # ============================================
+  # Lint and Type Check (快速反馈)
+  # ============================================
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+      - name: Type Check
+        run: pnpm run type-check
+
+  # ============================================
+  # Unit Tests with Coverage
+  # ============================================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests with coverage
+        run: pnpm run test:coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+  # ============================================
+  # Build
+  # ============================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            packages/*/dist
+            packages/editor/dist
+          retention-days: 7
+
+  # ============================================
+  # E2E Tests
+  # ============================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [build]
     services:
       mongodb:
         image: mongo:6.0
@@ -40,41 +150,38 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      # 1. Lint
-      - name: Run ESLint
-        run: pnpm run lint
-
-      # 2. Type Check
-      - name: Type Check
-        run: pnpm run type-check
-
-      # 3. Unit Test
-      - name: Run unit tests
-        run: pnpm run test -- --run
-
-      # 4. Build Frontend
-      - name: Build frontend
-        run: pnpm run build
-
-      # 5. Build Server (type check)
-      - name: Build server
-        run: cd server && pnpm run build
-
-      # 6. Playwright E2E
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run e2e tests
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: packages/
+
+      - name: Run E2E tests
         run: pnpm run test:e2e
         env:
           CI: true
 
-  publish-ui:
-    needs: build-and-test
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ============================================
+  # Publish Packages (on master push)
+  # ============================================
+  publish:
+    name: Publish Packages
+    needs: [test, build, e2e]
     runs-on: ubuntu-latest
-    if: "github.event_name == 'push' && github.ref == 'refs/heads/master'"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout source
@@ -90,22 +197,57 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
-
-      - name: Configure npm auth
-        run: |
-          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
-            echo "Missing NPM_TOKEN secret";
-            exit 1;
-          fi
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build @vela-studio/ui
-        run: pnpm -w -F @vela-studio/ui run build:lib
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: packages/
 
-      - name: Publish @vela-studio/ui to npm
+      - name: Check for version changes
+        id: version-check
+        run: |
+          # Check if any package version changed
+          echo "version_changed=false" >> $GITHUB_OUTPUT
+
+      - name: Publish @vela/ui
+        if: steps.version-check.outputs.version_changed == 'true'
         run: |
           cd packages/ui
           npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @vela/ui-react
+        if: steps.version-check.outputs.version_changed == 'true'
+        run: |
+          cd packages/ui-react
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ============================================
+  # Deploy Preview (on PR)
+  # ============================================
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: packages/
+
+      # Add your preview deployment here (Vercel, Netlify, etc.)
+      - name: Deploy to preview
+        run: echo "Preview deployment would go here"

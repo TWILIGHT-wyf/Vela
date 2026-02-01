@@ -1,13 +1,49 @@
 {
   "name": "@vela/renderer",
   "version": "1.0.0",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
+  "description": "Vela Low-Code Platform Runtime Renderer",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  },
   "dependencies": {
     "@vela/core": "workspace:*",
     "@vela/materials": "workspace:*",
     "@vela/ui": "workspace:*",
-    "vue": "^3.4.0",
     "vue-router": "^4.6.0"
-  }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.5.0",
+    "typescript": "^5.4.0",
+    "vue": "^3.4.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "lowcode",
+    "renderer",
+    "vue",
+    "vela"
+  ],
+  "license": "MIT"
 }

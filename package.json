@@ -5,10 +5,33 @@
     "dev": "docker-compose up -d && concurrently --kill-others -n \"SERVER,EDITOR\" -c \"blue,magenta\" \"pnpm -F @vela/server dev\" \"pnpm -F @vela/editor dev\"",
     "build": "pnpm -F @vela/editor build",
     "lint": "eslint .",
-    "type-check": "vue-tsc --noEmit -p packages/editor/tsconfig.app.json"
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "type-check": "vue-tsc --noEmit -p packages/editor/tsconfig.app.json",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.vue": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,json,md,css,scss}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
+    "@vitest/coverage-v8": "^4.0.17",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
     "@types/node": "^20.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitest/eslint-plugin": "^1.6.6",

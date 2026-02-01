@@ -1,7 +1,8 @@
-import type { Component } from '@vela/core/types/components'
+import type { NodeSchema } from '@vela/core/types/schema'
 
 /**
  * AI 建议面板类型定义
+ * V2.0: Uses NodeSchema instead of legacy Component type
  */
 
 /**
@@ -13,7 +14,7 @@ export interface SuggestionRequest {
   /** 当前画布上下文 */
   context: {
     /** 现有组件树 */
-    components: Component[]
+    components: NodeSchema[]
     /** 画布尺寸 */
     canvasSize: { width: number; height: number }
     /** 主题 */
@@ -47,7 +48,7 @@ export interface DiffItem {
   /** 新值（新增/修改时） */
   newValue?: unknown
   /** 完整的新组件数据（新增时） */
-  component?: Partial<Component>
+  component?: Partial<NodeSchema>
   /** 描述 */
   description: string
 }
@@ -95,9 +96,9 @@ export interface AuditRecord {
   /** 变更摘要 */
   changeSummary: string
   /** 执行前快照（组件树） */
-  beforeSnapshot: Component[]
+  beforeSnapshot: NodeSchema[]
   /** 执行后快照 */
-  afterSnapshot?: Component[]
+  afterSnapshot?: NodeSchema[]
   /** 时间戳 */
   timestamp: number
   /** 用户备注 */

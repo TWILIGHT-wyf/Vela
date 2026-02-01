@@ -48,16 +48,36 @@ export const useHistoryStore = defineStore('history', () => {
    * 执行命令并记录到历史
    * @param command 要执行的命令
    * @param skipMerge 是否跳过合并检查
+   * @returns true if command executed successfully, false otherwise
    */
-  function executeCommand(command: Command, skipMerge = false): void {
+  function executeCommand(command: Command, skipMerge = false): boolean {
     if (isPaused.value) {
       // 暂停时直接执行，不记录
-      command.execute()
-      return
+      try {
+        command.execute()
+        return true
+      } catch (error) {
+        console.error(`[History] Command failed (paused mode):`, error)
+        return false
+      }
     }
 
-    // 执行命令
-    command.execute()
+    // 执行命令（带异常处理）
+    try {
+      command.execute()
+    } catch (error) {
+      console.error(`[History] Command execute failed:`, error)
+      // 尝试回滚
+      if (command.undo) {
+        try {
+          command.undo()
+          console.log(`[History] Rolled back failed command: ${command.type}`)
+        } catch (undoError) {
+          console.error(`[History] Rollback also failed:`, undoError)
+        }
+      }
+      return false
+    }
 
     // 检查是否可以与上一个命令合并
     if (!skipMerge && undoStack.value.length > 0) {
@@ -68,7 +88,7 @@ export const useHistoryStore = defineStore('history', () => {
         const mergedCmd = command.merge!(lastCmd)
         undoStack.value.push(mergedCmd)
         console.log(`[History] Merged command: ${command.type}`)
-        return
+        return true
       }
     }
 
@@ -84,23 +104,34 @@ export const useHistoryStore = defineStore('history', () => {
     }
 
     console.log(`[History] Executed: ${command.type}, stack size: ${undoStack.value.length}`)
+    return true
   }
 
   /**
    * 撤销上一个命令
+   * @returns true if undo succeeded, false otherwise
    */
-  function undo(): void {
-    if (!canUndo.value || isExecuting.value) return
+  function undo(): boolean {
+    if (!canUndo.value || isExecuting.value) return false
 
     isExecuting.value = true
 
     try {
       const command = undoStack.value.pop()
       if (command) {
-        command.undo()
-        redoStack.value.push(command)
-        console.log(`[History] Undo: ${command.type}`)
+        try {
+          command.undo()
+          redoStack.value.push(command)
+          console.log(`[History] Undo: ${command.type}`)
+          return true
+        } catch (error) {
+          // Undo failed, put command back on undo stack
+          undoStack.value.push(command)
+          console.error(`[History] Undo failed for ${command.type}:`, error)
+          return false
+        }
       }
+      return false
     } finally {
       isExecuting.value = false
     }
@@ -108,19 +139,29 @@ export const useHistoryStore = defineStore('history', () => {
 
   /**
    * 重做上一个撤销的命令
+   * @returns true if redo succeeded, false otherwise
    */
-  function redo(): void {
-    if (!canRedo.value || isExecuting.value) return
+  function redo(): boolean {
+    if (!canRedo.value || isExecuting.value) return false
 
     isExecuting.value = true
 
     try {
       const command = redoStack.value.pop()
       if (command) {
-        command.redo()
-        undoStack.value.push(command)
-        console.log(`[History] Redo: ${command.type}`)
+        try {
+          command.redo()
+          undoStack.value.push(command)
+          console.log(`[History] Redo: ${command.type}`)
+          return true
+        } catch (error) {
+          // Redo failed, put command back on redo stack
+          redoStack.value.push(command)
+          console.error(`[History] Redo failed for ${command.type}:`, error)
+          return false
+        }
       }
+      return false
     } finally {
       isExecuting.value = false
     }
