@@ -28,7 +28,9 @@
       "Bash(npm publish:*)",
       "Bash(dir /b \"C:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\ui\\\\src\\\\components\")",
       "Bash(git checkout:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
