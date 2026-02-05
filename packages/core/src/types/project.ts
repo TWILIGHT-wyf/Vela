@@ -243,27 +243,29 @@ export interface UtilFunctionSchema {
 }
 
 /**
- * 应用生命周期钩子
+ * 应用生命周期钩子 (框架无关)
  */
 export interface AppLifecycleConfig {
-  /** 应用初始化前 (同步) */
-  onBeforeInit?: string
-  /** 应用初始化完成 */
-  onInited?: string
-  /** 应用挂载完成 */
-  onMounted?: string
-  /** 应用卸载前 */
-  onBeforeUnmount?: string
+  /** 应用初始化 (数据、配置加载前) */
+  onInit?: string
+  /** 应用就绪 (所有初始化完成) */
+  onReady?: string
+  /** 应用销毁前 */
+  onDestroy?: string
   /** 应用错误处理 */
   onError?: string
   /** 网络状态变化 */
   onNetworkChange?: string
+  /** 应用进入前台 */
+  onForeground?: string
+  /** 应用进入后台 */
+  onBackground?: string
 }
 
 /**
- * 路由守卫类型
+ * 路由守卫时机 (框架无关)
  */
-export type RouteGuardType = 'beforeEach' | 'afterEach' | 'beforeResolve'
+export type RouteGuardTiming = 'before' | 'after'
 
 /**
  * 路由守卫定义
@@ -273,9 +275,9 @@ export interface RouteGuardSchema {
   id: string
   /** 守卫名称 */
   name: string
-  /** 守卫类型 */
-  type: RouteGuardType
-  /** 守卫逻辑代码 (可访问 to, from, next) */
+  /** 守卫时机 (before: 导航前, after: 导航后) */
+  timing: RouteGuardTiming
+  /** 守卫逻辑代码 (可访问 to, from 路由信息，返回 false 或路径可阻止/重定向) */
   handler: string
   /** 优先级 (数字越小越先执行) */
   priority?: number
