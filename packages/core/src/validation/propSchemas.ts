@@ -25,8 +25,8 @@ export function getPropSchema(componentName: string, propName: string): z.ZodTyp
 export const CommonSchemas = {
   Color: z
     .string()
-    .regex(/^#([0-9a-fA-F]{3}){1,2}$|^rgba?\(.*\) |^transparent$/, 'Invalid color format'),
+    .regex(/^#([0-9a-fA-F]{3}){1,2}$|^rgba?\(.*\)$|^transparent$/, 'Invalid color format'),
   Url: z.string().url('Invalid URL'),
-  JsonArray: z.array(z.any()),
-  JsonObject: z.record(z.string(), z.any()),
+  JsonArray: z.array(z.unknown()),
+  JsonObject: z.record(z.string(), z.unknown()),
 }

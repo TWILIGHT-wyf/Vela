@@ -1,4 +1,4 @@
-import { Operation, InsertOp, DeleteOp, UpdateOp, MoveOp } from '../types/operation'
+import { Operation, InsertOp, DeleteOp, UpdateOp, MoveOp } from '../runtime/operation'
 import { TreeModel } from './tree'
 import { debounce, DebouncedFunction } from '../utils/lodash'
 

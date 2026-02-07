@@ -1,16 +1,15 @@
-import type { PropValue, JSExpression } from './expression'
-import type { ActionSchema } from './action'
+import type { PropValue, ValueOrExpression } from './expression'
+import {
+  extractActionIds,
+  validateActionLinkRef,
+  type ActionLinkRef,
+  type ActionRefValidationIssue,
+  type AnyActionSchema,
+} from './action'
 import type { VariableSchema } from './data'
 
-// ============================================================================
-// 表达式类型
-// ============================================================================
-
-/**
- * 表达式
- * 用于动态值绑定，由 Generator 转换为框架特定语法
- */
-export type Expression = boolean | string | number | JSExpression
+// 重新导出 Expression 类型
+export type { Expression, ValueOrExpression } from './expression'
 
 // ============================================================================
 // 渲染控制
@@ -21,15 +20,18 @@ export type Expression = boolean | string | number | JSExpression
  * 框架无关的循环渲染描述
  *
  * @example
- * // Schema
- * { source: { $expr: 'state.users' }, itemAlias: 'user', indexAlias: 'i' }
+ * // 表达式数据源
+ * { source: { type: 'expression', value: 'state.users' }, itemAlias: 'user', indexAlias: 'i' }
+ *
+ * // 静态数组
+ * { source: ['A', 'B', 'C'], itemAlias: 'item' }
  *
  * // → Vue: v-for="(user, i) in state.users"
  * // → React: state.users.map((user, i) => ...)
  */
 export interface RepeatConfig {
-  /** 数据源表达式 */
-  source: Expression
+  /** 数据源 (表达式或静态数组) */
+  source: ValueOrExpression<unknown[]>
   /** 唯一键字段 (用于优化渲染) */
   itemKey?: string
   /** 迭代项变量名，默认 'item' */
@@ -68,17 +70,52 @@ export interface AnimationConfig {
 }
 
 // ============================================================================
+// 编辑器布局 (画布定位，仅编辑器使用)
+// ============================================================================
+
+/**
+ * 编辑器画布布局
+ * 仅用于编辑器中的自由定位模式
+ * 代码生成时会转换为对应的 CSS
+ */
+export interface NodeLayout {
+  /** 画布 X 坐标 (px) */
+  x?: number
+  /** 画布 Y 坐标 (px) */
+  y?: number
+  /** 旋转角度 (度) */
+  rotate?: number
+  /** 缩放比例 */
+  scale?: number
+  /** 是否锁定位置 */
+  locked?: boolean
+  /** 是否隐藏 (编辑器中) */
+  hidden?: boolean
+}
+
+// ============================================================================
 // 节点样式 (框架无关，纯 CSS)
 // ============================================================================
 
 /**
  * 节点样式
  * 框架无关的 CSS 样式描述
+ * 注：x/y/rotate/scale 已移至 NodeLayout
  */
 export interface NodeStyle {
-  // === 定位与尺寸 ===
-  x?: number
-  y?: number
+  // === 兼容旧字段（建议迁移到 layout）===
+  /** @deprecated Use layout.x instead */
+  x?: number | string
+  /** @deprecated Use layout.y instead */
+  y?: number | string
+  /** @deprecated Use layout.rotate instead */
+  rotate?: number
+  /** @deprecated Use layout.locked instead */
+  locked?: boolean
+  /** @deprecated Use visibility instead */
+  visible?: boolean
+
+  // === 尺寸 ===
   width?: number | string
   height?: number | string
   minWidth?: number | string
@@ -95,8 +132,6 @@ export interface NodeStyle {
   zIndex?: number
 
   // === 变换 ===
-  rotate?: number
-  scale?: number
   transform?: string
   transformOrigin?: string
 
@@ -194,6 +229,45 @@ export interface NodeStyle {
 // ============================================================================
 
 /**
+ * 事件动作项
+ * - AnyActionSchema: 事件中直接声明动作
+ * - ActionLinkRef: 引用已注册动作 (global/page/node)
+ */
+export type NodeEventAction = AnyActionSchema | ActionLinkRef
+
+/**
+ * 判断节点事件动作项是否为动作引用
+ */
+export function isNodeEventActionLinkRef(action: NodeEventAction): action is ActionLinkRef {
+  if (typeof action === 'string') {
+    return true
+  }
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'type' in action &&
+    action.type === 'ref'
+  )
+}
+
+/**
+ * 节点动作引用校验错误
+ */
+export interface NodeActionRefValidationIssue extends ActionRefValidationIssue {
+  nodeId: string
+  eventName: string
+  actionIndex: number
+}
+
+/**
+ * 节点动作引用校验上下文
+ */
+export interface NodeActionRefValidationContext {
+  globalActionIds?: Iterable<string>
+  pageActionIds?: Iterable<string>
+}
+
+/**
  * 节点协议 - 框架无关的组件实例描述
  *
  * 设计原则：
@@ -224,7 +298,13 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    * 组件标识
    * 映射到物料注册表中的组件
    */
-  component: string
+  component?: string
+
+  /**
+   * 兼容旧字段
+   * @deprecated Use component instead
+   */
+  componentName?: string
 
   /** 节点显示名称 (编辑器中显示) */
   title?: string
@@ -236,8 +316,16 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    */
   props?: P
 
+  // ========== 布局 ==========
+  /**
+   * 编辑器画布布局
+   * 仅在自由定位模式下使用
+   * 代码生成时转换为 CSS position/transform
+   */
+  layout?: NodeLayout
+
   // ========== 样式 ==========
-  /** 节点样式 */
+  /** 节点样式 (纯 CSS) */
   style?: NodeStyle
 
   // ========== 子节点 ==========
@@ -254,12 +342,13 @@ export interface NodeSchema<P = Record<string, PropValue>> {
   // ========== 渲染控制 ==========
   /**
    * 条件渲染
-   * 当表达式为 falsy 时不渲染该节点
+   * 当值为 falsy 时不渲染该节点
+   * 支持静态布尔值或表达式
    *
    * Vue: v-if
    * React: {condition && <Component />}
    */
-  renderIf?: Expression
+  renderIf?: ValueOrExpression<boolean>
 
   /**
    * 列表渲染
@@ -276,7 +365,13 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    * key 为事件名 (click, change, input 等)
    * value 为触发的动作列表
    */
-  events?: Record<string, ActionSchema[]>
+  events?: Record<string, NodeEventAction[]>
+
+  /**
+   * 节点局部动作定义
+   * 可通过 ActionLinkRef(scope: 'node') 复用
+   */
+  actions?: AnyActionSchema[]
 
   // ========== 插槽 ==========
   /**
@@ -291,9 +386,58 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    */
   slotProps?: string
 
+  /**
+   * 命名插槽内容
+   * 用于容器组件定义多个插槽区域的内容
+   * key 为插槽名，value 为该插槽的子节点列表
+   *
+   * @example
+   * {
+   *   component: 'Card',
+   *   slots: {
+   *     header: [{ component: 'Text', props: { text: '标题' } }],
+   *     footer: [{ component: 'Button', props: { label: '确定' } }]
+   *   }
+   * }
+   */
+  slots?: Record<string, NodeSchema[]>
+
   // ========== 动画 ==========
   /** 动画配置 */
   animation?: AnimationConfig
+
+  // ========== 容器布局 ==========
+  /**
+   * 子节点布局模式（仅容器组件有意义）
+   * - 'free': 子节点使用 NodeLayout (x, y) 绝对定位
+   * - 'flow': 子节点使用文档流（由 style 的 display/flex 控制）
+   *
+   * 省略时继承父容器的模式，根节点默认 'flow'
+   */
+  childLayout?: 'free' | 'flow'
+
+  /**
+   * 兼容旧字段
+   * @deprecated Use childLayout instead
+   */
+  layoutMode?: 'free' | 'flow'
+
+  // ========== 响应式 ==========
+  /**
+   * 不同断点下的样式覆盖
+   * key 为断点名称（匹配 PageViewportConfig.breakpoints 中的 key）
+   * value 为需要覆盖的样式属性（与 style 浅合并）
+   *
+   * @example
+   * {
+   *   style: { width: '25%', display: 'flex' },
+   *   responsive: {
+   *     tablet: { width: '50%' },
+   *     mobile: { width: '100%', flexDirection: 'column' }
+   *   }
+   * }
+   */
+  responsive?: Record<string, Partial<NodeStyle>>
 
   // ========== 引用 ==========
   /**
@@ -306,38 +450,110 @@ export interface NodeSchema<P = Record<string, PropValue>> {
   ref?: string
 }
 
-// ============================================================================
-// 兼容导出 (向后兼容)
-// ============================================================================
-
 /**
- * 布局模式
- * @deprecated 布局应通过 style.display 控制，此类型仅用于兼容
+ * 获取节点组件名（兼容 component/componentName）
  */
-export type LayoutMode = 'free' | 'flex' | 'grid' | 'flow'
-
-/**
- * 数据绑定配置
- * @deprecated 使用表达式绑定替代组件间直接绑定
- */
-export interface DataBinding {
-  sourceId: string
-  sourcePath: string
-  targetPath: string
-  transformer?: string
-  transformerType?: 'expression' | 'template'
+export function getNodeComponentName(node: Pick<NodeSchema, 'component' | 'componentName'>): string {
+  return node.component || node.componentName || ''
 }
 
 /**
- * 数据源配置
- * @deprecated 数据获取应在页面级 apis 中定义
+ * 获取节点布局模式（兼容 childLayout/layoutMode）
  */
-export interface DataSourceConfig {
-  enabled?: boolean
-  url?: string
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
-  headers?: Record<string, string>
-  body?: string
-  interval?: number
-  dataPath?: string
+export function getNodeLayoutMode(
+  node: Pick<NodeSchema, 'childLayout' | 'layoutMode'>
+): 'free' | 'flow' | undefined {
+  return node.childLayout ?? node.layoutMode
+}
+
+/**
+ * 收集节点树内每个节点定义的动作 ID
+ */
+export function collectNodeActionIdMap(
+  root?: NodeSchema
+): Record<string, Set<string>> {
+  const idMap: Record<string, Set<string>> = {}
+  if (!root) {
+    return idMap
+  }
+
+  const walk = (node: NodeSchema): void => {
+    idMap[node.id] = extractActionIds(node.actions)
+
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child)
+      }
+    }
+
+    if (node.slots) {
+      for (const slotChildren of Object.values(node.slots)) {
+        for (const child of slotChildren) {
+          walk(child)
+        }
+      }
+    }
+  }
+
+  walk(root)
+  return idMap
+}
+
+/**
+ * 校验节点树中事件动作引用是否合法
+ */
+export function validateNodeEventActionRefs(
+  root: NodeSchema | undefined,
+  context: NodeActionRefValidationContext = {}
+): NodeActionRefValidationIssue[] {
+  if (!root) {
+    return []
+  }
+
+  const issues: NodeActionRefValidationIssue[] = []
+  const nodeActionIdMap = collectNodeActionIdMap(root)
+
+  const walk = (node: NodeSchema): void => {
+    if (node.events) {
+      for (const [eventName, actions] of Object.entries(node.events)) {
+        actions.forEach((action, actionIndex) => {
+          if (!isNodeEventActionLinkRef(action)) {
+            return
+          }
+
+          const validationIssues = validateActionLinkRef(action, {
+            globalActionIds: context.globalActionIds,
+            pageActionIds: context.pageActionIds,
+            nodeActionIds: nodeActionIdMap[node.id],
+          })
+
+          validationIssues.forEach((issue) => {
+            issues.push({
+              ...issue,
+              nodeId: node.id,
+              eventName,
+              actionIndex,
+            })
+          })
+        })
+      }
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child)
+      }
+    }
+
+    if (node.slots) {
+      for (const slotChildren of Object.values(node.slots)) {
+        for (const child of slotChildren) {
+          walk(child)
+        }
+      }
+    }
+  }
+
+  walk(root)
+  return issues
 }

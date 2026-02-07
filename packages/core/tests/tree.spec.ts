@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { TreeModel } from '../src/model/tree'
 import { NodeSchema } from '../src/types/schema'
-import { Plugin } from '../src/types/plugin'
+import { Plugin } from '../src/runtime/plugin'
 
 describe('TreeModel', () => {
   const root: NodeSchema = {

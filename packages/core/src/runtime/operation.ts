@@ -1,4 +1,4 @@
-import { NodeSchema } from './schema'
+import { NodeSchema } from '../types/schema'
 
 /**
  * 操作类型枚举
@@ -44,8 +44,8 @@ export interface UpdateOp extends BaseOp {
   type: 'update'
   nodeId: string
   path: string // 属性路径，如 "props.style.width"
-  value: any // 新值
-  oldValue: any // 旧值 (用于撤销)
+  value: unknown // 新值
+  oldValue: unknown // 旧值 (用于撤销)
 
   // 变更合并策略 (用于高频操作如拖拽、输入)
   // 'overwrite': 覆盖 (默认)

@@ -1,5 +1,18 @@
-import type { NodeSchema } from './schema'
+import {
+  validateNodeEventActionRefs,
+  type NodeActionRefValidationIssue,
+  type NodeSchema,
+} from './schema'
 import type { ApiSchema, VariableSchema } from './data'
+import {
+  extractActionIds,
+  validateActionLinkRef,
+  type ActionLinkRef,
+  type ActionRef,
+  type ActionRefValidationIssue,
+  type AnyActionSchema,
+} from './action'
+import type { ExpressionInput } from './expression'
 
 // ============================================================================
 // 页面 SEO 配置
@@ -107,21 +120,21 @@ export interface PageAuthConfig {
  */
 export interface PageLifecycleConfig {
   /** 页面初始化 (数据准备前) */
-  onInit?: string
+  onInit?: ActionRef
   /** 页面就绪 (DOM 已渲染，数据已加载) */
-  onReady?: string
+  onReady?: ActionRef
   /** 页面数据更新后 */
-  onUpdate?: string
+  onUpdate?: ActionRef
   /** 页面销毁前 */
-  onDestroy?: string
+  onDestroy?: ActionRef
   /** 页面激活 (从缓存恢复) */
-  onActivate?: string
+  onActivate?: ActionRef
   /** 页面休眠 (进入缓存) */
-  onSleep?: string
+  onSleep?: ActionRef
   /** 页面可见性变化 */
-  onVisibilityChange?: string
+  onVisibilityChange?: ActionRef
   /** 页面错误捕获 */
-  onError?: string
+  onError?: ActionRef
 }
 
 // ============================================================================
@@ -161,7 +174,7 @@ export interface PageComputedSchema {
   /** 计算属性键名 */
   key: string
   /** 计算表达式 (可访问 state, params, query) */
-  expression: string
+  expression: ExpressionInput
   /** 说明 */
   description?: string
 }
@@ -271,6 +284,45 @@ export interface PageRuntimeConfig {
 // ============================================================================
 
 /**
+ * 页面事件动作项
+ * - AnyActionSchema: 事件中直接声明动作
+ * - ActionLinkRef: 引用已注册动作 (global/page/node)
+ */
+export type PageEventAction = AnyActionSchema | ActionLinkRef
+
+/**
+ * 判断页面事件动作项是否为动作引用
+ */
+export function isPageEventActionLinkRef(action: PageEventAction): action is ActionLinkRef {
+  if (typeof action === 'string') {
+    return true
+  }
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'type' in action &&
+    action.type === 'ref'
+  )
+}
+
+/**
+ * 页面动作引用校验错误
+ */
+export interface PageActionRefValidationIssue extends ActionRefValidationIssue {
+  pageId: string
+  eventName: string
+  actionIndex: number
+}
+
+/**
+ * 页面动作引用校验汇总
+ */
+export interface PageActionValidationResult {
+  pageIssues: PageActionRefValidationIssue[]
+  nodeIssues: NodeActionRefValidationIssue[]
+}
+
+/**
  * 页面配置
  */
 export interface PageConfig {
@@ -280,60 +332,38 @@ export interface PageConfig {
   viewport?: PageViewportConfig
   /** 运行时相关配置 */
   runtime?: PageRuntimeConfig
+  /**
+   * 页面默认布局模式
+   * - 'free': Dashboard 型自由定位（子节点使用 NodeLayout x/y 绝对定位）
+   * - 'flow': 网页型文档流（子节点使用 CSS 文档流）
+   * 默认 'flow'
+   */
+  defaultLayout?: 'free' | 'flow'
   /** 预留扩展字段 */
   custom?: Record<string, unknown>
 }
 
 // ============================================================================
-// 页面定义 (主协议)
+// 页面基础定义 (公共部分)
 // ============================================================================
 
 /**
- * 页面定义 (V2.0)
- *
- * 完整的页面描述协议，包含：
- * - 基础信息：id, name, path, title
- * - SEO 配置：meta 标签、社交分享
- * - 路由参数：动态路由、查询参数
- * - 权限配置：登录要求、角色限制
- * - 数据层：状态、计算属性、API
- * - 生命周期：完整的页面生命周期钩子
- * - 过渡动画：页面切换动效
- * - 组件树：页面内容
+ * 页面基础定义 (所有页面类型共享)
  */
-export interface PageSchema {
-  // ========== 基础信息 ==========
+interface PageSchemaBase {
   /** 页面唯一标识 */
   id: string
   /** 页面名称 (用于编辑器显示) */
   name: string
-  /** 路由路径 (支持动态参数，如 /user/:id) */
-  path: string
-  /** 页面标题 (浏览器标签显示) */
+  /** 页面标题 */
   title?: string
   /** 页面图标 */
   icon?: string
   /** 页面描述 */
   description?: string
-  /** 关联的布局 ID */
-  layoutId?: string
-
-  // ========== SEO 配置 ==========
-  /** SEO/Meta 配置 */
-  meta?: PageMetaConfig
-
-  // ========== 路由参数 ==========
-  /** 动态路由参数定义 */
-  params?: RouteParamSchema[]
-  /** 查询参数定义 */
-  query?: QueryParamSchema[]
-
-  // ========== 权限配置 ==========
-  /** 页面权限配置 */
-  auth?: PageAuthConfig
 
   // ========== 页面配置 ==========
-  /** 页面配置 (视口、编辑器、运行时) */
+  /** 页面配置 (视口、运行时) */
   config?: PageConfig
 
   // ========== 数据层 ==========
@@ -344,18 +374,131 @@ export interface PageSchema {
   /** 页面 API 定义 */
   apis?: ApiSchema[]
 
+  // ========== 动作层 ==========
+  /**
+   * 页面动作定义
+   * 生命周期和事件可通过 ActionRef 引用这里定义的动作
+   */
+  actions?: AnyActionSchema[]
+
+  /**
+   * 页面级事件绑定
+   * key 为事件名（如 enter、leave、refresh）
+   * value 为触发动作列表
+   */
+  events?: Record<string, PageEventAction[]>
+
   // ========== 生命周期 ==========
   /** 页面生命周期 */
   lifecycle?: PageLifecycleConfig
 
-  // ========== 过渡动画 ==========
+  // ========== 组件树 ==========
+  /** 页面组件树 (根节点，可选用于空白占位页) */
+  children?: NodeSchema
+}
+
+// ============================================================================
+// 页面类型判别联合
+// ============================================================================
+
+/**
+ * 路由页面 - 必须有 path
+ */
+export interface RoutePage extends PageSchemaBase {
+  type: 'page'
+  /** 路由路径 (必填，支持动态参数如 /user/:id) */
+  path: string
+  /** 关联的布局 ID */
+  layoutId?: string
+  /** SEO/Meta 配置 */
+  meta?: PageMetaConfig
+  /** 动态路由参数定义 */
+  params?: RouteParamSchema[]
+  /** 查询参数定义 */
+  query?: QueryParamSchema[]
+  /** 页面权限配置 */
+  auth?: PageAuthConfig
   /** 页面过渡动画 */
   transition?: PageTransitionConfig
-
-  // ========== 组件树 ==========
-  /** 页面组件树 (根节点) */
-  children: NodeSchema
 }
+
+/**
+ * 片段页面 - 不可路由，用于嵌套/复用
+ */
+export interface FragmentPage extends PageSchemaBase {
+  type: 'fragment'
+  /** 片段不支持路由 */
+  path?: never
+  layoutId?: never
+  meta?: never
+  params?: never
+  query?: never
+  auth?: never
+  transition?: never
+}
+
+/**
+ * 弹窗页面 - 不可路由，用于模态弹窗
+ */
+export interface DialogPage extends PageSchemaBase {
+  type: 'dialog'
+  /** 弹窗不支持路由 */
+  path?: never
+  layoutId?: never
+  meta?: never
+  params?: never
+  query?: never
+  auth?: never
+  transition?: never
+  /** 弹窗配置 */
+  dialogConfig?: {
+    /** 弹窗宽度 */
+    width?: number | string
+    /** 弹窗高度 */
+    height?: number | string
+    /** 是否显示关闭按钮 */
+    closable?: boolean
+    /** 是否显示遮罩 */
+    mask?: boolean
+    /** 点击遮罩是否关闭 */
+    maskClosable?: boolean
+  }
+}
+
+/**
+ * 组件页面 - 可复用的业务组件
+ */
+export interface ComponentPage extends PageSchemaBase {
+  type: 'component'
+  /** 组件不支持路由 */
+  path?: never
+  layoutId?: never
+  meta?: never
+  params?: never
+  query?: never
+  auth?: never
+  transition?: never
+  /** 组件属性定义 (类似 props) */
+  propsSchema?: VariableSchema[]
+  /** 组件事件定义 */
+  emitsSchema?: Array<{ name: string; description?: string }>
+}
+
+/**
+ * 页面定义 (判别联合类型)
+ *
+ * 根据 type 区分不同页面形态：
+ * - page: 路由页面，必须有 path
+ * - fragment: 片段页面，用于嵌套/复用
+ * - dialog: 弹窗页面，用于模态弹窗
+ * - component: 组件页面，可复用的业务组件
+ */
+export type PageSchema = RoutePage | FragmentPage | DialogPage | ComponentPage
+
+/**
+ * 页面类型
+ */
+export type PageType = PageSchema['type']
 
 // ============================================================================
 // 布局定义
@@ -435,17 +578,74 @@ export interface LayoutSchema {
 // ============================================================================
 
 /**
- * 创建默认页面
+ * 创建路由页面
  */
-export function createDefaultPage(id: string, name: string = '新页面'): PageSchema {
+export function createRoutePage(id: string, path: string, name: string = '新页面'): RoutePage {
   return {
     id,
     name,
-    path: `/${id}`,
+    type: 'page',
+    path,
     title: name,
     children: {
       id: `${id}_root`,
       component: 'Page',
+      children: [],
+    },
+  }
+}
+
+/**
+ * 创建片段页面
+ */
+export function createFragmentPage(id: string, name: string = '片段'): FragmentPage {
+  return {
+    id,
+    name,
+    type: 'fragment',
+    children: {
+      id: `${id}_root`,
+      component: 'Fragment',
+      children: [],
+    },
+  }
+}
+
+/**
+ * 创建弹窗页面
+ */
+export function createDialogPage(id: string, name: string = '弹窗'): DialogPage {
+  return {
+    id,
+    name,
+    type: 'dialog',
+    dialogConfig: {
+      width: 500,
+      closable: true,
+      mask: true,
+      maskClosable: true,
+    },
+    children: {
+      id: `${id}_root`,
+      component: 'Dialog',
+      children: [],
+    },
+  }
+}
+
+/**
+ * 创建组件页面
+ */
+export function createComponentPage(id: string, name: string = '组件'): ComponentPage {
+  return {
+    id,
+    name,
+    type: 'component',
+    propsSchema: [],
+    emitsSchema: [],
+    children: {
+      id: `${id}_root`,
+      component: 'Container',
       children: [],
     },
   }
@@ -468,4 +668,115 @@ export function createDefaultLayout(id: string, name: string = '默认布局'): 
       children: [],
     },
   }
+}
+
+// ============================================================================
+// 类型守卫
+// ============================================================================
+
+/**
+ * 判断是否为路由页面
+ */
+export function isRoutePage(page: PageSchema): page is RoutePage {
+  return page.type === 'page'
+}
+
+/**
+ * 判断是否为片段页面
+ */
+export function isFragmentPage(page: PageSchema): page is FragmentPage {
+  return page.type === 'fragment'
+}
+
+/**
+ * 判断是否为弹窗页面
+ */
+export function isDialogPage(page: PageSchema): page is DialogPage {
+  return page.type === 'dialog'
+}
+
+/**
+ * 判断是否为组件页面
+ */
+export function isComponentPage(page: PageSchema): page is ComponentPage {
+  return page.type === 'component'
+}
+
+/**
+ * 创建页面作用域动作引用
+ */
+export function createPageActionRef(actionId: string, pageId: string): ActionLinkRef {
+  return {
+    type: 'ref',
+    scope: 'page',
+    id: actionId,
+    pageId,
+  }
+}
+
+/**
+ * 校验页面事件动作引用是否合法
+ */
+export function validatePageEventActionRefs(
+  page: PageSchema,
+  globalActionIds?: Iterable<string>
+): PageActionRefValidationIssue[] {
+  const issues: PageActionRefValidationIssue[] = []
+  const pageActionIds = extractActionIds(page.actions)
+
+  if (!page.events) {
+    return issues
+  }
+
+  for (const [eventName, actions] of Object.entries(page.events)) {
+    actions.forEach((action, actionIndex) => {
+      if (!isPageEventActionLinkRef(action)) {
+        return
+      }
+      const validationIssues = validateActionLinkRef(action, {
+        globalActionIds,
+        pageActionIds,
+      })
+
+      validationIssues.forEach((issue) => {
+        issues.push({
+          ...issue,
+          pageId: page.id,
+          eventName,
+          actionIndex,
+        })
+      })
+    })
+  }
+
+  return issues
+}
+
+/**
+ * 校验页面范围内的动作引用（页面事件 + 节点事件）
+ */
+export function validatePageActionRefs(
+  page: PageSchema,
+  globalActionIds?: Iterable<string>
+): PageActionValidationResult {
+  const pageActionIds = extractActionIds(page.actions)
+
+  return {
+    pageIssues: validatePageEventActionRefs(page, globalActionIds),
+    nodeIssues: validateNodeEventActionRefs(page.children, {
+      globalActionIds,
+      pageActionIds,
+    }),
+  }
+}
+
+// ============================================================================
+// 兼容旧版本
+// ============================================================================
+
+/**
+ * @deprecated Use createRoutePage instead
+ */
+export function createDefaultPage(id: string, name: string = '新页面'): RoutePage {
+  return createRoutePage(id, `/${id}`, name)
 }

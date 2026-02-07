@@ -1,12 +1,12 @@
 import { NodeSchema } from '../types/schema'
-import { Operation, InsertOp, DeleteOp, UpdateOp, MoveOp, Transaction } from '../types/operation'
+import { Operation, InsertOp, DeleteOp, UpdateOp, MoveOp, Transaction } from '../runtime/operation'
 import { TreeIndex } from '../utils/tree'
 import { applyOperation } from './processor'
 import { Validator } from './validator'
 import { MaterialMeta } from '../types/material'
 import { TypedEmitter } from '../utils/events'
 import { generateId } from '../utils/id'
-import { Plugin, PluginContext } from '../types/plugin'
+import { Plugin, PluginContext } from '../runtime/plugin'
 import { getValueByPath } from '../utils/object'
 import { deepClone } from '../utils/clone'
 
@@ -328,7 +328,7 @@ export class TreeModel extends TypedEmitter<TreeModelEvents> {
   /**
    * 便捷方法：更新属性
    */
-  updateProp(nodeId: string, path: string, value: any): UpdateOp {
+  updateProp(nodeId: string, path: string, value: unknown): UpdateOp {
     const node = this.getNode(nodeId)
     if (!node) throw new Error(`Node ${nodeId} not found`)
 

@@ -1,14 +1,13 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Handler<T = any> = (event: T) => void
+type Handler<T = unknown> = (event: T) => void
 
 export class TypedEmitter<Events extends { [K: string]: unknown }> {
-  private handlers: Map<keyof Events, Set<Handler>> = new Map()
+  private handlers: Map<keyof Events, Set<Handler<unknown>>> = new Map()
 
   on<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void {
     if (!this.handlers.has(type)) {
       this.handlers.set(type, new Set())
     }
-    this.handlers.get(type)!.add(handler as Handler)
+    this.handlers.get(type)!.add(handler as Handler<unknown>)
   }
 
   /**
@@ -25,7 +24,7 @@ export class TypedEmitter<Events extends { [K: string]: unknown }> {
   off<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void {
     const handlers = this.handlers.get(type)
     if (handlers) {
-      handlers.delete(handler as Handler)
+      handlers.delete(handler as Handler<unknown>)
     }
   }
 

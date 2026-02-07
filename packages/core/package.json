@@ -8,6 +8,14 @@
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
     "./types/*": "./src/types/*.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./contracts/*": "./src/contracts/*.ts",
+    "./runtime": "./src/runtime/index.ts",
+    "./runtime/*": "./src/runtime/*.ts",
+    "./validation": "./src/validation/index.ts",
+    "./validation/*": "./src/validation/*.ts",
+    "./compat": "./src/compat/index.ts",
+    "./compat/*": "./src/compat/*.ts",
     "./utils": "./src/utils/index.ts",
     "./constants": "./src/constants/index.ts",
     "./*": "./src/*.ts"
@@ -19,6 +27,30 @@
       ],
       "types/*": [
         "./src/types/*.ts"
+      ],
+      "contracts": [
+        "./src/contracts/index.ts"
+      ],
+      "contracts/*": [
+        "./src/contracts/*.ts"
+      ],
+      "runtime": [
+        "./src/runtime/index.ts"
+      ],
+      "runtime/*": [
+        "./src/runtime/*.ts"
+      ],
+      "validation": [
+        "./src/validation/index.ts"
+      ],
+      "validation/*": [
+        "./src/validation/*.ts"
+      ],
+      "compat": [
+        "./src/compat/index.ts"
+      ],
+      "compat/*": [
+        "./src/compat/*.ts"
       ],
       "utils": [
         "./src/utils/index.ts"

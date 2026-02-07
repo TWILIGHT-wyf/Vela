@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from '../types/plugin'
+import { Plugin, PluginContext } from '../runtime/plugin'
 import { HistoryManager, HistoryOptions } from '../model/history'
 
 export class HistoryPlugin implements Plugin {

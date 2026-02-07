@@ -2,7 +2,7 @@
  * API types for server communication
  */
 
-import type { ProjectSchema } from './project'
+import type { ProjectSchema } from '../types/project'
 
 /**
  * Server-side project representation

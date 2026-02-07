@@ -1,4 +1,4 @@
-import { NodeSchema } from '../types/schema'
+import { NodeSchema, getNodeComponentName } from '../types/schema'
 import { MaterialMeta } from '../types/material'
 
 /**
@@ -16,7 +16,8 @@ export class Validator {
     parent: NodeSchema | null,
     metaMap: Record<string, MaterialMeta>,
   ): void {
-    const meta = metaMap[node.componentName]
+    const component = getNodeComponentName(node)
+    const meta = component ? metaMap[component] : undefined
 
     // 1. 物料存在性校验
     // (可选，因为有时允许未知组件)
@@ -25,7 +26,7 @@ export class Validator {
     if (node.children && node.children.length > 0) {
       if (meta && meta.isContainer === false) {
         throw new Error(
-          `Component '${node.componentName}' is not a container and cannot have children.`,
+          `Component '${component}' is not a container and cannot have children.`,
         )
       }
     }
@@ -39,12 +40,13 @@ export class Validator {
    */
   static validateInsert(
     parent: NodeSchema,
-    node: NodeSchema,
+    _node: NodeSchema,
     metaMap: Record<string, MaterialMeta>,
   ) {
-    const parentMeta = metaMap[parent.componentName]
+    const parentComponent = getNodeComponentName(parent)
+    const parentMeta = parentComponent ? metaMap[parentComponent] : undefined
     if (parentMeta && parentMeta.isContainer === false) {
-      throw new Error(`Cannot insert into non-container '${parent.componentName}'`)
+      throw new Error(`Cannot insert into non-container '${parentComponent}'`)
     }
   }
 }

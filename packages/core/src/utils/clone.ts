@@ -57,4 +57,9 @@ function regenerateIds(node: NodeSchema, genId: () => string) {
   if (node.children) {
     node.children.forEach((child) => regenerateIds(child, genId))
   }
+  if (node.slots) {
+    Object.values(node.slots).forEach((slotChildren) => {
+      slotChildren.forEach((child) => regenerateIds(child, genId))
+    })
+  }
 }

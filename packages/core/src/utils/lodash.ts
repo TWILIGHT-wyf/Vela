@@ -1,7 +1,7 @@
 /**
  * 可取消的防抖函数返回类型
  */
-export interface DebouncedFunction<T extends (...args: any[]) => any> {
+export interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
   (...args: Parameters<T>): void
   cancel(): void
   flush(): void
@@ -10,14 +10,14 @@ export interface DebouncedFunction<T extends (...args: any[]) => any> {
 /**
  * 防抖函数
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
   immediate = false,
 ): DebouncedFunction<T> {
   let timeout: ReturnType<typeof setTimeout> | null = null
   let lastArgs: Parameters<T> | null = null
-  let lastContext: any = null
+  let lastContext: unknown = null
 
   const later = function () {
     timeout = null
@@ -28,7 +28,7 @@ export function debounce<T extends (...args: any[]) => any>(
     }
   }
 
-  const debounced = function (this: any, ...args: Parameters<T>) {
+  const debounced = function (this: unknown, ...args: Parameters<T>) {
     lastArgs = args
     lastContext = this
 
@@ -68,7 +68,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * 可取消的节流函数返回类型
  */
-export interface ThrottledFunction<T extends (...args: any[]) => any> {
+export interface ThrottledFunction<T extends (...args: unknown[]) => unknown> {
   (...args: Parameters<T>): void
   cancel(): void
 }
@@ -76,7 +76,7 @@ export interface ThrottledFunction<T extends (...args: any[]) => any> {
 /**
  * 节流函数
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number,
 ): ThrottledFunction<T> {
@@ -84,7 +84,7 @@ export function throttle<T extends (...args: any[]) => any>(
   let lastFunc: ReturnType<typeof setTimeout> | null = null
   let lastRan = 0
 
-  const throttled = function (this: any, ...args: Parameters<T>) {
+  const throttled = function (this: unknown, ...args: Parameters<T>) {
     const context = this
     if (!inThrottle) {
       func.apply(context, args)

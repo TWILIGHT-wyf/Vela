@@ -9,10 +9,12 @@
  */
 
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+let lastTimestamp = ''
+let lastCounter = 0
 
 /**
  * 生成唯一 ID
- * 格式: [prefix]_[timestamp(base36)][random(6)]
+ * 格式: [prefix]_[timestamp(base36)][counter(2)][random(4)]
  * 示例: btn_lfc2q9z5x9a2
  */
 export function generateId(prefix?: string): string {
@@ -21,15 +23,24 @@ export function generateId(prefix?: string): string {
   // 足以保证毫秒级的时间顺序
   const timestamp = Date.now().toString(36)
 
-  // 2. 随机部分 (6字符)
-  // 62^6 = 568亿组合，配合时间戳，单机冲突概率极低
+  // 2. 同毫秒递增计数器，保证同时间片内的字典序稳定
+  if (timestamp === lastTimestamp) {
+    lastCounter = (lastCounter + 1) % (62 * 62)
+  } else {
+    lastTimestamp = timestamp
+    lastCounter = 0
+  }
+  const counter = lastCounter.toString(36).padStart(2, '0')
+
+  // 3. 随机部分 (4字符)
+  // 62^4 = 1477万组合；结合 timestamp+counter，单机冲突概率仍很低
   let random = ''
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     // 使用位运算取整比 Math.floor 略快
     random += ALPHABET[(Math.random() * 62) | 0]
   }
 
-  const id = `${timestamp}${random}`
+  const id = `${timestamp}${counter}${random}`
 
   if (prefix) {
     // 简单的清洗，只保留字母数字

@@ -40,6 +40,14 @@ export class TreeIndex {
         this._index(child, depth + 1, node)
       }
     }
+
+    if (node.slots) {
+      for (const slotChildren of Object.values(node.slots)) {
+        for (const child of slotChildren) {
+          this._index(child, depth + 1, node)
+        }
+      }
+    }
   }
 
   /** 获取节点 O(1) */
@@ -84,6 +92,14 @@ export function findNodeById(root: NodeSchema, id: string): NodeSchema | null {
       if (found) return found
     }
   }
+  if (root.slots) {
+    for (const slotChildren of Object.values(root.slots)) {
+      for (const child of slotChildren) {
+        const found = findNodeById(child, id)
+        if (found) return found
+      }
+    }
+  }
   return null
 }
 
@@ -94,17 +110,31 @@ export function findNodeById(root: NodeSchema, id: string): NodeSchema | null {
 export function findParent(
   root: NodeSchema,
   targetId: string,
-): { parent: NodeSchema; index: number } | null {
-  if (!root.children) return null
-
-  for (let i = 0; i < root.children.length; i++) {
-    const child = root.children[i]
-    if (child.id === targetId) {
-      return { parent: root, index: i }
+): { parent: NodeSchema; index: number; slot?: string } | null {
+  if (root.children) {
+    for (let i = 0; i < root.children.length; i++) {
+      const child = root.children[i]
+      if (child.id === targetId) {
+        return { parent: root, index: i }
+      }
+      const found = findParent(child, targetId)
+      if (found) return found
     }
-    const found = findParent(child, targetId)
-    if (found) return found
   }
+
+  if (root.slots) {
+    for (const [slotName, slotChildren] of Object.entries(root.slots)) {
+      for (let i = 0; i < slotChildren.length; i++) {
+        const child = slotChildren[i]
+        if (child.id === targetId) {
+          return { parent: root, index: i, slot: slotName }
+        }
+        const found = findParent(child, targetId)
+        if (found) return found
+      }
+    }
+  }
+
   return null
 }
 
@@ -119,6 +149,14 @@ export function traverse(root: NodeSchema, callback: (node: NodeSchema) => boole
   if (root.children) {
     for (const child of root.children) {
       traverse(child, callback)
+    }
+  }
+
+  if (root.slots) {
+    for (const slotChildren of Object.values(root.slots)) {
+      for (const child of slotChildren) {
+        traverse(child, callback)
+      }
     }
   }
 }
@@ -142,11 +180,17 @@ export function removeNode(root: NodeSchema, targetId: string): NodeSchema | nul
   const result = findParent(root, targetId)
   if (!result) return null
 
-  const { parent, index } = result
-  if (!parent.children) return null
+  const { parent, index, slot } = result
+  if (slot) {
+    const slotChildren = parent.slots?.[slot]
+    if (!slotChildren) return null
+    const [removed] = slotChildren.splice(index, 1)
+    return removed ?? null
+  }
 
+  if (!parent.children) return null
   const [removed] = parent.children.splice(index, 1)
-  return removed
+  return removed ?? null
 }
 
 /**

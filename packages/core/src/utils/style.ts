@@ -1,4 +1,5 @@
-import type { NodeSchema, NodeStyle, LayoutMode } from '../types/schema'
+import type { NodeSchema, NodeStyle } from '../types/schema'
+import type { LayoutMode } from '../compat/legacy'
 
 /**
  * CSS 样式类型（不依赖 Vue）
@@ -90,6 +91,9 @@ export function isNodeVisible(style: NodeStyle | undefined): boolean {
   if ('visible' in style) {
     return style.visible !== false
   }
+  if (style.visibility === 'hidden') {
+    return false
+  }
   return true
 }
 
@@ -100,6 +104,24 @@ export function generateLayoutCSS(
   style: NodeStyle | undefined,
   mode: LayoutMode = 'free',
 ): ComponentCSSStyle {
+  if (mode === 'flow') {
+    const css: ComponentCSSStyle = {
+      position: style?.position || 'relative',
+    }
+
+    if (style?.width !== undefined) {
+      css.width = typeof style.width === 'number' ? `${style.width}px` : style.width
+    }
+    if (style?.height !== undefined) {
+      css.height = typeof style.height === 'number' ? `${style.height}px` : style.height
+    }
+    if (style?.zIndex !== undefined) {
+      css.zIndex = style.zIndex
+    }
+
+    return css
+  }
+
   if (mode === 'flex') {
     // Flex Layout Mode: Use flex item properties
     const css: ComponentCSSStyle = {
@@ -219,13 +241,19 @@ export function generateVisualCSS(style: NodeStyle | undefined): ComponentCSSSty
  * Generate animation CSS from NodeSchema animation config
  */
 export function generateAnimationCSS(animation: NodeSchema['animation']): AnimationStyle {
-  if (!animation || !animation.class) return {}
+  if (!animation) return {}
+
+  const legacyClassName =
+    animation.className ||
+    (animation as unknown as { class?: string }).class
+
+  if (!legacyClassName) return {}
 
   return {
-    animationDuration: `${animation.duration || 0.7}s`,
-    animationDelay: `${animation.delay || 0}s`,
-    animationIterationCount: animation.iterationCount || 1,
-    animationTimingFunction: animation.timingFunction || 'ease',
+    animationDuration: `${(animation.duration || 700) / 1000}s`,
+    animationDelay: `${(animation.delay || 0) / 1000}s`,
+    animationIterationCount: animation.iterations || 1,
+    animationTimingFunction: animation.easing || 'ease',
     animationFillMode: 'both',
   }
 }

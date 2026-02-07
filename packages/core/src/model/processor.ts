@@ -1,5 +1,5 @@
 import { NodeSchema } from '../types/schema'
-import { Operation, UpdateOp, InsertOp, DeleteOp, MoveOp } from '../types/operation'
+import { Operation, UpdateOp, InsertOp, DeleteOp, MoveOp } from '../runtime/operation'
 import { TreeIndex, findNodeById } from '../utils/tree'
 import { getValueByPath, setValueByPath } from '../utils/object'
 
@@ -82,11 +82,23 @@ function applyDelete(root: NodeSchema, op: DeleteOp, index?: TreeIndex) {
     parent = findNodeById(root, op.parentId) || undefined
   }
 
-  if (!parent || !parent.children) throw new Error(`Parent node not found or empty: ${op.parentId}`)
+  if (!parent) throw new Error(`Parent node not found or empty: ${op.parentId}`)
 
-  const idx = parent.children.findIndex((n) => n.id === op.nodeId)
-  if (idx > -1) {
-    parent.children.splice(idx, 1)
+  if (parent.children) {
+    const idx = parent.children.findIndex((n) => n.id === op.nodeId)
+    if (idx > -1) {
+      parent.children.splice(idx, 1)
+    }
+  }
+
+  if (parent.slots) {
+    for (const slotChildren of Object.values(parent.slots)) {
+      const idx = slotChildren.findIndex((n) => n.id === op.nodeId)
+      if (idx > -1) {
+        slotChildren.splice(idx, 1)
+        break
+      }
+    }
   }
 
   if (index) {
@@ -99,13 +111,29 @@ function applyMove(root: NodeSchema, op: MoveOp, index?: TreeIndex) {
   let fromParent = index?.getNode(op.fromParentId)
   if (!fromParent) fromParent = findNodeById(root, op.fromParentId) || undefined
 
-  if (!fromParent?.children) throw new Error(`Source parent not found: ${op.fromParentId}`)
+  if (!fromParent) throw new Error(`Source parent not found: ${op.fromParentId}`)
 
   // Always find node by ID for robustness (index may be stale)
-  const realIndex = fromParent.children.findIndex((n) => n.id === op.nodeId)
-  if (realIndex === -1) throw new Error(`Node not found in source parent: ${op.nodeId}`)
+  let node: NodeSchema | undefined
 
-  const [node] = fromParent.children.splice(realIndex, 1)
+  if (fromParent.children) {
+    const realIndex = fromParent.children.findIndex((n) => n.id === op.nodeId)
+    if (realIndex > -1) {
+      ;[node] = fromParent.children.splice(realIndex, 1)
+    }
+  }
+
+  if (!node && fromParent.slots) {
+    for (const slotChildren of Object.values(fromParent.slots)) {
+      const realIndex = slotChildren.findIndex((n) => n.id === op.nodeId)
+      if (realIndex > -1) {
+        ;[node] = slotChildren.splice(realIndex, 1)
+        break
+      }
+    }
+  }
+
+  if (!node) throw new Error(`Node not found in source parent: ${op.nodeId}`)
 
   // 2. Insert to new
   let toParent = index?.getNode(op.toParentId)

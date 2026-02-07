@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from '../types/plugin'
+import { Plugin, PluginContext } from '../runtime/plugin'
 import { TypedEmitter } from '../utils/events'
 
 export interface SelectionEvents {

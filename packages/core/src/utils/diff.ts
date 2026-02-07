@@ -1,4 +1,4 @@
-import { UpdateOp } from '../types/operation'
+import { UpdateOp } from '../runtime/operation'
 import { generateId } from './id'
 
 /**

@@ -1,4 +1,9 @@
-import { I18nString } from './i18n'
+import type { I18nString } from './i18n'
+export type { I18nString } from './i18n'
+
+// ============================================================================
+// 属性设置器
+// ============================================================================
 
 /**
  * 属性设置器类型
@@ -45,8 +50,8 @@ export interface ComponentImportSpec {
  */
 export interface PropSchema {
   name: string
-  label: I18nString // 原 title
-  title?: I18nString // 兼容 title
+  label: string // 原 title
+  title?: string // 兼容 title
   setter: SetterType
   defaultValue?: unknown
   setterProps?: Record<string, unknown>
