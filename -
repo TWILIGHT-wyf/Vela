@@ -1,0 +1,21 @@
+0000	69 6d 70 6f 72 74 20 7b  20 50 61 67 65 53 63 68   import { PageSch
+0010	65 6d 61 2c 20 4c 61 79  6f 75 74 53 63 68 65 6d   ema, LayoutSchem
+0020	61 20 7d 20 66 72 6f 6d  20 27 2e 2f 70 61 67 65   a } from './page
+0030	27 0a 0a 2f 2a 2a 0a 20  2a 20 e9 a1 b9 e7 9b ae   '../**. * ......
+0040	e9 85 8d e7 bd ae e5 8d  8f e8 ae ae 0a 20 2a 2f   ............. */
+0050	0a 65 78 70 6f 72 74 20  69 6e 74 65 72 66 61 63   .export interfac
+0060	65 20 50 72 6f 6a 65 63  74 53 63 68 65 6d 61 20   e ProjectSchema 
+0070	7b 0a 20 20 76 65 72 73  69 6f 6e 3a 20 73 74 72   {.  version: str
+0080	69 6e 67 0a 20 20 6e 61  6d 65 3a 20 73 74 72 69   ing.  name: stri
+0090	6e 67 0a 20 20 64 65 73  63 72 69 70 74 69 6f 6e   ng.  description
+00a0	3f 3a 20 73 74 72 69 6e  67 0a 20 20 2f 2f 54 4f   ?: string.  //TO
+00b0	44 4f 0a 20 20 63 6f 6e  66 69 67 3a 20 7b 0a 20   DO.  config: {. 
+00c0	20 20 20 6c 61 79 6f 75  74 3a 20 27 6d 6f 62 69      layout: 'mobi
+00d0	6c 65 27 20 7c 20 27 70  63 27 0a 20 20 20 20 74   le' | 'pc'.    t
+00e0	68 65 6d 65 3a 20 73 74  72 69 6e 67 0a 20 20 7d   heme: string.  }
+00f0	0a 20 20 2f 2f 20 e5 a4  9a e9 a1 b5 e9 9d a2 e5   .  // ..........
+0100	ae 9a e4 b9 89 0a 20 20  70 61 67 65 73 3a 20 50   ......  pages: P
+0110	61 67 65 53 63 68 65 6d  61 5b 5d 0a 20 20 2f 2f   ageSchema[].  //
+0120	20 e5 b8 83 e5 b1 80 e5  ae 9a e4 b9 89 0a 20 20    .............  
+0130	6c 61 79 6f 75 74 73 3a  20 4c 61 79 6f 75 74 53   layouts: LayoutS
+0140	63 68 65 6d 61 5b 5d 0a  7d 0a                     chema[].}.
