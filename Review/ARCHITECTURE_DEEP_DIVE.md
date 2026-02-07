@@ -186,8 +186,9 @@ function changePageLayout(pageId: string, layout: LayoutMode): void
 	- 为什么要设置width和height
 	- theme
 	- 这里每个页面都要显式设置layout吗，这个存在的意义是什么用于编辑器编辑模式判断吗？
-	- 
-
+	- pageId怎么是用的nanoid，我记得core中有写一个id生成工具
+- saveProject没有保存到数据库中，只保存在localstorage中
+- changePageLayout改变页面布局，page中的node的布局模式也会改变就很不合理
 #### 3.3.2 `history.ts` - 历史记录（命令模式）
 
 ```typescript
