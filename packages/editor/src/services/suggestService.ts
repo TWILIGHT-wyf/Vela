@@ -3,26 +3,19 @@
  * 负责调用 Agent、校验、白名单过滤、沙箱隔离
  */
 
-// 临时注释：suggestion类型在@vela/core中不存在，等待后续重构
-// import type {
-//   SuggestionRequest,
-//   SuggestionResult,
-//   DiffItem,
-//   WhitelistConfig,
-// } from '@vela/core/types/suggestion'
-// import type { Component } from '@vela/core/types/components'
+import type {
+  SuggestionRequest,
+  SuggestionResult,
+  DiffItem,
+  WhitelistConfig,
+} from '@/types/suggestion'
 import { nanoid } from 'nanoid'
 import http from '@/services/http'
 // import { getAllSchemas, type ComponentSchema } from '@/components/siderBar/properties/schema/types'
 // import '@/components/siderBar/properties/schema/index'
 
-// 临时类型定义，避免编译错误
+// TODO: 使用统一 NodeSchema 后替换为明确组件类型
 type Component = any
-
-type SuggestionRequest = any
-type SuggestionResult = any
-type DiffItem = any
-type WhitelistConfig = any
 
 /**
  * 构建组件能力文档（基于 Schema）

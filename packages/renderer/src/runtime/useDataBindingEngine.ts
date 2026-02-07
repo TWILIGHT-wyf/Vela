@@ -1,6 +1,7 @@
 import { watch, ref, type Ref, type WatchStopHandle, type ComputedRef } from 'vue'
 import { get, isEqual } from 'lodash-es'
-import type { NodeSchema, DataBinding } from '@vela/core'
+import type { NodeSchema } from '@vela/core'
+import type { DataBinding } from '@vela/core/compat'
 
 export interface DataBindingEngine {
   start: () => void

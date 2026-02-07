@@ -1,5 +1,5 @@
 ﻿import http from './http'
-import type { ServerProject, ProjectInput } from '@vela/core/types/api'
+import type { ServerProject, ProjectInput } from '@vela/core/contracts'
 
 // API 响应类型
 export type { ServerProject, ProjectInput }

@@ -15,7 +15,7 @@
       v-bind="resolvedProps"
       :style="innerStyle"
       :data-id="node.id"
-      :data-component="node.componentName"
+      :data-component="node.component"
       class="universal-node-content"
     >
       <!-- Recursive Children -->
@@ -36,10 +36,10 @@
       v-else
       class="universal-node-content node-unresolved"
       :data-id="node.id"
-      :data-component="node.componentName"
+      :data-component="node.component"
       :style="innerStyle"
     >
-      <div class="unresolved-label">{{ node.componentName }} (未找到)</div>
+      <div class="unresolved-label">{{ node.component }} (未找到)</div>
       <!-- Still render children -->
       <template v-if="node.children && node.children.length">
         <UniversalRenderer
@@ -74,10 +74,10 @@ const props = defineProps<{
 
 // Component Resolution
 const isResolved = computed(() => {
-  return hasComponent(props.node.componentName)
+  return hasComponent(props.node.component)
 })
 const componentRef = computed(() => {
-  return getComponent(props.node.componentName)
+  return getComponent(props.node.component)
 })
 
 // Data Source Adapter
@@ -86,35 +86,22 @@ const { resolvedProps } = useDataSourceAdapter(nodeRef)
 
 const effectiveParentLayoutMode = computed(() => props.parentLayoutMode || 'flow')
 const selfChildrenLayoutMode = computed(
-  () => (props.node.layoutMode as 'free' | 'flow' | undefined) || effectiveParentLayoutMode.value,
+  () => props.node.childLayout || effectiveParentLayoutMode.value,
 )
 
-// Style Logic: Strip layout styles handled by wrapper
+// Style Logic: Only strip sizing properties managed by wrapper
+// With layout/style separation, x/y/rotate live in node.layout (not style)
 const innerStyle = computed(() => {
   if (!props.node.style) return {}
   const style = { ...props.node.style }
 
-  // Exclude layout properties managed by wrappers
-  // Free Mode (ShapeWrapper)
-  delete style.position
-  delete style.left
-  delete style.top
-  delete style.x
-  delete style.y
-  delete style.transform
-  delete style.rotate
-  delete style.zIndex
-
-  // Flow Mode (NodeWrapper) & Common
+  // Size properties are managed by the wrapper (NodeWrapper/FreeWrapper)
   delete style.width
   delete style.height
   delete style.minHeight
 
-  // Other
-  delete style.locked
-
   // Free layout containers need a positioning context for absolute children
-  if (props.node.layoutMode === 'free' && !style.position) {
+  if (props.node.childLayout === 'free') {
     style.position = 'relative'
   }
 

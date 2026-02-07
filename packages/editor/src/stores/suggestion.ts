@@ -11,8 +11,8 @@ import type {
   SuggestionResult,
   SuggestionItem,
   AuditRecord,
-} from '@vela/core/types/suggestion'
-import type { NodeSchema } from '@vela/core/types/schema'
+} from '@/types/suggestion'
+import type { NodeSchema } from '@vela/core'
 import { generateSuggestion, applyDiffs } from '@/services/suggestService'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'

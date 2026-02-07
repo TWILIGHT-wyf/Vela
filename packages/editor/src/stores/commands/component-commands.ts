@@ -1,4 +1,4 @@
-import type { NodeSchema, NodeStyle } from '@vela/core'
+import type { NodeSchema, NodeStyle, NodeLayout } from '@vela/core'
 import type { Command, CommandType } from './types'
 
 /**
@@ -15,7 +15,8 @@ export interface ComponentStoreAccessor {
   updateStyleRaw(id: string, style: Partial<NodeStyle>): void
   updatePropsRaw(id: string, props: Record<string, unknown>): void
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
-  updateLayoutModeRaw(id: string, layoutMode: NodeSchema['layoutMode']): void
+  updateLayoutRaw(id: string, layout: Partial<NodeLayout>): void
+  updateChildLayoutRaw(id: string, childLayout: NodeSchema['childLayout']): void
 }
 
 // Store accessor 将在初始化时设置
@@ -55,7 +56,7 @@ export class AddComponentCommand implements Command {
     this.parentId = parentId
     this.component = structuredClone(component)
     this.index = index
-    this.description = `Add ${component.componentName}`
+    this.description = `Add ${component.component}`
   }
 
   execute(): void {
@@ -346,20 +347,92 @@ export class UpdateDataSourceCommand implements Command {
 }
 
 /**
- * 更新布局模式命令
+ * 更新画布布局命令
+ * 用于自由定位模式下的 x/y/rotate 等变更
  */
-export class UpdateLayoutModeCommand implements Command {
-  readonly type: CommandType = 'update-layout-mode'
+export class UpdateLayoutCommand implements Command {
+  readonly type: CommandType = 'update-layout'
   readonly description: string
 
   private id: string
-  private newLayoutMode: NodeSchema['layoutMode']
-  private oldLayoutMode?: NodeSchema['layoutMode']
+  private newLayout: Partial<NodeLayout>
+  private oldLayout?: Partial<NodeLayout>
+  private timestamp: number
 
-  constructor(id: string, layoutMode: NodeSchema['layoutMode']) {
+  constructor(id: string, newLayout: Partial<NodeLayout>) {
     this.id = id
-    this.newLayoutMode = layoutMode
-    this.description = `Update layout mode of ${id}`
+    this.newLayout = structuredClone(newLayout)
+    this.timestamp = Date.now()
+    this.description = `Update layout of ${id}`
+  }
+
+  execute(): void {
+    const store = getStore()
+    const node = store.findNodeById(null, this.id)
+
+    // 保存旧值
+    if (node) {
+      this.oldLayout = {}
+      for (const key of Object.keys(this.newLayout)) {
+        this.oldLayout[key as keyof NodeLayout] = node.layout?.[key as keyof NodeLayout]
+      }
+    }
+
+    store.updateLayoutRaw(this.id, this.newLayout)
+  }
+
+  undo(): void {
+    const store = getStore()
+    if (this.oldLayout) {
+      store.updateLayoutRaw(this.id, this.oldLayout)
+    }
+  }
+
+  redo(): void {
+    const store = getStore()
+    store.updateLayoutRaw(this.id, this.newLayout)
+  }
+
+  /**
+   * 检查是否可以与另一个命令合并
+   * 连续的同一组件布局更新可以合并（300ms 内，用于拖拽）
+   */
+  canMerge(other: Command): boolean {
+    if (other.type !== 'update-layout') return false
+    const otherCmd = other as UpdateLayoutCommand
+    return otherCmd.id === this.id && this.timestamp - otherCmd.timestamp < 300
+  }
+
+  /**
+   * 合并另一个命令
+   */
+  merge(other: Command): Command {
+    const otherCmd = other as UpdateLayoutCommand
+    const merged = new UpdateLayoutCommand(this.id, {
+      ...otherCmd.newLayout,
+      ...this.newLayout,
+    })
+    // 保留最早的 oldLayout
+    merged.oldLayout = otherCmd.oldLayout
+    return merged
+  }
+}
+
+/**
+ * 更新子节点布局模式命令
+ */
+export class UpdateChildLayoutCommand implements Command {
+  readonly type: CommandType = 'update-child-layout'
+  readonly description: string
+
+  private id: string
+  private newChildLayout: NodeSchema['childLayout']
+  private oldChildLayout?: NodeSchema['childLayout']
+
+  constructor(id: string, childLayout: NodeSchema['childLayout']) {
+    this.id = id
+    this.newChildLayout = childLayout
+    this.description = `Update child layout of ${id}`
   }
 
   execute(): void {
@@ -367,20 +440,20 @@ export class UpdateLayoutModeCommand implements Command {
     const node = store.findNodeById(null, this.id)
 
     if (node) {
-      this.oldLayoutMode = node.layoutMode
+      this.oldChildLayout = node.childLayout
     }
 
-    store.updateLayoutModeRaw(this.id, this.newLayoutMode)
+    store.updateChildLayoutRaw(this.id, this.newChildLayout)
   }
 
   undo(): void {
     const store = getStore()
-    store.updateLayoutModeRaw(this.id, this.oldLayoutMode)
+    store.updateChildLayoutRaw(this.id, this.oldChildLayout)
   }
 
   redo(): void {
     const store = getStore()
-    store.updateLayoutModeRaw(this.id, this.newLayoutMode)
+    store.updateChildLayoutRaw(this.id, this.newChildLayout)
   }
 }
 

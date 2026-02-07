@@ -20,7 +20,7 @@
 
 import { useHistoryStore } from './history'
 import { useComponent } from './component'
-import { getPropSchema } from '@vela/core'
+import { getPropSchema } from '@vela/core/validation'
 import { ElMessage } from 'element-plus'
 import type { NodeSchema } from '@vela/core'
 

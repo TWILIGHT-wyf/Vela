@@ -260,7 +260,7 @@ const categoryOptions = [
 ]
 
 // 项目列表
-import type { ServerProject, ProjectInput } from '@vela/core/types/api'
+import type { ServerProject, ProjectInput } from '@vela/core/contracts'
 import type { PageSchema } from '@vela/core'
 
 // Dashboard 显示用的扩展项目类型

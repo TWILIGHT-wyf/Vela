@@ -131,7 +131,7 @@ import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MagicStick, View, Check, Close, Refresh } from '@element-plus/icons-vue'
 import { useSuggestion } from '@/stores/suggestion'
-import type { SuggestionStatus, SuggestionDiff, DiffItem } from '@vela/core/types/suggestion'
+import type { SuggestionStatus, SuggestionDiff, DiffItem } from '@/types/suggestion'
 import DiffViewer from './DiffViewer.vue'
 
 /**
@@ -139,7 +139,7 @@ import DiffViewer from './DiffViewer.vue'
  */
 function toDiffItem(suggestionDiff: SuggestionDiff): DiffItem {
   return {
-    action: suggestionDiff.type,
+    action: suggestionDiff.type ?? suggestionDiff.action,
     componentType: suggestionDiff.newComponent?.componentName || suggestionDiff.after?.componentName || 'Unknown',
     componentId: suggestionDiff.targetId,
     description: suggestionDiff.description,

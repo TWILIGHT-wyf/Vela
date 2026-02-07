@@ -34,7 +34,7 @@
 
       <!-- Label -->
       <div v-if="!isDragging && !isResizing && !isRotating" class="selection-label">
-        {{ selectedNode.title || selectedNode.componentName }}
+        {{ selectedNode.title || selectedNode.component }}
       </div>
     </div>
   </div>
@@ -86,23 +86,30 @@ const rotateHandleStyle = computed(() => {
 
 const boxStyle = computed(() => {
   const node = selectedNode.value
-  if (!node || !node.style) return null
+  if (!node) return null
 
   // Trigger reactivity explicitly via styleVersion
   const _v = store.styleVersion[node.id]
 
-  const { x, y, width, height, rotate } = node.style
+  // Read positioning from node.layout, sizing from node.style
+  const layout = node.layout || {}
+  const style = node.style || {}
+  const x = layout.x ?? 0
+  const y = layout.y ?? 0
+  const rotate = layout.rotate ?? 0
+  const width = style.width ?? 100
+  const height = style.height ?? 100
 
   return {
-    transform: `translate(${x ?? 0}px, ${y ?? 0}px) rotate(${rotate ?? 0}deg)`,
-    width: `${width ?? 100}px`,
-    height: `${height ?? 100}px`,
+    transform: `translate(${x}px, ${y}px) rotate(${rotate}deg)`,
+    width: `${width}px`,
+    height: `${height}px`,
     position: 'absolute' as const,
     left: 0,
     top: 0,
     pointerEvents: 'all' as const,
     zIndex: 9999,
-    willChange: 'transform, width, height', // Perf optimization
+    willChange: 'transform, width, height',
   }
 })
 

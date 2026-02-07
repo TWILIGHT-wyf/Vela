@@ -138,6 +138,7 @@ export * from './src/utils/dataUtils'
 // 导出类型
 export type { TriggerLog } from './src/components/advanced/trigger/Trigger.vue'
 export type { GroupProps } from './src/components/group/Group.vue'
+export type { TableColumn } from './src/types/component-props'
 
 // 提供 Vue 插件式的安装方法
 export default {

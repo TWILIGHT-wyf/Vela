@@ -5,6 +5,7 @@
 export type {
   SuggestionRequest,
   SuggestionResult,
+  SuggestionDiff,
   DiffItem,
   WhitelistConfig,
   SuggestionItem,
@@ -13,14 +14,14 @@ export type {
 } from './suggestion'
 
 // 导出项目相关类型 (re-export from @vela/core)
-export type { ProjectSchema as Project, PageSchema as ProjectPage } from '@vela/core/types/project'
+export type { ProjectSchema as Project, PageSchema as ProjectPage } from '@vela/core'
 
 // Server-side project types for API communication
 export interface ServerProject {
   _id: string
   name: string
   description?: string
-  schema: import('@vela/core/types/project').ProjectSchema
+  schema: import('@vela/core').ProjectSchema
   createdAt: string
   updatedAt: string
 }
@@ -28,7 +29,7 @@ export interface ServerProject {
 export interface ProjectInput {
   name: string
   description?: string
-  schema: import('@vela/core/types/project').ProjectSchema
+  schema: import('@vela/core').ProjectSchema
 }
 
 export interface CanvasSettings {

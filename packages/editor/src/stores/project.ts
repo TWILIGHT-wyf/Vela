@@ -1,19 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { nanoid } from 'nanoid'
-import type { ProjectSchema, PageSchema, NodeSchema } from '@vela/core'
+import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/core'
 
 const STORAGE_KEY = 'vela_project'
 
 export const useProjectStore = defineStore('project', () => {
   // State
   const project = ref<ProjectSchema>({
-    version: '1.0.0',
+    id: `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    version: '2.0.0',
     name: 'Untitled Project',
     description: 'Created with Vela Editor',
     config: {
-      layout: 'pc',
-      theme: 'light',
+      target: 'pc',
     },
     pages: [],
   })
@@ -57,15 +57,19 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  /**
+   * 规范化页面布局配置
+   * 确保每个页面和根节点都有正确的布局模式
+   */
   function normalizePageLayouts() {
     if (!Array.isArray(project.value.pages)) return
     for (const page of project.value.pages) {
-      if (!page.config) page.config = { layout: 'flow' }
-      if (page.config.layout !== 'flow' && page.config.layout !== 'free') {
-        page.config.layout = 'flow'
+      if (!page.config) page.config = { defaultLayout: 'flow' }
+      if (page.config.defaultLayout !== 'flow' && page.config.defaultLayout !== 'free') {
+        page.config.defaultLayout = 'flow'
       }
       if (page.children) {
-        page.children.layoutMode = page.config.layout
+        page.children.childLayout = page.config.defaultLayout
       }
     }
   }
@@ -74,17 +78,18 @@ export const useProjectStore = defineStore('project', () => {
     const pageId = nanoid()
     const defaultPage: PageSchema = {
       id: pageId,
+      type: 'page',
       name: 'Home',
       path: '/',
       config: {
-        layout: 'flow',
+        defaultLayout: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: 'root',
-        componentName: 'Page', // Using 'Page' as root container
-        layoutMode: 'flow',
+        component: 'Page',
+        childLayout: 'flow',
         props: {},
         style: {
           width: '100%',
@@ -97,11 +102,11 @@ export const useProjectStore = defineStore('project', () => {
     }
 
     project.value = {
-      version: '1.0.0',
+      id: `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      version: '2.0.0',
       name: 'My Awesome Dashboard',
       config: {
-        layout: 'pc',
-        theme: 'light',
+        target: 'pc',
       },
       pages: [defaultPage],
     }
@@ -112,17 +117,18 @@ export const useProjectStore = defineStore('project', () => {
     const pageId = nanoid()
     const newPage: PageSchema = {
       id: pageId,
+      type: 'page',
       name,
       path: `/${name.toLowerCase()}`,
       config: {
-        layout: 'flow',
+        defaultLayout: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: `root_${pageId}`,
-        componentName: 'Page',
-        layoutMode: 'flow',
+        component: 'Page',
+        childLayout: 'flow',
         props: {},
         style: {
           width: '100%',
@@ -150,11 +156,11 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
-  function updatePageConfig(config: Partial<PageSchema['config']>) {
+  function updatePageConfig(config: Partial<PageConfig>) {
     if (currentPage.value && currentPage.value.config) {
       Object.assign(currentPage.value.config, config)
-      if (config.layout && currentPage.value.children) {
-        currentPage.value.children.layoutMode = config.layout
+      if (config.defaultLayout !== undefined && currentPage.value.children) {
+        currentPage.value.children.childLayout = config.defaultLayout
       }
     }
   }
@@ -162,9 +168,9 @@ export const useProjectStore = defineStore('project', () => {
   function changePageLayout(pageId: string, layout: 'free' | 'flow'): boolean {
     const page = project.value.pages.find((p) => p.id === pageId)
     if (page && page.config) {
-      page.config.layout = layout
+      page.config.defaultLayout = layout
       if (page.children) {
-        page.children.layoutMode = layout
+        page.children.childLayout = layout
       }
       return true
     }

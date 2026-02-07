@@ -69,7 +69,7 @@ const currentNode = computed(() => {
 })
 
 const componentLabel = computed(() => {
-  return props.componentName || currentNode.value?.componentName || ''
+  return props.componentName || currentNode.value?.component || ''
 })
 
 /** 判断是否为容器组件 */
@@ -113,33 +113,34 @@ const formatValue = (
 
 const wrapperStyle = computed<CSSProperties>(() => {
   const node = currentNode.value
-  if (!node?.style) {
-    // 容器默认宽度 100%
+  if (!node) {
     return isContainer.value ? { width: '100%' } : {}
   }
 
+  // Free mode: read positioning from node.layout, sizing from node.style
   if (props.parentLayoutMode === 'free') {
-    const rotate = Number(node.style.rotate ?? 0)
-    const customTransform =
-      typeof node.style.transform === 'string' ? node.style.transform : undefined
+    const layout = node.layout || {}
+    const style = node.style || {}
+    const rotate = Number(layout.rotate ?? 0)
     const rotateTransform = rotate ? `rotate(${rotate}deg)` : undefined
-    const transform = [customTransform, rotateTransform].filter(Boolean).join(' ')
 
     return {
       position: 'absolute',
-      left: formatValue(node.style.x as string | number | undefined, 0),
-      top: formatValue(node.style.y as string | number | undefined, 0),
-      width: formatValue(node.style.width as string | number | undefined, 'auto'),
-      height: formatValue(node.style.height as string | number | undefined, 'auto'),
-      zIndex: (node.style.zIndex as number | undefined) ?? 0,
-      transform: transform || undefined,
-      transformOrigin: transform ? 'center center' : undefined,
+      left: formatValue(layout.x as number | undefined, 0),
+      top: formatValue(layout.y as number | undefined, 0),
+      width: formatValue(style.width as string | number | undefined, 'auto'),
+      height: formatValue(style.height as string | number | undefined, 'auto'),
+      zIndex: (style.zIndex as number | undefined) ?? 0,
+      transform: rotateTransform || undefined,
+      transformOrigin: rotateTransform ? 'center center' : undefined,
     }
   }
 
+  // Flow mode: only width and minHeight matter
+  const style = node.style || {}
   return {
-    width: node.style.width || (isContainer.value ? '100%' : 'auto'),
-    minHeight: node.style.minHeight || node.style.height || 'auto',
+    width: style.width || (isContainer.value ? '100%' : 'auto'),
+    minHeight: style.minHeight || style.height || 'auto',
   }
 })
 
@@ -180,7 +181,7 @@ const handleDragStart = (e: DragEvent) => {
   // 设置拖拽数据
   const dragData = {
     nodeId: props.nodeId,
-    componentName: currentNode.value.componentName,
+    component: currentNode.value.component,
   }
   e.dataTransfer.setData('application/x-vela', JSON.stringify(dragData))
   e.dataTransfer.effectAllowed = 'move'

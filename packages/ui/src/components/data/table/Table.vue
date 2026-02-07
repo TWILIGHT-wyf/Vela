@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { ElTable, ElTableColumn } from 'element-plus'
-import type { TableColumn } from '@vela/core/types'
+import type { TableColumn } from '../../../types/component-props'
 
 const props = withDefaults(
   defineProps<{

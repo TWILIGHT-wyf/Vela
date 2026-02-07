@@ -1,4 +1,4 @@
-import type { NodeSchema } from '@vela/core/types/schema'
+import type { NodeSchema } from '@vela/core'
 
 /**
  * AI 建议面板类型定义
@@ -32,6 +32,19 @@ export interface SuggestionRequest {
 export type DiffActionType = 'add' | 'modify' | 'delete'
 
 /**
+ * 兼容旧版 AI 返回的组件结构
+ */
+export interface LegacySuggestionComponent extends Partial<NodeSchema> {
+  componentName?: string
+  type?: string
+  name?: string
+  position?: { x: number; y: number }
+  size?: { width: number; height: number }
+  rotation?: number
+  zindex?: number
+}
+
+/**
  * 差异项
  */
 export interface DiffItem {
@@ -48,9 +61,25 @@ export interface DiffItem {
   /** 新值（新增/修改时） */
   newValue?: unknown
   /** 完整的新组件数据（新增时） */
-  component?: Partial<NodeSchema>
+  component?: LegacySuggestionComponent
   /** 描述 */
   description: string
+}
+
+/**
+ * Agent 原始差异项（兼容历史字段）
+ */
+export interface SuggestionDiff extends DiffItem {
+  /** 历史字段：差异类型 */
+  type?: DiffActionType
+  /** 历史字段：目标节点 ID */
+  targetId?: string
+  /** 历史字段：变更前值 */
+  before?: unknown
+  /** 历史字段：变更后值 */
+  after?: LegacySuggestionComponent
+  /** 历史字段：新增节点 */
+  newComponent?: LegacySuggestionComponent
 }
 
 /**
@@ -62,7 +91,7 @@ export interface SuggestionResult {
   /** 原始请求 */
   request: SuggestionRequest
   /** 差异列表 */
-  diffs: DiffItem[]
+  diffs: SuggestionDiff[]
   /** 建议摘要 */
   summary: string
   /** 置信度 (0-1) */
