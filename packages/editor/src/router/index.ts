@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // 路由懒加载，优化首屏性能
-const Dashboard = () => import('@/views/Dashboard.vue')
-const Editor = () => import('@/views/Editor.vue')
+const Dashboard = () => import('@/views/dashboard.vue')
+const Editor = () => import('@/views/editor.vue')
 const Preview = () => import('@/views/Preview.vue')
 
 const router = createRouter({

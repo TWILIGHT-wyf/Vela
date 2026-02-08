@@ -599,7 +599,7 @@ watch(
 )
 
 const handleBack = () => {
-  router.push('/editor-v2')
+  router.push('/editor')
 }
 
 const handleRefresh = () => {
