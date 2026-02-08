@@ -13,17 +13,29 @@ export type {
 export { useHistoryStore } from './history'
 export { useUIStore } from './ui'
 export { useSuggestion } from './suggestion'
-export { useCommands } from './commands'
+export {
+  AddComponentCommand,
+  DeleteComponentCommand,
+  MoveComponentCommand,
+  UpdatePropsCommand,
+  UpdateStyleCommand,
+  UpdateDataSourceCommand,
+  UpdateGeometryCommand,
+  UpdateChildLayoutCommand,
+  BatchCommand,
+} from './commands'
 
 export type { SaveStatus } from './project'
 export type {
   Command,
   CommandType,
-  UpdatePropCommand,
-  UpdateStyleCommand,
-  UpdateGeometryCommand,
-  UpdateAnimationCommand,
-  AddComponentCommand,
-  DeleteComponentCommand,
-  MoveComponentCommand,
+  AddComponentPayload,
+  DeleteComponentPayload,
+  MoveComponentPayload,
+  UpdatePropsPayload,
+  UpdateStylePayload,
+  UpdateDataSourcePayload,
+  UpdateGeometryPayload,
+  UpdateContainerLayoutPayload,
+  BatchPayload,
 } from './commands'
