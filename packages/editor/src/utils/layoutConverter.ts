@@ -34,6 +34,10 @@ function getContainerMode(node: NodeSchema, parentMode: LayoutMode): LayoutMode 
  */
 export function convertToFlow(root: NodeSchema): NodeSchema {
   const cloned = cloneDeep(root)
+  cloned.container = {
+    ...(cloned.container || {}),
+    mode: 'flow',
+  }
 
   function processNode(node: NodeSchema, parentLayout: LayoutMode = 'flow'): void {
     if (parentLayout === 'flow' && node.style) {
@@ -93,6 +97,10 @@ export function convertToFlow(root: NodeSchema): NodeSchema {
  */
 export function convertToFree(root: NodeSchema): NodeSchema {
   const cloned = cloneDeep(root)
+  cloned.container = {
+    ...(cloned.container || {}),
+    mode: 'free',
+  }
 
   const OFFSET_X = 20
   const OFFSET_Y = 50
@@ -152,12 +160,7 @@ export function convertToFree(root: NodeSchema): NodeSchema {
  * 根据目标模式转换布局
  */
 export function convertLayout(root: NodeSchema, targetMode: LayoutMode): NodeSchema {
-  const converted = targetMode === 'flow' ? convertToFlow(root) : convertToFree(root)
-  converted.container = {
-    ...(converted.container || {}),
-    mode: targetMode,
-  }
-  return converted
+  return targetMode === 'flow' ? convertToFlow(root) : convertToFree(root)
 }
 
 /**

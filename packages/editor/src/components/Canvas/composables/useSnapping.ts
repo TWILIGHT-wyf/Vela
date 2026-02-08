@@ -28,12 +28,24 @@ export function useSnapping(threshold = 5) {
 
     // Helper to extract rect from node
     const getNodeRect = (node: NodeSchema): Rect => {
-      const s = node.style || {}
+      const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
+      const style = node.style || {}
+      const parseNumber = (value: unknown): number => {
+        if (typeof value === 'number') {
+          return Number.isFinite(value) ? value : 0
+        }
+        if (typeof value === 'string') {
+          const num = Number.parseFloat(value)
+          return Number.isFinite(num) ? num : 0
+        }
+        return 0
+      }
+
       return {
-        x: Number(s.x ?? 0),
-        y: Number(s.y ?? 0),
-        w: Number(s.width ?? 0),
-        h: Number(s.height ?? 0),
+        x: parseNumber(geometry?.x ?? style.left ?? 0),
+        y: parseNumber(geometry?.y ?? style.top ?? 0),
+        w: parseNumber(geometry?.width ?? style.width ?? 0),
+        h: parseNumber(geometry?.height ?? style.height ?? 0),
       }
     }
 

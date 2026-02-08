@@ -48,6 +48,8 @@
           <p class="empty-title">页面暂无内容</p>
           <p class="empty-hint">请从左侧拖入容器或组件</p>
         </div>
+
+        <SelectionLayer v-if="rootLayoutMode === 'free'" />
       </div>
     </div>
 
@@ -79,6 +81,7 @@ import UniversalRenderer from '../../UniversalRenderer.vue'
 import NodeWrapper from './NodeWrapper.vue'
 import DropIndicator from './DropIndicator.vue'
 import ContextMenu from './ContextMenu.vue'
+import SelectionLayer from '../../selection/SelectionLayer.vue'
 import { useFlowDrop } from './useFlowDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -385,7 +388,7 @@ const handleRootDrop = (e: DragEvent) => {
 }
 
 /* 选中状态 - Figma 风格蓝色实线 + 控制点效果 */
-.simulation-page :deep([data-id].selected) {
+.simulation-page :deep(.editor-node-wrapper.is-selected) {
   outline: 2px solid #0d99ff !important;
   outline-offset: 0px;
   box-shadow:
@@ -394,7 +397,7 @@ const handleRootDrop = (e: DragEvent) => {
 }
 
 /* 选中状态悬停 */
-.simulation-page :deep([data-id].selected:hover) {
+.simulation-page :deep(.editor-node-wrapper.is-selected:hover) {
   box-shadow:
     0 0 0 2px rgba(13, 153, 255, 0.2),
     inset 0 0 0 1px rgba(13, 153, 255, 0.1);

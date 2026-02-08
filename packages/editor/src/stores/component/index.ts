@@ -46,6 +46,15 @@ export const useComponent = defineStore('component', () => {
     const currentPage = projectStore.currentPage
     if (currentPage && treeCtx.rootNode.value) {
       currentPage.children = cloneDeep(treeCtx.rootNode.value)
+      const rootMode = treeCtx.rootNode.value.container?.mode
+      if (rootMode === 'free' || rootMode === 'flow') {
+        if (!currentPage.config) {
+          currentPage.config = {}
+        }
+        if (currentPage.config.defaultLayoutMode !== rootMode) {
+          currentPage.config.defaultLayoutMode = rootMode
+        }
+      }
       projectStore.saveStatus = 'unsaved'
     }
   }

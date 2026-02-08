@@ -1,5 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
+import type { LayoutMode } from '@vela/core'
+import { useComponent } from './component'
 import { useProjectStore } from './project'
 
 /**
@@ -68,37 +70,31 @@ export const useUIStore = defineStore('ui', () => {
   const rightPanelCollapsed = ref<boolean>(false)
 
   /**
-   * 画布模式
-   * - 'flow': 流式画布模式 (文档流) - 默认
-   * - 'free': 自由画布模式 (绝对定位，作为可选扩展)
-   */
-  const canvasMode = ref<'free' | 'flow'>('flow')
-
-  /**
    * 模拟运行模式
    * 在模拟运行模式下，组件可以交互，但不能编辑
    */
   const isSimulationMode = ref<boolean>(false)
 
-  // ========== Watchers ==========
+  // ========== Derived State ==========
+
+  const projectStore = useProjectStore()
+  const componentStore = useComponent()
+  const { currentPage } = storeToRefs(projectStore)
+  const { rootNode } = storeToRefs(componentStore)
 
   /**
-   * 监听页面切换，同步布局模式
-   * 当用户切换到不同页面时，画布模式应该跟随该页面的配置
+   * 画布模式（单一真源：rootNode.container.mode）
+   * page.config.defaultLayoutMode 仅作为兜底值
    */
-  const projectStore = useProjectStore()
-  const { currentPage } = storeToRefs(projectStore)
+  const canvasMode = computed<LayoutMode>(() => {
+    const rootMode = rootNode.value?.container?.mode
+    if (rootMode === 'free' || rootMode === 'flow') {
+      return rootMode
+    }
 
-  watch(
-    () => currentPage.value?.config?.defaultLayoutMode,
-    (newLayout) => {
-      if (newLayout && newLayout !== canvasMode.value) {
-        canvasMode.value = newLayout as 'free' | 'flow'
-        console.log(`[UIStore] Synced canvasMode to page layout: ${newLayout}`)
-      }
-    },
-    { immediate: true },
-  )
+    const pageMode = currentPage.value?.config?.defaultLayoutMode
+    return pageMode === 'free' ? 'free' : 'flow'
+  })
 
   // ========== Actions ==========
 
@@ -155,15 +151,21 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 设置画布模式
    */
-  function setCanvasMode(mode: 'free' | 'flow') {
-    canvasMode.value = mode
+  function setCanvasMode(mode: LayoutMode) {
+    const root = rootNode.value
+    if (root && root.container?.mode !== mode) {
+      componentStore.updateChildLayoutRaw(root.id, mode)
+    }
+    if (currentPage.value?.config?.defaultLayoutMode !== mode) {
+      projectStore.updatePageConfig({ defaultLayoutMode: mode })
+    }
   }
 
   /**
    * 切换画布模式
    */
   function toggleCanvasMode() {
-    canvasMode.value = canvasMode.value === 'free' ? 'flow' : 'free'
+    setCanvasMode(canvasMode.value === 'free' ? 'flow' : 'free')
   }
 
   /**

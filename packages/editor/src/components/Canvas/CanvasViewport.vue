@@ -31,8 +31,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useCanvasContextProvider } from './composables/useCanvasContext'
-import { useCanvasStore } from '@/stores/canvas'
+import { useUIStore } from '@/stores/ui'
 
 interface Props {
   /** Minimum zoom scale */
@@ -61,19 +62,20 @@ const props = withDefaults(defineProps<Props>(), {
   backgroundColor: '#f5f5f5',
 })
 
-const canvasStore = useCanvasStore()
+const uiStore = useUIStore()
+const { canvasScale, canvasOffset } = storeToRefs(uiStore)
 
 // Initialize canvas context with store values
 const { scale, panX, panY, viewportRef, isPanning, isSpacePressed, setScale, panBy, setPan } =
   useCanvasContextProvider({
     minScale: props.minScale,
     maxScale: props.maxScale,
-    initialScale: canvasStore.scale || props.initialScale,
+    initialScale: canvasScale.value || props.initialScale,
   })
 
-// Sync Store -> Context
+// Sync UI store -> Canvas context
 watch(
-  () => canvasStore.scale,
+  canvasScale,
   (newScale) => {
     if (Math.abs(newScale - scale.value) > 0.001) {
       setScale(newScale)
@@ -81,14 +83,30 @@ watch(
   },
 )
 
-// Sync Context -> Store
-watch([scale, panX, panY], ([s, x, y]) => {
-  if (Math.abs(s - canvasStore.scale) > 0.001) canvasStore.scale = s
-  if (Math.abs(x - canvasStore.offsetX) > 0.1) canvasStore.offsetX = x
-  if (Math.abs(y - canvasStore.offsetY) > 0.1) canvasStore.offsetY = y
+watch(
+  canvasOffset,
+  (offset) => {
+    if (
+      Math.abs(offset.x - panX.value) > 0.1 ||
+      Math.abs(offset.y - panY.value) > 0.1
+    ) {
+      setPan(offset.x, offset.y)
+    }
+  },
+  { immediate: true },
+)
 
-  canvasStore.isPanning = isPanning.value
-  canvasStore.isSpacePressed = isSpacePressed.value
+// Sync Canvas context -> UI store
+watch([scale, panX, panY], ([s, x, y]) => {
+  if (Math.abs(s - canvasScale.value) > 0.001) {
+    uiStore.setCanvasScale(s)
+  }
+  if (
+    Math.abs(x - canvasOffset.value.x) > 0.1 ||
+    Math.abs(y - canvasOffset.value.y) > 0.1
+  ) {
+    uiStore.setCanvasOffset(x, y)
+  }
 })
 
 // Local ref for the viewport element

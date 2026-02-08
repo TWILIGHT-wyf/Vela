@@ -3,6 +3,8 @@
     ref="wrapperRef"
     :class="wrapperClasses"
     :style="wrapperStyle"
+    :data-id="nodeId"
+    :data-component="componentLabel"
     :data-label="componentLabel"
     :data-node-id="nodeId"
     :draggable="!isFreeParent"
@@ -116,6 +118,9 @@ const wrapperStyle = computed<CSSProperties>(() => {
   if (!node) {
     return isContainer.value ? { width: '100%' } : {}
   }
+
+  // Subscribe to styleVersion to trigger reactivity on geometry/style updates
+  const _v = componentStore.styleVersion[node.id]
 
   // Free mode: read positioning from node.geometry, sizing from geometry/style
   if (props.parentLayoutMode === 'free') {

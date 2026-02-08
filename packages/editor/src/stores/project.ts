@@ -159,26 +159,30 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function updatePageConfig(config: Partial<PageConfig>) {
-    if (currentPage.value && currentPage.value.config) {
-      Object.assign(currentPage.value.config, config)
-      if (config.defaultLayoutMode !== undefined && currentPage.value.children) {
-        currentPage.value.children.container = {
-          mode: config.defaultLayoutMode,
-        }
-      }
+    if (!currentPage.value) return
+    if (!currentPage.value.config) {
+      currentPage.value.config = {}
     }
+    Object.assign(currentPage.value.config, config)
+    saveStatus.value = 'unsaved'
   }
 
   function changePageLayout(pageId: string, layout: 'free' | 'flow'): boolean {
     const page = project.value.pages.find((p) => p.id === pageId)
-    if (page && page.config) {
-      page.config.defaultLayoutMode = layout
-      if (page.children) {
-        page.children.container = { mode: layout }
-      }
-      return true
+    if (!page) return false
+
+    if (!page.config) {
+      page.config = {}
     }
-    return false
+    page.config.defaultLayoutMode = layout
+    if (page.children) {
+      page.children.container = {
+        ...(page.children.container || {}),
+        mode: layout,
+      }
+    }
+    saveStatus.value = 'unsaved'
+    return true
   }
 
   return {

@@ -122,7 +122,6 @@ import { ref, computed, watch } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { InfoFilled, Rank, List } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/project'
-import { useUIStore } from '@/stores/ui'
 import { useComponent } from '@/stores/component'
 import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
 import { storeToRefs } from 'pinia'
@@ -130,7 +129,6 @@ import type { LayoutMode } from '@vela/core'
 import { convertLayout } from '@/utils/layoutConverter'
 
 const projectStore = useProjectStore()
-const uiStore = useUIStore()
 const componentStore = useComponent()
 const sizeStore = useSizeStore()
 
@@ -207,14 +205,12 @@ async function handleLayoutChange(mode: LayoutMode) {
       },
     )
 
-    projectStore.updatePageConfig({ defaultLayoutMode: mode })
-    uiStore.setCanvasMode(mode)
-
     if (rootNode.value) {
       const converted = convertLayout(rootNode.value, mode)
       componentStore.setTree(converted)
       componentStore.syncToProjectStore()
     }
+    projectStore.updatePageConfig({ defaultLayoutMode: mode })
     ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
   } catch {
     console.log('[PageSettingPane] Layout change cancelled')
