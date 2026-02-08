@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Video',
-  componentName: 'Video',
   title: '视频',
   version: '1.0.0',
   category: '媒体',

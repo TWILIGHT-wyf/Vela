@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Stat',
-  componentName: 'Stat',
   title: '统计指标',
   version: '1.0.0',
   category: '数据',

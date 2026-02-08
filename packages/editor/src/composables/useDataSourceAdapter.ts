@@ -306,7 +306,8 @@ export function useDataSourceAdapter(node: Ref<NodeSchema>) {
     }
 
     // 根据组件类型选择适配器
-    const adapter = adapterMap[node.value.componentName] || defaultAdapter
+    const componentName = node.value.component || node.value.componentName || ''
+    const adapter = adapterMap[componentName] || defaultAdapter
     return adapter(baseProps, remoteData.value, dsConfig)
   })
 

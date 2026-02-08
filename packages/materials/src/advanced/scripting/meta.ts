@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Scripting',
-  componentName: 'Scripting',
   title: '脚本',
   version: '1.0.0',
   category: '高级',

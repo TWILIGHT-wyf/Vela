@@ -8,7 +8,7 @@
 
     <el-form v-else label-position="top" size="default" class="props-form">
       <div class="component-info">
-        <el-tag type="info" size="small">{{ node.componentName }}</el-tag>
+        <el-tag type="info" size="small">{{ node.component || node.componentName }}</el-tag>
         <el-text size="small" type="info" v-if="metaProps.length === 0">
           该组件没有可配置的属性
         </el-text>
@@ -115,7 +115,8 @@ const componentStore = useComponent()
 // 获取当前组件的 Meta 定义（只取 props，排除 '样式' 分组）
 const metaProps = computed<NamedPropConfig[]>(() => {
   if (!props.node) return []
-  const meta = materialList.find((m) => m.componentName === props.node!.componentName)
+  const nodeName = props.node!.component || props.node!.componentName
+  const meta = materialList.find((m) => m.name === nodeName || m.componentName === nodeName)
   if (!meta?.props) return []
   return Object.entries(meta.props)
     .filter(([_, config]) => config.group !== '样式')

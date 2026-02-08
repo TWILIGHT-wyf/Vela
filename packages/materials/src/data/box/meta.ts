@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Box',
-  componentName: 'Box',
   title: '占位盒',
   version: '1.0.0',
   category: 'KPI',

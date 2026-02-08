@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Timeline',
-  componentName: 'Timeline',
   title: '时间线',
   version: '1.0.0',
   category: '数据展示',

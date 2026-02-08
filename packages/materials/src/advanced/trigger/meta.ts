@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Trigger',
-  componentName: 'Trigger',
   title: '触发器',
   version: '1.0.0',
   category: '高级',

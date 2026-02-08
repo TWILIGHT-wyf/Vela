@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'SankeyChart',
-  componentName: 'SankeyChart',
   title: '桑基图',
   version: '1.0.0',
   category: '图表',

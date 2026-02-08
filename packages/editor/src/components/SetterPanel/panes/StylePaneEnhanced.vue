@@ -300,7 +300,8 @@ function setLayoutMode(mode: 'flow' | 'free') {
 // 获取当前组件的 Meta 样式配置（包含 styles 和 group='样式' 的 props）
 const metaStyles = computed<NamedStyleConfig[]>(() => {
   if (!props.node) return []
-  const meta = materialList.find((m) => m.componentName === props.node!.componentName)
+  const nodeName = props.node!.component || props.node!.componentName
+  const meta = materialList.find((m) => m.name === nodeName || m.componentName === nodeName)
 
   const styles: NamedStyleConfig[] = []
 

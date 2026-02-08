@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'MultiSelect',
-  componentName: 'MultiSelect',
   title: '多选选择器',
   version: '1.0.0',
   category: '基础控件',

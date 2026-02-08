@@ -16,7 +16,7 @@
             :key="a.name"
             class="anim-card"
             :class="{ active: currentAnimation?.name === a.name }"
-            @mouseenter="triggerPreview(a.class)"
+            @mouseenter="triggerPreview(a.className)"
             @mouseleave="cancelPreview()"
             @click="selectAnimation(a)"
           >
@@ -34,10 +34,11 @@
 
           <el-form label-position="top" size="small" class="modern-form">
             <el-form-item label="触发方式">
-              <el-select v-model="currentAnimation.trigger" class="modern-select">
-                <el-option label="页面加载时 (Load)" value="load" />
+              <el-select v-model="currentAnimation.trigger" class="modern-select" @change="handleUpdate">
+                <el-option label="页面初始化 (Init)" value="init" />
                 <el-option label="鼠标悬停时 (Hover)" value="hover" />
                 <el-option label="点击时 (Click)" value="click" />
+                <el-option label="元素可见时 (Visible)" value="visible" />
               </el-select>
             </el-form-item>
 
@@ -69,7 +70,7 @@
             <el-form-item label="重复次数">
               <div class="radio-group-wrapper">
                 <el-radio-group
-                  v-model="currentAnimation.iterationCount"
+                  v-model="currentAnimation.iterations"
                   size="small"
                   @change="handleUpdate"
                 >
@@ -83,7 +84,7 @@
 
             <el-form-item label="缓动函数">
               <el-select
-                v-model="currentAnimation.timingFunction"
+                v-model="currentAnimation.easing"
                 class="modern-select"
                 @change="handleUpdate"
               >

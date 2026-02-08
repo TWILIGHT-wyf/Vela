@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'ButtonGroup',
-  componentName: 'ButtonGroup',
   title: '按钮组',
   version: '1.0.0',
   category: '基础控件',

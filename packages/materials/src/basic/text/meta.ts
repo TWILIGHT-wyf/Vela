@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Text',
-  componentName: 'Text',
   title: '文本',
   version: '1.0.0',
   category: '基础组件',

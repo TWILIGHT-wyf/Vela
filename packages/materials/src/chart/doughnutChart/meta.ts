@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'DoughnutChart',
-  componentName: 'DoughnutChart',
   title: '环形图',
   version: '1.0.0',
   category: '图表',

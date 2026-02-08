@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'LineChart',
-  componentName: 'LineChart',
   title: '折线图',
   version: '1.0.0',
   category: '图表',

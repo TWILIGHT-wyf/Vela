@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'FunnelChart',
-  componentName: 'FunnelChart',
   title: '漏斗图',
   version: '1.0.0',
   category: '图表',

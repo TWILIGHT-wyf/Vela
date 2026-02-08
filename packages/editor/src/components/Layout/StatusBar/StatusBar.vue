@@ -91,7 +91,7 @@ const selectedInfo = computed(() => {
   if (count === 0) return '未选中'
   if (count === 1) {
     const node = compStore.selectedNode
-    return node ? `${node.componentName} (${node.id.slice(0, 8)}...)` : '未选中'
+    return node ? `${node.component || node.componentName} (${node.id.slice(0, 8)}...)` : '未选中'
   }
   return `已选中 ${count} 个组件`
 })

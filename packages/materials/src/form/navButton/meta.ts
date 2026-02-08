@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'NavButton',
-  componentName: 'NavButton',
   title: '导航按钮',
   version: '1.0.0',
   category: '基础控件',

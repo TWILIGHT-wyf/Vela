@@ -26,7 +26,7 @@
                 <div
                   class="grid-item"
                   v-for="item in cat.items"
-                  :key="item.componentName"
+                  :key="item.name"
                   draggable="true"
                   @dragstart="onDrag($event, item)"
                 >
@@ -108,7 +108,7 @@ type Category = {
 }
 
 type Item = {
-  componentName: string
+  name: string
   label: string
   meta: MaterialMeta
   width?: number
@@ -131,11 +131,11 @@ const categories = computed<Category[]>(() => {
     const config = getCategoryConfig(categoryName)
 
     const items = materials.map((meta) => ({
-      componentName: meta.componentName,
+      name: meta.name,
       label: meta.title,
       meta,
       categoryConfig: config,
-      icon: getComponentIcon(meta.componentName),
+      icon: getComponentIcon(meta.name),
     }))
 
     result.push({
@@ -173,7 +173,7 @@ const filteredCategories = computed(() => {
     const matchedItems = category.items.filter(
       (item) =>
         item.label.toLowerCase().includes(query) ||
-        item.componentName.toLowerCase().includes(query),
+        item.name.toLowerCase().includes(query),
     )
 
     if (matchedItems.length > 0) {
@@ -194,28 +194,30 @@ const filteredCategories = computed(() => {
 
 // --- 拖拽处理 (适配 V1.5 架构) ---
 const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]) => {
-  const { componentName, meta, categoryConfig } = item
+  const { name, meta, categoryConfig } = item
 
   // 从 MaterialMeta 提取默认 props
   const defaultProps = extractDefaultProps(meta.props || {})
 
+  const width = categoryConfig.defaultWidth || 120
+  const height = categoryConfig.defaultHeight || 80
+
   // 构建完整的 NodeSchema 结构
-  // 注意：FreeCanvas 期望 width/height 为数值类型
   const nodeSchema: Partial<NodeSchema> = {
-    id: generateId(componentName),
-    componentName,
+    id: generateId(name),
+    component: name,
     props: defaultProps as Record<string, PropValue>,
     style: {
-      // 数值类型，由 ShapeWrapper 转换为 px
-      width: categoryConfig.defaultWidth || 120,
-      height: categoryConfig.defaultHeight || 80,
+      width,
+      height,
     },
-    children: [], // V1.5 必须包含 children 字段
+    width,
+    height,
+    children: [],
   }
 
-  // DEBUG: 打印拖拽数据
   console.log('[MaterialPanel] Drag start:', {
-    componentName,
+    component: name,
     defaultProps,
     categoryConfig,
     nodeSchema,

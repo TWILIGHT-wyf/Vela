@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'ContainerV2',
-  componentName: 'ContainerV2',
   title: '容器 V2',
   version: '2.0.0',
   category: '布局',

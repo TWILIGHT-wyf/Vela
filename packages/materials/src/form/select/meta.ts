@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Select',
-  componentName: 'Select',
   title: '下拉选择',
   version: '1.0.0',
   category: '基础控件',

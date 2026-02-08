@@ -110,7 +110,7 @@ export function useComponentClipboard(
     // 如果选中了一个节点，检查它是否可以作为容器
     if (selectedId.value) {
       const selected = nodeIndex.get(selectedId.value)
-      if (selected && selected.componentName === 'Container') {
+      if (selected && (selected.component === 'Container' || selected.componentName === 'Container')) {
         targetNode = selected
         targetId = selected.id
       }

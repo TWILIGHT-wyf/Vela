@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Badge',
-  componentName: 'Badge',
   title: '徽章',
   version: '1.0.0',
   category: '数据',

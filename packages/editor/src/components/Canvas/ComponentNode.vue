@@ -41,8 +41,8 @@ const isSelected = computed(() => selectedIds.value.includes(props.node.id))
 
 // 组件解析
 const componentType = computed(() => {
-  const name = props.node.componentName
-  if (hasComponent(name)) {
+  const name = props.node.component || props.node.componentName
+  if (name && hasComponent(name)) {
     return getComponent(name)
   }
   return 'div'

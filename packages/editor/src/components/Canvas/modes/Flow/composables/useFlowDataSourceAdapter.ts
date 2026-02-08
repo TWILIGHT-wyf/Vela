@@ -336,7 +336,8 @@ export function useFlowDataSourceAdapter() {
     }
 
     // 根据组件类型选择适配器
-    const adapter = adapterMap[node.componentName] || defaultAdapter
+    const componentName = node.component || node.componentName || ''
+    const adapter = adapterMap[componentName] || defaultAdapter
     return adapter(baseProps, remoteData, dsConfig)
   }
 

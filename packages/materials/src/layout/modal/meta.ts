@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Modal',
-  componentName: 'Modal',
   title: '对话框',
   version: '1.0.0',
   category: '布局容器',

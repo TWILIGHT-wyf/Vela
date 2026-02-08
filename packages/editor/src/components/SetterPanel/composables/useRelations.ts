@@ -77,8 +77,8 @@ export function useTreeOperations() {
 
     const buildTree = (node: any) => ({
       id: node.id,
-      label: node.componentName,
-      type: node.componentName,
+      label: node.component || node.componentName,
+      type: node.component || node.componentName,
       children: node.children?.map(buildTree) || [],
     })
 

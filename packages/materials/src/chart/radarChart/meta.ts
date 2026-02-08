@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'RadarChart',
-  componentName: 'RadarChart',
   title: '雷达图',
   version: '1.0.0',
   category: '图表',

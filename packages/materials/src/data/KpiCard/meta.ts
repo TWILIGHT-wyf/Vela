@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'KpiCard',
-  componentName: 'KpiCard',
   title: '指标卡',
   version: '1.0.0',
   category: '数据',

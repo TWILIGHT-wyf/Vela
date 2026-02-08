@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'SearchBox',
-  componentName: 'SearchBox',
   title: '搜索框',
   version: '1.0.0',
   category: '基础控件',

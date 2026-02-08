@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Progress',
-  componentName: 'Progress',
   title: '进度条',
   version: '1.0.0',
   category: '数据',

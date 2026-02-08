@@ -77,7 +77,7 @@ export function getCategoryConfig(category: string): CategoryConfig {
 
 /**
  * Icon mapping for component types
- * Based on componentName patterns
+ * Based on component name patterns
  */
 export function getComponentIcon(name: string): Component {
   const n = name.toLowerCase()

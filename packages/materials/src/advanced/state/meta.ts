@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'State',
-  componentName: 'State',
   title: '状态管理',
   version: '1.0.0',
   category: '高级',

@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'BaseButton',
-  componentName: 'BaseButton', // 注册名称
   title: '基础按钮',
   version: '1.0.0', // 新架构首版
   category: '基础',

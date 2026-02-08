@@ -2,7 +2,6 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Pivot',
-  componentName: 'Pivot',
   title: '数据透视表',
   version: '1.0.0',
   category: '数据展示',

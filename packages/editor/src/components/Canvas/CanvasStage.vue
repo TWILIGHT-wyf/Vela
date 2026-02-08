@@ -102,24 +102,33 @@ const handleDrop = (e: DragEvent) => {
   try {
     const data = JSON.parse(dataStr)
 
-    if (!data.componentName) {
-      console.warn('[CanvasStage] Drop data missing componentName:', data)
+    const componentName = data.component || data.componentName
+    if (!componentName) {
+      console.warn('[CanvasStage] Drop data missing component name:', data)
       return
     }
 
     // Convert client coordinates to stage coordinates
     const stageCoords = canvasContext.toStageCoords(e.clientX, e.clientY)
 
+    const width = data.width || data.style?.width || 120
+    const height = data.height || data.style?.height || 80
+
     // Create new component with calculated position
     const newComponent: Partial<NodeSchema> = {
       id: `comp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      componentName: data.componentName,
+      component: componentName,
       props: data.props || {},
       style: {
+        width,
+        height,
+      },
+      geometry: {
+        mode: 'free' as const,
         x: Math.round(stageCoords.x),
         y: Math.round(stageCoords.y),
-        width: data.style?.width || data.width || 120,
-        height: data.style?.height || data.height || 80,
+        width,
+        height,
         zIndex: 0,
       },
       children: data.children || [],
@@ -131,7 +140,7 @@ const handleDrop = (e: DragEvent) => {
       compStore.selectComponent(newId)
     }
 
-    console.log('[CanvasStage] Component dropped:', newComponent.componentName, stageCoords)
+    console.log('[CanvasStage] Component dropped:', componentName, stageCoords)
   } catch (err) {
     console.error('[CanvasStage] Drop error:', err)
   }

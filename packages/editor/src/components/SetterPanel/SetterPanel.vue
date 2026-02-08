@@ -48,7 +48,8 @@ const selectedComponent = computed(() => componentStore.selectedNode)
 const showPageSettings = computed(() => {
   if (!selectedComponent.value) return true
   // 如果选中的是 Page 组件（根节点），也显示页面设置
-  return selectedComponent.value.componentName === 'Page'
+  const name = selectedComponent.value.component || selectedComponent.value.componentName
+  return name === 'Page'
 })
 
 const activeTab = ref('props')
