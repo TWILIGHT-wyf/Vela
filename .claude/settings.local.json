@@ -31,7 +31,10 @@
       "Bash(git ls-tree:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(for dir in \"c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\materials\\\\src\\\\data\"/*)",
+      "Bash(do [ -d \"$dir\" ])",
+      "Bash(done)"
     ]
   }
 }
