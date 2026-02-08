@@ -132,7 +132,7 @@ async function handleReset() {
 
         <RuntimeRenderer
           v-else
-          :components="rootNode ? [rootNode] : []"
+          :root-node="rootNode || undefined"
           :pages="[]"
           :is-project-mode="false"
           mode="simulation"

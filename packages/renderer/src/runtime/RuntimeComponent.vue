@@ -4,14 +4,14 @@
     :ref="setComponentRef"
     :id="node.id"
     :data-id="node.id"
-    :data-component="node.componentName"
+    :data-component="resolvedComponent"
     :class="computedClasses"
     :style="computedStyle as any"
     v-bind="componentProps"
     v-on="eventHandlers"
   >
     <!-- Text component special handling -->
-    <template v-if="node.componentName === 'Text'">
+    <template v-if="resolvedComponent === 'Text'">
       {{ node.props?.text }}
     </template>
 
@@ -35,8 +35,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
 import { getComponent, hasComponent } from '@vela/materials'
-import type { NodeSchema } from '@vela/core'
-import { useComponentStyle, type ComponentCSSStyle } from '../composables/useComponentStyle'
+import { getNodeComponent, type NodeSchema } from '@vela/core'
+import { useComponentStyle } from '../composables/useComponentStyle'
 import { useComponentDataSource } from './useComponentDataSource'
 import type { RuntimeMode } from '../types'
 
@@ -46,7 +46,7 @@ import type { RuntimeMode } from '../types'
  * Renders a NodeSchema as a Vue component with full support for:
  * - Dynamic component resolution from @vela/materials
  * - Layout and visual styles via useComponentStyle
- * - Animations (load, hover, click triggers)
+ * - Animations (init, visible, hover, click triggers)
  * - Event handling (in runtime mode)
  * - Data source integration
  *
@@ -85,8 +85,10 @@ const emit = defineEmits<{
 }>()
 
 // ========== Component Resolution ==========
+const resolvedComponent = computed(() => getNodeComponent(props.node))
+
 const componentType = computed(() => {
-  const name = props.node.componentName
+  const name = resolvedComponent.value
 
   // Built-in type mapping for common elements
   const typeMap: Record<string, string> = {
@@ -112,13 +114,10 @@ const componentType = computed(() => {
 
 // ========== Styles (via shared composable) ==========
 const nodeRef = toRef(props, 'node')
-const nodeStyleRef = computed(() => props.node.style)
 const {
   computedStyle: baseComputedStyle,
-  animationClasses: baseAnimationClasses,
   locked,
-  visible,
-} = useComponentStyle(nodeStyleRef as any, {
+} = useComponentStyle(nodeRef, {
   includeLayout: props.includeLayout,
   includeAnimation: true,
 })
@@ -138,15 +137,6 @@ function setComponentRef(el: unknown) {
 const computedStyle = computed(() => {
   const style = { ...baseComputedStyle.value }
 
-  // Additional animation styles when playing
-  if (animationPlaying.value && props.node.animation) {
-    const anim = props.node.animation
-    style.animationDuration = `${anim.duration || 0.7}s`
-    style.animationDelay = `${anim.delay || 0}s`
-    style.animationIterationCount = anim.iterationCount || 1
-    style.animationTimingFunction = anim.timingFunction || 'ease'
-  }
-
   // Editor mode: show locked indicator
   if (props.mode === 'editor' && locked.value) {
     style.cursor = 'not-allowed'
@@ -160,16 +150,21 @@ const computedClasses = computed(() => {
   const classes: string[] = ['runtime-component']
 
   const animation = props.node.animation
-  if (animation && animation.class) {
-    const trigger = animation.trigger || 'load'
+  const className =
+    animation?.className ||
+    (animation as unknown as { class?: string } | undefined)?.class
 
-    // Load-triggered animations play immediately
-    if (trigger === 'load') {
-      classes.push('animated', animation.class)
+  if (animation && className) {
+    const trigger = animation.trigger || 'init'
+    const isAutoTriggered = trigger === 'init' || trigger === 'visible'
+
+    // Init/visible animations play automatically.
+    if (isAutoTriggered) {
+      classes.push('animated', className)
     }
-    // Hover/click animations only play when triggered
+    // Hover/click animations only play when triggered.
     else if ((trigger === 'hover' || trigger === 'click') && animationPlaying.value) {
-      classes.push('animated', animation.class)
+      classes.push('animated', className)
     }
   }
 
@@ -188,7 +183,7 @@ const componentProps = computed(() => {
   if (props.node.props) {
     for (const [key, value] of Object.entries(props.node.props)) {
       // Skip text prop for Text component (rendered via interpolation)
-      if (props.node.componentName === 'Text' && key === 'text') continue
+      if (resolvedComponent.value === 'Text' && key === 'text') continue
       compProps[key] = value
     }
   }
@@ -341,13 +336,16 @@ function resetAnimation() {
   }, 10)
 }
 
+function shouldAutoPlayAnimation(): boolean {
+  const trigger = props.node.animation?.trigger || 'init'
+  return trigger === 'init' || trigger === 'visible'
+}
+
 // ========== Lifecycle ==========
 onMounted(() => {
-  // Auto-play load-triggered animations
-  if (props.node.animation?.trigger === 'load' && isInteractive.value) {
-    nextTick(() => {
-      // Animation class is already applied via computedClasses
-    })
+  // Auto-play init/visible-triggered animations
+  if (shouldAutoPlayAnimation() && isInteractive.value) {
+    playAnimation()
   }
 })
 
@@ -355,7 +353,7 @@ onMounted(() => {
 watch(
   () => props.node.animation,
   () => {
-    if (props.node.animation?.trigger === 'load' && isInteractive.value) {
+    if (shouldAutoPlayAnimation() && isInteractive.value) {
       playAnimation()
     }
   },

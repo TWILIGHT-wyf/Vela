@@ -1,5 +1,5 @@
 import { computed, type Ref } from 'vue'
-import type { NodeSchema } from '@vela/core/types/schema'
+import { getNodeComponent, type NodeSchema } from '@vela/core'
 import {
   useDataSource,
   extractWithFallback,
@@ -13,24 +13,42 @@ import {
   extract2DArray,
 } from '@vela/ui'
 
+interface DataSourceConfig {
+  enabled?: boolean
+  dataPath?: string
+  urlField?: string
+  posterField?: string
+  contentField?: string
+  valuePath?: string
+  statusPath?: string
+  titlePath?: string
+  changePath?: string
+  xAxisPath?: string
+  seriesNamesPath?: string
+  seriesDataPath?: string
+  labelsPath?: string
+  nodesPath?: string
+  linksPath?: string
+}
+
 /**
  * 运行时数据源处理 Hook
  * 负责从 dataSource 配置中获取数据，并根据组件类型映射到 props
  */
-export function useComponentDataSource(component: Ref<any>) {
+export function useComponentDataSource(component: Ref<NodeSchema>) {
   const dataSourceRef = computed(() => component.value.dataSource)
   const { data: remoteData } = useDataSource(dataSourceRef)
 
   const dataSourceProps = computed(() => {
     const comp = component.value
-    const ds = comp.dataSource
+    const ds = (comp.dataSource ?? {}) as DataSourceConfig
     const data = remoteData.value
 
     if (!ds?.enabled || !data) {
       return {}
     }
 
-    const type = comp.type || comp.componentName
+    const type = getNodeComponent(comp)
     const props: Record<string, unknown> = {}
 
     try {
@@ -135,10 +153,13 @@ export function useComponentDataSource(component: Ref<any>) {
               const labelField = (comp.props?.labelField as string) || 'label'
               const valueField = (comp.props?.valueField as string) || 'value'
               props.options = list.map((item) => {
-                if (typeof item !== 'object') return { label: String(item), value: String(item) }
+                if (typeof item !== 'object' || item === null) {
+                  return { label: String(item), value: String(item) }
+                }
+                const record = item as Record<string, unknown>
                 return {
-                  label: item[labelField],
-                  value: item[valueField],
+                  label: record[labelField],
+                  value: record[valueField],
                 }
               })
             }
