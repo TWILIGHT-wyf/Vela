@@ -45,19 +45,6 @@ const emit = defineEmits<{
 const isSelected = (id: string) => props.selectedId === id
 
 const getChildLayoutMode = (node: NodeSchema): 'free' | 'flow' => {
-  // 根据组件类型决定子节点的布局模式
-  // GridBox, FlexContainer 等强制子节点为流式
-  if (['GridBox', 'FlexRow', 'FlexCol'].includes(node.componentName)) {
-    return 'flow'
-  }
-
-  // Group 或特殊容器可能支持内部自由布局
-  if (node.componentName === 'FreeContainer') {
-    return 'free'
-  }
-
-  // 默认继承当前模式？或者默认为 Flow？
-  // 绝大多数嵌套容器内部都是流式
-  return 'flow'
+  return node.container?.mode || 'flow'
 }
 </script>

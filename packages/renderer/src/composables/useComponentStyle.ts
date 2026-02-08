@@ -66,16 +66,25 @@ export function useComponentStyle(
   const styleRef = computed(() => {
     const value = unref(nodeOrStyle)
     if (!value) return undefined
-    if ('componentName' in value) {
+    if ('component' in value || 'componentName' in value) {
       return (value as NodeSchema).style
     }
     return value as NodeStyle
   })
 
+  const geometryRef = computed(() => {
+    const value = unref(nodeOrStyle)
+    if (!value) return undefined
+    if ('component' in value || 'componentName' in value) {
+      return (value as NodeSchema).geometry
+    }
+    return undefined
+  })
+
   const animationRef = computed(() => {
     const value = unref(nodeOrStyle)
     if (!value) return undefined
-    if ('componentName' in value) {
+    if ('component' in value || 'componentName' in value) {
       return (value as NodeSchema).animation
     }
     return undefined
@@ -84,39 +93,37 @@ export function useComponentStyle(
   // ========== Granular Layout Properties ==========
 
   // Position (x, y) - only recalculates when position changes
-  const position = computed(() => extractPosition(styleRef.value))
+  const position = computed(() => extractPosition(styleRef.value, geometryRef.value))
 
   // Size (width, height) - only recalculates when size changes
-  const size = computed(() => extractSize(styleRef.value))
+  const size = computed(() => extractSize(styleRef.value, geometryRef.value))
 
   // Rotation - only recalculates when rotation changes
-  const rotation = computed(() => extractRotation(styleRef.value))
+  const rotation = computed(() => extractRotation(styleRef.value, geometryRef.value))
 
   // Z-Index - only recalculates when zIndex changes
   const zIndex = computed(() => extractZIndex(styleRef.value))
 
   // Lock state
-  const locked = computed(() => isNodeLocked(styleRef.value))
+  const locked = computed(() => isNodeLocked(styleRef.value, geometryRef.value))
 
   // Visibility state
-  const visible = computed(() => isNodeVisible(styleRef.value))
+  const visible = computed(() => isNodeVisible(styleRef.value, geometryRef.value))
 
   // ========== Cached Style Computations ==========
 
   // Position style (absolute positioning)
   const positionStyle = computed<CSSProperties>(() => {
-    const style = styleRef.value
-    if (!style) return {}
-
-    const cacheKey = `pos:${style.x}:${style.y}`
+    const pos = position.value
+    const cacheKey = `pos:${pos.x}:${pos.y}`
     if (enableCache && styleCache.has(cacheKey)) {
       return styleCache.get(cacheKey)!.value
     }
 
     const result: CSSProperties = {
       position: 'absolute',
-      left: style.x != null ? `${style.x}px` : undefined,
-      top: style.y != null ? `${style.y}px` : undefined,
+      left: `${pos.x}px`,
+      top: `${pos.y}px`,
     }
 
     if (enableCache) {
@@ -153,14 +160,13 @@ export function useComponentStyle(
 
   // Transform style (rotation, scale)
   const transformStyle = computed<CSSProperties>(() => {
-    const style = styleRef.value
-    if (!style) return {}
+    const geometry = geometryRef.value
 
     const transforms: string[] = []
-    if (style.rotate) transforms.push(`rotate(${style.rotate}deg)`)
-    if (style.scaleX != null || style.scaleY != null) {
-      const sx = style.scaleX ?? 1
-      const sy = style.scaleY ?? 1
+    if (rotation.value) transforms.push(`rotate(${rotation.value}deg)`)
+    if (geometry?.mode === 'free' && (geometry.scaleX != null || geometry.scaleY != null)) {
+      const sx = geometry.scaleX ?? 1
+      const sy = geometry.scaleY ?? 1
       transforms.push(`scale(${sx}, ${sy})`)
     }
 
@@ -176,7 +182,11 @@ export function useComponentStyle(
       return styleCache.get(cacheKey)!.value
     }
 
-    const result = generateLayoutCSS(styleRef.value) as CSSProperties
+    const result = generateLayoutCSS(
+      styleRef.value,
+      geometryRef.value?.mode || 'free',
+      geometryRef.value,
+    ) as CSSProperties
 
     if (enableCache) {
       styleCache.set(cacheKey, { key: cacheKey, value: result })
@@ -246,8 +256,11 @@ export function useComponentStyle(
   // Animation classes
   const animationClasses = computed(() => {
     const animation = animationRef.value
-    if (!animation || !animation.class) return []
-    return ['animated', animation.class]
+    const className =
+      animation?.className ||
+      (animation as unknown as { class?: string } | undefined)?.class
+    if (!className) return []
+    return ['animated', className]
   })
 
   // ========== Cache Management ==========

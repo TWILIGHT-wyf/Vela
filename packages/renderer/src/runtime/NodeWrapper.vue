@@ -53,33 +53,35 @@ const formatValue = (
 }
 
 const wrapperStyle = computed<StyleValue>(() => {
-  const layout = props.node.style || {}
+  const style = props.node.style || {}
+  const geometry = props.node.geometry
 
   if (props.layoutMode === 'free') {
+    const freeGeometry = geometry?.mode === 'free' ? geometry : undefined
     // 自由布局模式：绝对定位
     return {
       position: 'absolute',
-      left: formatValue(layout.x as string | number | undefined, 0),
-      top: formatValue(layout.y as string | number | undefined, 0),
-      width: formatValue(layout.width as string | number | undefined, 'auto'),
-      height: formatValue(layout.height as string | number | undefined, 'auto'),
-      transform: layout.rotate ? `rotate(${layout.rotate}deg)` : undefined,
-      zIndex: (layout.zIndex as number | undefined) ?? 0,
+      left: formatValue(freeGeometry?.x, 0),
+      top: formatValue(freeGeometry?.y, 0),
+      width: formatValue((freeGeometry?.width ?? style.width) as string | number | undefined, 'auto'),
+      height: formatValue((freeGeometry?.height ?? style.height) as string | number | undefined, 'auto'),
+      transform: freeGeometry?.rotate ? `rotate(${freeGeometry.rotate}deg)` : undefined,
+      zIndex: freeGeometry?.zIndex ?? (style.zIndex as number | undefined) ?? 0,
     } as CSSProperties
   } else {
     // 流式布局模式：文档流
     return {
       position: 'relative',
-      width: formatValue(layout.width as string | number | undefined, '100%'),
-      height: formatValue(layout.height as string | number | undefined, 'auto'),
-      marginTop: formatValue(layout.marginTop as string | number | undefined),
-      marginBottom: formatValue(layout.marginBottom as string | number | undefined),
-      marginLeft: formatValue(layout.marginLeft as string | number | undefined),
-      marginRight: formatValue(layout.marginRight as string | number | undefined),
+      width: formatValue((geometry?.width ?? style.width) as string | number | undefined, '100%'),
+      height: formatValue((geometry?.height ?? style.height) as string | number | undefined, 'auto'),
+      marginTop: formatValue(style.marginTop as string | number | undefined),
+      marginBottom: formatValue(style.marginBottom as string | number | undefined),
+      marginLeft: formatValue(style.marginLeft as string | number | undefined),
+      marginRight: formatValue(style.marginRight as string | number | undefined),
 
       // Flex 配置
-      flex: layout.flex as string | undefined,
-      display: (layout.display as string) || 'block',
+      flex: style.flex as string | undefined,
+      display: (style.display as string) || 'block',
     } as CSSProperties
   }
 })
