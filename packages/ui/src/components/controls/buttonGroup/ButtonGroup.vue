@@ -71,7 +71,7 @@ const defaultButtons: ButtonItem[] = [
 
 // 显示的按钮
 const displayButtons = computed(() => {
-  return props.buttons.length > 0 ? props.buttons : defaultButtons
+  return props.buttons && props.buttons.length > 0 ? props.buttons : defaultButtons
 })
 
 // 容器样式

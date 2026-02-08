@@ -112,7 +112,7 @@ const defaultData: CardItem[] = [
   },
 ]
 
-const cardData = computed(() => (props.data.length > 0 ? props.data : defaultData))
+const cardData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
 
 function getTitle(item: CardItem): string {
   return String(item[props.titleField] ?? '')

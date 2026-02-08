@@ -94,11 +94,11 @@ const finalOption = computed<EChartsOption>(() => {
           }
         : undefined,
 
-    // 网格
+    // 网格 — containLabel 不包含 axis name，需动态补偿
     grid: {
-      left: '6%',
+      left: props.yAxisName ? '15%' : '6%',
       right: '6%',
-      bottom: '8%',
+      bottom: props.xAxisName ? '15%' : '8%',
       top: props.title ? '15%' : '10%',
       containLabel: true,
       show: props.showGrid !== false,

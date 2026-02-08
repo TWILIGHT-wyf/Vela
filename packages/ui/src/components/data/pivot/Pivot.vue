@@ -82,7 +82,7 @@ const defaultData = [
   { category: '产品B', region: '华南', q1: 800, q2: 1000, q3: 1200, q4: 1400 },
 ]
 
-const pivotData = computed(() => (props.data.length > 0 ? props.data : defaultData))
+const pivotData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
 
 const rowHeadersList = computed(() => {
   if (Array.isArray(props.rowHeaders)) return props.rowHeaders

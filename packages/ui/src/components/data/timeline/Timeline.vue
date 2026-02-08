@@ -103,7 +103,7 @@ const defaultData: TimelineItem[] = [
   { title: '活动结束', content: '活动已经顺利结束', timestamp: '2024-01-03 18:00', type: 'info' },
 ]
 
-const timelineData = computed(() => (props.data.length > 0 ? props.data : defaultData))
+const timelineData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
 
 function getTitle(item: TimelineItem): string {
   return item.title ?? ''

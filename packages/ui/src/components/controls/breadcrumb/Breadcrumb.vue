@@ -44,7 +44,7 @@ const emit = defineEmits<{
 const defaultItems: BreadcrumbItem[] = [{ label: '首页', pageId: 'home' }, { label: '当前页面' }]
 
 const displayItems = computed(() => {
-  return props.items.length > 0 ? props.items : defaultItems
+  return props.items && props.items.length > 0 ? props.items : defaultItems
 })
 
 const containerStyle = computed<CSSProperties>(() => ({

@@ -85,7 +85,7 @@ const defaultOptions: CheckboxOption[] = [
 
 // 显示的选项
 const displayOptions = computed(() => {
-  return props.options.length > 0 ? props.options : defaultOptions
+  return props.options && props.options.length > 0 ? props.options : defaultOptions
 })
 
 // 内部值

@@ -69,8 +69,8 @@ const defaultColumns: TableColumn[] = [
   { prop: 'status', label: '状态', align: 'center' },
 ]
 
-const tableData = computed(() => (props.data.length > 0 ? props.data : defaultData))
-const tableColumns = computed(() => (props.columns.length > 0 ? props.columns : defaultColumns))
+const tableData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
+const tableColumns = computed(() => (props.columns && props.columns.length > 0 ? props.columns : defaultColumns))
 
 // 样式
 const containerStyle = computed<CSSProperties>(() => ({

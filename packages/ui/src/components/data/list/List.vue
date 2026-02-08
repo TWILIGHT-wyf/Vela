@@ -95,7 +95,7 @@ const defaultData: ListItem[] = [
   { title: '列表项 3', description: '这是列表项的描述信息', extra: '详情' },
 ]
 
-const listData = computed(() => (props.data.length > 0 ? props.data : defaultData))
+const listData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
 
 const computedScrollHeight = computed(() => {
   const height = props.scrollHeight
