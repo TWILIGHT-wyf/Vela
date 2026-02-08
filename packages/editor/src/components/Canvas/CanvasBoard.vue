@@ -6,24 +6,29 @@
       <FlowCanvas embedded />
 
       <template #overlay>
-        <SelectionLayer />
+        <SelectionLayer v-if="showSelectionLayer" />
       </template>
     </CanvasViewport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
+import { useComponent } from '@/stores/component'
 import CanvasViewport from './CanvasViewport.vue'
 import SelectionLayer from './selection/SelectionLayer.vue'
 import FlowCanvas from './modes/Flow/FlowCanvas.vue'
 
 const uiStore = useUIStore()
 const canvasStore = useCanvasStore()
+const componentStore = useComponent()
 const { canvasScale } = storeToRefs(uiStore)
+const { rootNode } = storeToRefs(componentStore)
+
+const showSelectionLayer = computed(() => rootNode.value?.container?.mode === 'free')
 
 // Sync zoom scale between legacy canvas store and new UI store
 watch(

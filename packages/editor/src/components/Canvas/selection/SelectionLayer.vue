@@ -5,7 +5,7 @@
 
     <!-- Selection Box -->
     <div
-      v-if="selectedNode && selectedId && boxStyle"
+      v-if="selectedNode && selectedId && isFreeSelection && boxStyle"
       class="selection-box"
       :style="boxStyle"
       @mousedown.stop="handleDragStart"
@@ -57,6 +57,17 @@ const { startDrag, startResize, startRotate, snapLines, isDragging, isResizing, 
 
 const handles: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se']
 
+const isFreeSelection = computed(() => {
+  if (!selectedNode.value || !selectedId.value) return false
+
+  if (selectedNode.value.geometry?.mode === 'free') {
+    return true
+  }
+
+  const parent = store.findParentNode(selectedId.value)
+  return parent?.container?.mode === 'free'
+})
+
 // Counter-scale for resize handles with position fix
 const getHandleStyle = (handle: ResizeHandle) => {
   const s = scale.value
@@ -86,7 +97,7 @@ const rotateHandleStyle = computed(() => {
 
 const boxStyle = computed(() => {
   const node = selectedNode.value
-  if (!node) return null
+  if (!node || !isFreeSelection.value) return null
 
   // Trigger reactivity explicitly via styleVersion
   const _v = store.styleVersion[node.id]
@@ -114,19 +125,19 @@ const boxStyle = computed(() => {
 })
 
 const handleDragStart = (e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value) {
+  if (selectedId.value && selectedNode.value && isFreeSelection.value) {
     startDrag(selectedId.value, selectedNode.value, e)
   }
 }
 
 const handleResizeStart = (handle: ResizeHandle, e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value) {
+  if (selectedId.value && selectedNode.value && isFreeSelection.value) {
     startResize(selectedId.value, handle, selectedNode.value, e)
   }
 }
 
 const handleRotateStart = (e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value) {
+  if (selectedId.value && selectedNode.value && isFreeSelection.value) {
     startRotate(selectedId.value, selectedNode.value, e)
   }
 }

@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import type { NodeSchema } from '@vela/core'
 
 /**
@@ -16,6 +17,16 @@ export function useComponentIndex() {
    * 用于 O(1) 时间复杂度的父节点查找
    */
   const parentIndex = new Map<string, string>()
+
+  /**
+   * 索引版本号
+   * 用于让依赖 nodeIndex/parentIndex 的计算属性在索引重建后重新计算
+   */
+  const indexVersion = ref(0)
+
+  function bumpIndexVersion() {
+    indexVersion.value += 1
+  }
 
   /**
    * 递归遍历树
@@ -41,7 +52,10 @@ export function useComponentIndex() {
     nodeIndex.clear()
     parentIndex.clear()
 
-    if (!rootNode) return
+    if (!rootNode) {
+      bumpIndexVersion()
+      return
+    }
 
     traverse(rootNode, (node, parent) => {
       nodeIndex.set(node.id, node)
@@ -50,6 +64,7 @@ export function useComponentIndex() {
       }
     })
 
+    bumpIndexVersion()
     console.log(`[ComponentIndex] Index rebuilt: ${nodeIndex.size} nodes`)
   }
 
@@ -57,35 +72,43 @@ export function useComponentIndex() {
    * 向索引中添加节点（增量更新）
    */
   function indexNode(node: NodeSchema, parentId?: string) {
-    nodeIndex.set(node.id, node)
-    if (parentId) {
-      parentIndex.set(node.id, parentId)
-    }
+    const walk = (current: NodeSchema, currentParentId?: string) => {
+      nodeIndex.set(current.id, current)
+      if (currentParentId) {
+        parentIndex.set(current.id, currentParentId)
+      }
 
-    // 递归索引子节点
-    if (node.children && Array.isArray(node.children)) {
-      for (const child of node.children) {
-        indexNode(child, node.id)
+      if (current.children && Array.isArray(current.children)) {
+        for (const child of current.children) {
+          walk(child, current.id)
+        }
       }
     }
+
+    walk(node, parentId)
+    bumpIndexVersion()
   }
 
   /**
    * 从索引中移除节点（增量更新）
    */
   function unindexNode(id: string) {
-    const node = nodeIndex.get(id)
-    if (!node) return
+    const walk = (targetId: string) => {
+      const node = nodeIndex.get(targetId)
+      if (!node) return
 
-    // 递归移除子节点的索引
-    if (node.children && Array.isArray(node.children)) {
-      for (const child of node.children) {
-        unindexNode(child.id)
+      if (node.children && Array.isArray(node.children)) {
+        for (const child of node.children) {
+          walk(child.id)
+        }
       }
+
+      nodeIndex.delete(targetId)
+      parentIndex.delete(targetId)
     }
 
-    nodeIndex.delete(id)
-    parentIndex.delete(id)
+    walk(id)
+    bumpIndexVersion()
   }
 
   /**
@@ -127,6 +150,7 @@ export function useComponentIndex() {
   return {
     nodeIndex,
     parentIndex,
+    indexVersion,
     traverse,
     rebuildIndex,
     indexNode,
