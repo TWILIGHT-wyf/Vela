@@ -32,7 +32,8 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("handleFlowResizeStart('se', $event)")
     expect(source).toContain('updateStyle(props.nodeId, patch)')
     expect(source).toContain('patch.width = Math.round(pendingWidth)')
-    expect(source).toContain('patch.minHeight = Math.round(pendingMinHeight)')
+    expect(source).toContain('patch.minHeight = nextHeight')
+    expect(source).toContain('patch.height = nextHeight')
   })
 
   it('流式模式应在悬停/选中时显示 margin 标注', () => {
@@ -72,5 +73,12 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('top: formatValue')
     expect(source).toContain('geometry?.x')
     expect(source).toContain('geometry?.y')
+  })
+
+  it('flow 模式应提供显式高度以避免图表初始化 0 高度', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    expect(source).toContain("const flowHeight = (style.height ?? style.minHeight)")
+    expect(source).toContain('height: formatValue(flowHeight, \'auto\')')
+    expect(source).toContain('minHeight: formatValue(flowMinHeight, \'auto\')')
   })
 })
