@@ -39,6 +39,8 @@ describe('editor shortcuts / transform interaction', () => {
   it('画布应展示交互提示文案', () => {
     const source = readFileSync(flowCanvasPath, 'utf-8')
     expect(source).toContain('Ctrl/Cmd/Shift + 点击：多选')
+    expect(source).toContain('选中组件后拖拽边缘手柄：调整宽高')
+    expect(source).toContain('悬停节点可查看 margin 标注')
     expect(source).toContain('方向键微调（Shift 加速）')
     expect(source).toContain('Alt + 拖拽：临时关闭吸附')
   })
