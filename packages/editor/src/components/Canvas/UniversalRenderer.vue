@@ -99,6 +99,11 @@ const innerStyle = computed(() => {
   delete style.width
   delete style.height
   delete style.minHeight
+  delete style.margin
+  delete style.marginTop
+  delete style.marginRight
+  delete style.marginBottom
+  delete style.marginLeft
 
   // Free layout containers need a positioning context for absolute children
   if (props.node.container?.mode === 'free') {

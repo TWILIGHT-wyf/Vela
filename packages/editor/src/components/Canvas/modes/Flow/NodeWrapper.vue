@@ -191,6 +191,11 @@ const formatValue = (
   return val
 }
 
+const formatOptionalValue = (val: string | number | undefined): string | undefined => {
+  if (val === undefined || val === null) return undefined
+  return formatValue(val)
+}
+
 const wrapperStyle = computed<CSSProperties>(() => {
   const node = currentNode.value
   if (!node) {
@@ -219,7 +224,7 @@ const wrapperStyle = computed<CSSProperties>(() => {
     }
   }
 
-  // Flow mode: only width and minHeight matter
+  // Flow mode: sizing and spacing are handled by wrapper
   const style = node.style || {}
   const flowHeight = (style.height ?? style.minHeight) as string | number | undefined
   const flowMinHeight = (style.minHeight ?? style.height) as string | number | undefined
@@ -228,6 +233,11 @@ const wrapperStyle = computed<CSSProperties>(() => {
     // For ECharts-like components using 100% height, explicit height avoids 0-size init.
     height: formatValue(flowHeight, 'auto'),
     minHeight: formatValue(flowMinHeight, 'auto'),
+    margin: formatOptionalValue(style.margin as string | number | undefined),
+    marginTop: formatOptionalValue(style.marginTop as string | number | undefined),
+    marginRight: formatOptionalValue(style.marginRight as string | number | undefined),
+    marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined),
+    marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined),
   }
 })
 
@@ -325,11 +335,13 @@ const marginStyleKeyMap: Record<FlowSpacingSide, keyof NodeStyle> = {
   left: 'marginLeft',
 }
 
-const toLengthNumber = (val: unknown): number | null => {
+const toAbsoluteLengthNumber = (val: unknown): number | null => {
   if (typeof val === 'number' && Number.isFinite(val)) return val
   if (typeof val === 'string') {
-    const num = Number.parseFloat(val)
-    if (Number.isFinite(num)) return num
+    const trimmed = val.trim()
+    if (!trimmed) return null
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number.parseFloat(trimmed)
+    if (/^-?\d+(\.\d+)?px$/.test(trimmed)) return Number.parseFloat(trimmed)
   }
   return null
 }
@@ -390,8 +402,8 @@ const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
   const rect = wrapperRef.value.getBoundingClientRect()
   const style = currentNode.value.style || {}
 
-  const baseWidth = toLengthNumber(style.width) ?? rect.width
-  const baseMinHeight = toLengthNumber(style.minHeight ?? style.height) ?? rect.height
+  const baseWidth = toAbsoluteLengthNumber(style.width) ?? rect.width
+  const baseMinHeight = toAbsoluteLengthNumber(style.minHeight ?? style.height) ?? rect.height
   const minWidth = 24
   const minHeight = 24
 
