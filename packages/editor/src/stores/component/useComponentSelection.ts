@@ -75,11 +75,15 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
     const index = selectedIds.value.indexOf(id)
     if (index !== -1) {
       selectedIds.value.splice(index, 1)
-    } else {
-      selectedIds.value.push(id)
+      if (selectedId.value === id) {
+        selectedId.value =
+          selectedIds.value.length > 0 ? selectedIds.value[selectedIds.value.length - 1] : null
+      }
+      return
     }
 
-    selectedId.value = selectedIds.value.length > 0 ? selectedIds.value[0] : null
+    selectedIds.value.push(id)
+    selectedId.value = id
   }
 
   /**

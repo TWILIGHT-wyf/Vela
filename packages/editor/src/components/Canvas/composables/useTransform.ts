@@ -51,21 +51,30 @@ export function useTransform() {
       const rawX = initialX + dx
       const rawY = initialY + dy
 
-      // Snap
-      const { position } = snap(
-        {
-          x: rawX,
-          y: rawY,
-          w: width,
-          h: height,
-        },
-        siblings,
-      )
+      let nextX = rawX
+      let nextY = rawY
+
+      // Hold Alt to temporarily disable snapping for precise move
+      if (!ev.altKey) {
+        const { position } = snap(
+          {
+            x: rawX,
+            y: rawY,
+            w: width,
+            h: height,
+          },
+          siblings,
+        )
+        nextX = position.x
+        nextY = position.y
+      } else {
+        clearSnap()
+      }
 
       store.updateGeometry(id, {
         mode: 'free',
-        x: Math.round(position.x),
-        y: Math.round(position.y),
+        x: Math.round(nextX),
+        y: Math.round(nextY),
       })
     }, 16)
 

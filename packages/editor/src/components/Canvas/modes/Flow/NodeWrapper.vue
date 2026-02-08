@@ -51,8 +51,8 @@ const flowDrop = inject<UseFlowDropReturn>('flowDrop')
 
 // ========== Store ==========
 const componentStore = useComponent()
-const { selectedId, hoveredId, rootNode } = storeToRefs(componentStore)
-const { selectComponent, findNodeById, setHovered } = componentStore
+const { selectedIds, hoveredId, rootNode } = storeToRefs(componentStore)
+const { selectComponent, toggleSelection, findNodeById, setHovered } = componentStore
 
 // ========== Refs ==========
 const wrapperRef = ref<HTMLDivElement | null>(null)
@@ -61,7 +61,7 @@ const isDragOver = ref(false)
 const isFreeParent = computed(() => props.parentLayoutMode === 'free')
 
 // ========== Computed ==========
-const isSelected = computed(() => selectedId.value === props.nodeId)
+const isSelected = computed(() => selectedIds.value.includes(props.nodeId))
 const isHovered = computed(() => hoveredId.value === props.nodeId)
 
 const currentNode = computed(() => {
@@ -235,7 +235,14 @@ const handleDrop = (e: DragEvent) => {
 }
 
 // ========== Event Handlers ==========
-const handleClick = () => {
+const handleClick = (e: MouseEvent) => {
+  // Ctrl/Cmd/Shift + Click: toggle multi-selection
+  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+    toggleSelection(props.nodeId)
+    emit('select', props.nodeId)
+    return
+  }
+
   selectComponent(props.nodeId)
   emit('select', props.nodeId)
 }

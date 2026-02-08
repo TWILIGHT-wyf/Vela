@@ -68,6 +68,12 @@
       :target-id="contextMenu.targetId"
       @action="handleMenuAction"
     />
+
+    <div class="interaction-hint">
+      <span>Ctrl/Cmd/Shift + 点击：多选</span>
+      <span v-if="rootLayoutMode === 'free'">方向键微调（Shift 加速）</span>
+      <span v-if="rootLayoutMode === 'free'">Alt + 拖拽：临时关闭吸附</span>
+    </div>
   </div>
 </template>
 
@@ -97,7 +103,7 @@ const props = withDefaults(
 
 const componentStore = useComponent()
 const { rootNode } = storeToRefs(componentStore)
-const { selectComponent, clearSelection } = componentStore
+const { selectComponent, toggleSelection, clearSelection } = componentStore
 
 const uiStore = useUIStore()
 const sizeStore = useSizeStore()
@@ -227,6 +233,7 @@ function handleMenuAction(action: string) {
  */
 const handleBackgroundClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement
+  const isMultiSelectModifier = e.ctrlKey || e.metaKey || e.shiftKey
 
   // 检查是否点击了组件 (通过事件代理)
   const nodeEl = target.closest('[data-id]')
@@ -234,10 +241,19 @@ const handleBackgroundClick = (e: MouseEvent) => {
     const id = nodeEl.getAttribute('data-id')
     if (id) {
       console.log('[FlowCanvas] Selected component:', id)
-      selectComponent(id)
+      if (isMultiSelectModifier) {
+        toggleSelection(id)
+      } else {
+        selectComponent(id)
+      }
       e.stopPropagation()
       return
     }
+  }
+
+  // 多选修饰键按下时，点击空白不清空选择，避免误操作
+  if (isMultiSelectModifier) {
+    return
   }
 
   // 点击空白处，取消选中
@@ -431,5 +447,23 @@ const handleRootDrop = (e: DragEvent) => {
   border: 1px dashed #d1d5db;
   border-radius: 4px;
   background: #f9fafb;
+}
+
+.interaction-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  z-index: 20;
 }
 </style>
