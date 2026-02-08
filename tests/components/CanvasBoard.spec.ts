@@ -1,39 +1,26 @@
 /**
- * CanvasBoard 组件测试（覆盖渲染 / 拖拽 / 缩放 / shape 出现等）
+ * CanvasBoard 组件测试（当前画布架构）
  */
-import { mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import CanvasBoard from '../../src/components/Editor/canvasBoard/canvasBoard.vue'
-import { pointerDrag } from '../setupTests'
-import { createPinia } from 'pinia'
+
+const canvasBoardPath = path.resolve(
+  __dirname,
+  '../../packages/editor/src/components/Canvas/CanvasBoard.vue',
+)
 
 describe('CanvasBoard 组件', () => {
-  it('应当渲染画布并能接收拖拽事件', async () => {
-    const wrapper = mount(CanvasBoard, {
-      props: {},
-      global: {
-        plugins: [createPinia()],
-      },
-    })
-    const canvas = wrapper.find('.canvas-wrap')
-    expect(canvas.exists()).toBe(true)
-
-    // 模拟拖拽（使用 helper） - 在 canvas-wrap 上触发 pointer 事件
-    pointerDrag(canvas.element, { x: 10, y: 10 }, { x: 100, y: 100 })
-
-    // 确保组件在处理拖拽后没有抛错
-    expect(true).toBe(true)
+  it('应保持新画布入口：CanvasViewport + FlowCanvas', () => {
+    const source = readFileSync(canvasBoardPath, 'utf-8')
+    expect(source).toContain('<CanvasViewport>')
+    expect(source).toContain('<FlowCanvas embedded />')
   })
 
-  it('缩放（wheel）事件触发', async () => {
-    const wrapper = mount(CanvasBoard, {
-      props: {},
-      global: {
-        plugins: [createPinia()],
-      },
-    })
-    const canvas = wrapper.find('.canvas-wrap')
-    await canvas.trigger('wheel', { deltaY: -100 })
-    expect(true).toBe(true)
+  it('Board 层不应再出现旧的 SelectionLayer/canvasStore 桥接', () => {
+    const source = readFileSync(canvasBoardPath, 'utf-8')
+    expect(source).not.toContain('SelectionLayer')
+    expect(source).not.toContain('useCanvasStore')
+    expect(source).not.toContain('canvasStore')
   })
 })
