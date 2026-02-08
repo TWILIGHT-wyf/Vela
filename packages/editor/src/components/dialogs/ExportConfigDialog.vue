@@ -78,77 +78,19 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-// 类型可以静态导入（不会触发运行时代码加载）
-import type {
-  ExportOptions,
-  Framework,
-  Component as GeneratorComponent,
-  Project as GeneratorProject,
-} from '@vela/generator'
+import type { ProjectSchema } from '@vela/core'
 
-// 本地类型定义（与 projectGenerator 兼容）
-interface LocalComponent {
-  id: string
-  componentName: string
-  props?: Record<string, unknown>
-  style?: Record<string, unknown>
-  children?: LocalComponent[]
-  events?: Record<string, unknown[]>
-}
-
-interface Page {
-  id: string
-  name: string
-  route?: string
-  components?: LocalComponent[]
-}
-
-interface Project {
-  id?: string
-  name: string
-  description?: string
-  pages: Page[]
-  cover?: string
-  createdAt?: number
-  updatedAt?: number
-}
-
-// 转换本地 Component 格式为 Generator 需要的格式
-function convertToGeneratorComponent(comp: LocalComponent): GeneratorComponent {
-  return {
-    id: comp.id,
-    type: comp.componentName,
-    position: { x: 0, y: 0 },
-    size: { width: 100, height: 100 },
-    props: comp.props,
-    style: comp.style,
-    events: comp.events as GeneratorComponent['events'],
-  }
-}
-
-// 转换本地 Project 格式为 Generator 需要的格式
-function convertToGeneratorProject(project: Project): GeneratorProject {
-  return {
-    name: project.name,
-    description: project.description,
-    pages: project.pages.map((page) => ({
-      id: page.id,
-      name: page.name,
-      route: page.route,
-      components: (page.components || []).map(convertToGeneratorComponent),
-    })),
-  }
-}
-
-interface ExportFormOptions extends ExportOptions {
-  framework: Framework
+interface ExportFormOptions {
+  framework: 'vue3' | 'react'
+  language: 'ts' | 'js'
+  lint: boolean
 }
 
 const STORAGE_KEY = 'vela-export-preferences'
 
 const props = defineProps<{
   modelValue: boolean
-  project: Project | null
+  project: ProjectSchema | null
 }>()
 
 const emit = defineEmits<{
@@ -223,29 +165,38 @@ async function handleConfirm() {
 
   isExporting.value = true
   try {
-    if (form.framework === 'vue3') {
-      // 动态导入 Vue3 导出函数
-      const { exportProjectToZip } = await import('@vela/generator')
-      await exportProjectToZip(props.project, {
+    const { generateFromProject } = await import('@vela/generator')
+    const result = generateFromProject(props.project, {
+      framework: form.framework,
+      continueOnError: true,
+      vue: {
         language: form.language,
         lint: form.lint,
-      })
-    } else {
-      // 动态导入 React 项目生成器
-      const { generateProjectFiles } = await import('@vela/generator')
-      const generatorProject = convertToGeneratorProject(props.project)
-      const files = generateProjectFiles(generatorProject, {
-        framework: 'react',
+      },
+      react: {
         typescript: form.language === 'ts',
-        lint: form.lint,
+        cssModules: true,
         router: 'react-router',
         stateManagement: 'zustand',
-        cssModules: true,
-      })
+      },
+    })
 
-      // 创建并下载 ZIP
-      await downloadAsZip(props.project.name || 'react-project', files)
+    const files = [...result.files]
+    if (result.diagnostics.length > 0) {
+      const diagnostics = result.diagnostics
+        .map((item) => {
+          const path = item.path ? ` [${item.path}]` : ''
+          return `[${item.level.toUpperCase()}][${item.code}]${path} ${item.message}`
+        })
+        .join('\n')
+
+      files.push({
+        path: 'vela.diagnostics.txt',
+        content: diagnostics,
+      })
     }
+
+    await downloadAsZip(props.project.name || `${form.framework}-project`, files)
 
     ElMessage.success('源码正在下载，请稍候...')
     dialogVisible.value = false

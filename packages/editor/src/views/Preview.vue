@@ -240,7 +240,7 @@ import {
   Loading,
   DocumentRemove,
 } from '@element-plus/icons-vue'
-import type { NodeSchema } from '@vela/core'
+import type { ProjectSchema } from '@vela/core'
 
 // 引入 highlight.js
 import hljs from 'highlight.js/lib/core'
@@ -293,6 +293,82 @@ interface GeneratedFile {
 const projectFiles = ref<GeneratedFile[]>([])
 const selectedFilePath = ref('')
 const isGeneratingProject = ref(false)
+
+interface GeneratorDiagnostic {
+  level: 'error' | 'warning' | 'info'
+  code: string
+  message: string
+  path?: string
+}
+
+function buildGenerateOptions(
+  framework: 'vue3' | 'react',
+  language: 'ts' | 'js',
+) {
+  if (framework === 'vue3') {
+    return {
+      framework,
+      continueOnError: true,
+      vue: {
+        language,
+        lint: true,
+      },
+    } as const
+  }
+
+  return {
+    framework,
+    continueOnError: true,
+    react: {
+      typescript: language === 'ts',
+      cssModules: true,
+      router: 'react-router',
+      stateManagement: 'zustand',
+    },
+  } as const
+}
+
+function formatDiagnostics(diagnostics: GeneratorDiagnostic[]): string {
+  if (diagnostics.length === 0) return ''
+  return diagnostics
+    .map((item) => {
+      const path = item.path ? ` [${item.path}]` : ''
+      return `[${item.level.toUpperCase()}][${item.code}]${path} ${item.message}`
+    })
+    .join('\n')
+}
+
+function buildCodePreview(files: GeneratedFile[], diagnostics: GeneratorDiagnostic[]): string {
+  const diagnosticsText = formatDiagnostics(diagnostics)
+  const filesText = files
+    .map((file) => `/* ===== ${file.path} ===== */\n${file.content}`)
+    .join('\n\n')
+
+  if (diagnosticsText && filesText) {
+    return `/* ===== GENERATION DIAGNOSTICS ===== */\n${diagnosticsText}\n\n${filesText}`
+  }
+  if (diagnosticsText) {
+    return `/* ===== GENERATION DIAGNOSTICS ===== */\n${diagnosticsText}`
+  }
+  return filesText
+}
+
+function withDiagnosticsFile(
+  files: GeneratedFile[],
+  diagnostics: GeneratorDiagnostic[],
+): GeneratedFile[] {
+  if (diagnostics.length === 0) {
+    return files
+  }
+
+  return [
+    ...files,
+    {
+      path: 'vela.diagnostics.txt',
+      content: formatDiagnostics(diagnostics),
+    },
+  ]
+}
 
 // 文件树属性
 const fileTreeProps = Object.freeze({ children: 'children', label: 'label' })
@@ -453,23 +529,16 @@ watch(
 
     isGenerating.value = true
     try {
-      const { generateCode } = await import('@vela/generator')
-      const components = flattenNodeSchema(rootNode.value)
+      const { generateFromProject } = await import('@vela/generator')
+      const result = generateFromProject(
+        projectStore.project as ProjectSchema,
+        buildGenerateOptions(codeOptions.framework, codeOptions.language),
+      )
 
-      const result = generateCode(components, {
-        framework: codeOptions.framework,
-        typescript: codeOptions.language === 'ts',
-        componentName: currentPage.value?.name || 'Page',
-      })
-
-      generatedCode.value = result.code
-
-      // 如果有 CSS 文件，附加到底部
-      if (result.extraFiles) {
-        for (const [filename, content] of Object.entries(result.extraFiles)) {
-          generatedCode.value += `\n\n/* ===== ${filename} ===== */\n${content}`
-        }
-      }
+      generatedCode.value = buildCodePreview(
+        result.files.map((file) => ({ path: file.path, content: file.content })),
+        result.diagnostics,
+      )
     } catch (error) {
       console.error('代码生成失败:', error)
       generatedCode.value = `// 代码生成失败: ${error}`
@@ -493,48 +562,16 @@ watch(
     const previousSelectedPath = selectedFilePath.value
 
     try {
-      if (projectOptions.framework === 'vue3') {
-        // Vue3 项目生成
-        const { generateProjectSourceFiles } = await import('@vela/generator')
-        const components = rootNode.value ? flattenNodeSchema(rootNode.value) : []
+      const { generateFromProject } = await import('@vela/generator')
+      const result = generateFromProject(
+        projectStore.project as ProjectSchema,
+        buildGenerateOptions(projectOptions.framework, projectOptions.language),
+      )
 
-        const files = generateProjectSourceFiles(components, {
-          typescript: projectOptions.language === 'ts',
-          pageName: currentPage.value?.name || 'Page',
-        })
-
-        projectFiles.value = files.map((f) => ({
-          path: f.path,
-          content: f.content,
-        }))
-      } else {
-        // React 项目生成
-        const { generateReactProject } = await import('@vela/generator')
-        const components = rootNode.value ? flattenNodeSchema(rootNode.value) : []
-
-        // 构建项目结构
-        const project = {
-          name: 'my-react-app',
-          description: '由 Vela 低代码平台生成',
-          pages: [
-            {
-              id: currentPage.value?.id || 'page-1',
-              name: currentPage.value?.name || 'Home',
-              route: '/',
-              components,
-            },
-          ],
-        }
-
-        const files = generateReactProject(project, {
-          typescript: projectOptions.language === 'ts',
-          cssModules: true,
-          router: 'react-router',
-          stateManagement: 'zustand',
-        })
-
-        projectFiles.value = files
-      }
+      projectFiles.value = withDiagnosticsFile(
+        result.files.map((file) => ({ path: file.path, content: file.content })),
+        result.diagnostics,
+      )
 
       // 尝试恢复之前选中的文件，如果不存在则选中第一个文件
       const matchingFile = projectFiles.value.find((f) => f.path === previousSelectedPath)
@@ -560,61 +597,6 @@ watch(
   },
   { immediate: true },
 )
-
-/**
- * 将 NodeSchema 树扁平化为 Component 数组（用于代码生成）
- */
-function flattenNodeSchema(node: NodeSchema): any[] {
-  const result: any[] = []
-
-  function traverse(n: NodeSchema, groupId?: string) {
-    const componentName = n.component || n.componentName || ''
-
-    // 跳过根节点（Page/Container），只处理其子节点
-    if (componentName === 'Page' || componentName === 'Container') {
-      if (n.children) {
-        for (const child of n.children) {
-          traverse(child, groupId)
-        }
-      }
-      return
-    }
-
-    // 从 geometry/style 中提取位置和尺寸
-    const style = n.style || {}
-    const geometry = n.geometry?.mode === 'free' ? n.geometry : undefined
-    const component = {
-      id: n.id,
-      type: componentName,
-      position: {
-        x: geometry?.x ?? 0,
-        y: geometry?.y ?? 0,
-      },
-      size: {
-        width: typeof (geometry?.width ?? style.width) === 'number' ? (geometry?.width ?? style.width) : 100,
-        height: typeof (geometry?.height ?? style.height) === 'number' ? (geometry?.height ?? style.height) : 100,
-      },
-      props: n.props,
-      style: n.style,
-      events: n.events,
-      dataBindings: (n as any).dataBindings,
-      dataSource: (n as any).dataSource,
-      animation: n.animation,
-      groupId,
-    }
-    result.push(component)
-
-    // 递归处理子节点
-    if (n.children) {
-      for (const child of n.children) {
-        traverse(child, n.id)
-      }
-    }
-  }
-
-  traverse(node)
-  return result
-}
 
 const handleBack = () => {
   router.push('/editor-v2')

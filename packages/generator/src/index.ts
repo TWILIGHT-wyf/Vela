@@ -32,6 +32,23 @@ export {
   type Project,
 } from './codeGenerator'
 
+// 协议驱动生成入口（新架构）
+export {
+  generateFromProject,
+  ProjectGenerationError,
+  type GenerateFramework,
+  type GenerateFromProjectOptions,
+  type GenerateFromProjectResult,
+} from './api/generateFromProject'
+
+export type {
+  IRNode as CompileIRNode,
+  IRPage as CompileIRPage,
+  IRProject as CompileIRProject,
+} from './pipeline/ir/ir'
+
+export type { CompileDiagnostic, DiagnosticLevel } from './pipeline/validate/diagnostics'
+
 // 组件类型
 export type {
   Component,
