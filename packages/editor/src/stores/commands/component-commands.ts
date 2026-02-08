@@ -2,6 +2,14 @@ import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
 import type { Command, CommandType } from './types'
 
 /**
+ * Deep clone that safely handles Vue reactive proxies.
+ * structuredClone throws on Proxy objects; JSON round-trip strips them.
+ */
+function safeClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+/**
  * Store 获取函数类型
  * 使用函数而非直接引用，避免循环依赖和确保获取最新实例
  */
@@ -103,7 +111,7 @@ export class DeleteComponentCommand implements Command {
 
     // 保存删除前的状态用于 undo
     const node = store.findNodeById(null, this.id)
-    this.deletedNode = node ? structuredClone(node) : undefined
+    this.deletedNode = node ? safeClone(node) : undefined
     this.parentId = store.getParentId(this.id)
     this.index = store.getNodeIndex(this.id)
 
@@ -372,7 +380,7 @@ export class UpdateGeometryCommand implements Command {
 
     // 保存旧值
     if (node) {
-      this.oldGeometry = node.geometry ? structuredClone(node.geometry) : undefined
+      this.oldGeometry = node.geometry ? safeClone(node.geometry) : undefined
     }
 
     store.updateGeometryRaw(this.id, this.newGeometry)
