@@ -41,6 +41,7 @@ describe('editor shortcuts / transform interaction', () => {
     expect(source).toContain('Ctrl/Cmd/Shift + 点击：多选')
     expect(source).toContain('选中组件后拖拽边缘手柄：调整宽高')
     expect(source).toContain('悬停节点可查看 margin 标注')
+    expect(source).toContain('拖拽橙色外侧线：调整 margin')
     expect(source).toContain('方向键微调（Shift 加速）')
     expect(source).toContain('Alt + 拖拽：临时关闭吸附')
   })

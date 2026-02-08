@@ -48,6 +48,22 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('ml {{ flowSpacingHints.left }}')
   })
 
+  it('流式模式应支持拖拽外侧线调整 margin', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    expect(source).toContain('showFlowSpacingHandles')
+    expect(source).toContain("handleFlowSpacingDragStart('top', $event)")
+    expect(source).toContain("handleFlowSpacingDragStart('right', $event)")
+    expect(source).toContain("handleFlowSpacingDragStart('bottom', $event)")
+    expect(source).toContain("handleFlowSpacingDragStart('left', $event)")
+    expect(source).toContain('parseMarginShorthand')
+    expect(source).toContain('resolveSpacingNumber(style, side)')
+    expect(source).toContain("const patch = { [styleKey]: Math.round(pendingMargin) }")
+    expect(source).toContain('.flow-spacing-handle.spacing-top')
+    expect(source).toContain('.flow-spacing-handle.spacing-right')
+    expect(source).toContain('.flow-spacing-handle.spacing-bottom')
+    expect(source).toContain('.flow-spacing-handle.spacing-left')
+  })
+
   it('free 父布局逻辑应使用 geometry 计算绝对定位', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     expect(source).toContain("if (props.parentLayoutMode === 'free')")
