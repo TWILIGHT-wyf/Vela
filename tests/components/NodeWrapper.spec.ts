@@ -34,6 +34,8 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('patch.width = Math.round(pendingWidth)')
     expect(source).toContain('patch.minHeight = nextHeight')
     expect(source).toContain('patch.height = nextHeight')
+    expect(source).toContain('const baseWidth = toAbsoluteLengthNumber(style.width) ?? rect.width')
+    expect(source).toContain("if (/^-?\\d+(\\.\\d+)?px$/.test(trimmed)) return Number.parseFloat(trimmed)")
   })
 
   it('流式模式应在悬停/选中时显示 margin 标注', () => {
@@ -80,5 +82,9 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("const flowHeight = (style.height ?? style.minHeight)")
     expect(source).toContain('height: formatValue(flowHeight, \'auto\')')
     expect(source).toContain('minHeight: formatValue(flowMinHeight, \'auto\')')
+    expect(source).toContain('marginTop: formatOptionalValue(style.marginTop as string | number | undefined)')
+    expect(source).toContain('marginRight: formatOptionalValue(style.marginRight as string | number | undefined)')
+    expect(source).toContain('marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined)')
+    expect(source).toContain('marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined)')
   })
 })
