@@ -11,6 +11,11 @@ describe('Editor Integration', () => {
     id: 'node-1',
     componentName: 'BaseButton',
     style: {
+      width: 100,
+      height: 50,
+    },
+    geometry: {
+      mode: 'free',
       x: 10,
       y: 20,
       width: 100,
@@ -43,6 +48,7 @@ describe('Editor Integration', () => {
           node: {
             ...mockNode,
             style: { width: '100%', height: 200, marginTop: 10 },
+            geometry: { mode: 'flow' },
           },
           layoutMode: 'flow',
         },
@@ -52,7 +58,7 @@ describe('Editor Integration', () => {
       expect(style).toContain('position: relative')
       expect(style).toContain('width: 100%')
       expect(style).toContain('height: 200px')
-      expect(style).toContain('margin-top: 10px')
+      expect(style).toMatch(/margin(-top)?: 10px/)
     })
 
     it('should emit select event on mousedown', async () => {

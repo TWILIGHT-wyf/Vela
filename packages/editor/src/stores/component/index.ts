@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, watch } from 'vue'
-import type { NodeSchema, NodeStyle } from '@vela/core'
+import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
 import { ElMessage } from 'element-plus'
 import { cloneDeep } from 'lodash-es'
 import { useProjectStore } from '../project'
@@ -11,6 +11,7 @@ import {
   DeleteComponentCommand,
   MoveComponentCommand,
   UpdateStyleCommand,
+  UpdateGeometryCommand,
   UpdatePropsCommand,
   UpdateDataSourceCommand,
   UpdateChildLayoutCommand,
@@ -102,6 +103,21 @@ export const useComponent = defineStore('component', () => {
 
     const historyStore = useHistoryStore()
     const cmd = new UpdateStyleCommand(id, style)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 更新组件的几何信息（通过命令执行，支持撤销）
+   */
+  function updateGeometry(id: string, geometry: Partial<NodeGeometry>) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] updateGeometry - Node not found: ${id}`)
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateGeometryCommand(id, geometry)
     historyStore.executeCommand(cmd)
   }
 
@@ -222,21 +238,21 @@ export const useComponent = defineStore('component', () => {
    * Update component position in geometry
    */
   function updateComponentPosition(id: string, x: number, y: number) {
-    styleCtx.updateGeometryRaw(id, { mode: 'free', x, y })
+    updateGeometry(id, { mode: 'free', x, y })
   }
 
   /**
    * Update component size in geometry
    */
   function updateComponentSize(id: string, width: number, height: number) {
-    styleCtx.updateGeometryRaw(id, { mode: 'free', width, height })
+    updateGeometry(id, { mode: 'free', width, height })
   }
 
   /**
    * Update component rotation in geometry
    */
   function updateComponentRotation(id: string, rotate: number) {
-    styleCtx.updateGeometryRaw(id, { mode: 'free', rotate })
+    updateGeometry(id, { mode: 'free', rotate })
   }
 
   // ========== 响应式属性引用工厂（包装） ==========
@@ -344,6 +360,7 @@ export const useComponent = defineStore('component', () => {
     addComponent,
     updateProps,
     updateStyle,
+    updateGeometry,
     updateDataSource,
     updateContainerLayout,
     deleteComponent,

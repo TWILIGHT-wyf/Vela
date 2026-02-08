@@ -22,16 +22,15 @@ import { useHistoryStore } from './history'
 import { useComponent } from './component'
 import { getPropSchema } from '@vela/core/validation'
 import { ElMessage } from 'element-plus'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, AnimationConfig } from '@vela/core'
+import type { NodeGeometry } from '@vela/core/types'
 
 // ========== Command Types ==========
 
 export type CommandType =
   | 'update-prop'
   | 'update-style'
-  | 'update-position'
-  | 'update-size'
-  | 'update-rotation'
+  | 'update-geometry'
   | 'update-animation'
   | 'add-component'
   | 'delete-component'
@@ -59,36 +58,16 @@ export interface UpdateStyleCommand extends BaseCommand {
   value: unknown
 }
 
-export interface UpdatePositionCommand extends BaseCommand {
-  type: 'update-position'
+export interface UpdateGeometryCommand extends BaseCommand {
+  type: 'update-geometry'
   id: string
-  position: { x: number; y: number }
-}
-
-export interface UpdateSizeCommand extends BaseCommand {
-  type: 'update-size'
-  id: string
-  size: { width: number; height: number }
-}
-
-export interface UpdateRotationCommand extends BaseCommand {
-  type: 'update-rotation'
-  id: string
-  rotation: number
+  geometry: Partial<NodeGeometry>
 }
 
 export interface UpdateAnimationCommand extends BaseCommand {
   type: 'update-animation'
   id: string
-  animation: {
-    name: string
-    class: string
-    duration: number
-    delay: number
-    iterationCount: string | number
-    timingFunction: string
-    trigger: 'load' | 'hover' | 'click'
-  }
+  animation: AnimationConfig
 }
 
 export interface AddComponentCommand extends BaseCommand {
@@ -113,9 +92,7 @@ export interface MoveComponentCommand extends BaseCommand {
 export type Command =
   | UpdatePropCommand
   | UpdateStyleCommand
-  | UpdatePositionCommand
-  | UpdateSizeCommand
-  | UpdateRotationCommand
+  | UpdateGeometryCommand
   | UpdateAnimationCommand
   | AddComponentCommand
   | DeleteComponentCommand
@@ -179,13 +156,14 @@ function executeUpdateProp(
   if (!node) return false
 
   // Validation: Check Zod schema if registered
-  if (node.componentName) {
-    const schema = getPropSchema(node.componentName, command.path)
+  const componentName = node.component || node.componentName
+  if (componentName) {
+    const schema = getPropSchema(componentName, command.path)
     if (schema) {
       const result = schema.safeParse(command.value)
       if (!result.success) {
         console.warn(
-          `[Commands] Validation failed for ${node.componentName}.${command.path}:`,
+          `[Commands] Validation failed for ${componentName}.${command.path}:`,
           result.error,
         )
         const msg = result.error.errors[0]?.message || 'Validation failed'
@@ -209,10 +187,8 @@ function executeUpdateProp(
       }
       current = current[parts[i]] as Record<string, unknown>
     }
-    // Cast to satisfy PropValue type (allows any for dynamic values)
     current[parts[parts.length - 1]] = command.value as any
   } else {
-    // Cast to satisfy PropValue type
     node.props[command.path] = command.value as any
   }
 
@@ -233,15 +209,15 @@ function executeUpdateStyle(
   if (!node) return false
 
   // Validation: Check Zod schema if registered
-  if (node.componentName) {
-    // Only support top-level prop validation for now (nested paths skipped)
+  const componentName = node.component || node.componentName
+  if (componentName) {
     if (!command.path.includes('.')) {
-      const schema = getPropSchema(node.componentName, command.path)
+      const schema = getPropSchema(componentName, command.path)
       if (schema) {
         const result = schema.safeParse(command.value)
         if (!result.success) {
           console.warn(
-            `[Commands] Validation failed for ${node.componentName}.${command.path}:`,
+            `[Commands] Validation failed for ${componentName}.${command.path}:`,
             result.error,
           )
           const msg = result.error.errors[0]?.message || 'Validation failed'
@@ -252,11 +228,10 @@ function executeUpdateStyle(
     }
   }
 
-  if (!node.props) {
-    node.props = {}
+  if (!node.style) {
+    node.style = {}
   }
 
-  // Cast to satisfy PropValue type
   node.style[command.path] = command.value as any
 
   console.log(`[Commands] Updated style ${command.path} for component ${command.id}`)
@@ -264,60 +239,23 @@ function executeUpdateStyle(
 }
 
 /**
- * Execute update-position command
+ * Execute update-geometry command
  */
-function executeUpdatePosition(
-  command: UpdatePositionCommand,
+function executeUpdateGeometry(
+  command: UpdateGeometryCommand,
   componentStore: ReturnType<typeof useComponent>,
 ): boolean {
   if (!validateComponentId(componentStore, command.id)) return false
 
-  const node = componentStore.findNodeById(componentStore.rootNode!, command.id) as any
+  const node = componentStore.findNodeById(componentStore.rootNode!, command.id)
   if (!node) return false
 
-  node.position = command.position
+  node.geometry = {
+    ...(node.geometry || { mode: 'free' }),
+    ...command.geometry,
+  } as NodeGeometry
 
-  console.log(`[Commands] Updated position for component ${command.id}`)
-  return true
-}
-
-/**
- * Execute update-size command
- */
-function executeUpdateSize(
-  command: UpdateSizeCommand,
-  componentStore: ReturnType<typeof useComponent>,
-): boolean {
-  if (!validateComponentId(componentStore, command.id)) return false
-
-  const node = componentStore.findNodeById(componentStore.rootNode!, command.id) as any
-  if (!node) return false
-
-  if (!node.size) {
-    node.size = { width: 100, height: 100 }
-  }
-
-  node.size = command.size
-
-  console.log(`[Commands] Updated size for component ${command.id}`)
-  return true
-}
-
-/**
- * Execute update-rotation command
- */
-function executeUpdateRotation(
-  command: UpdateRotationCommand,
-  componentStore: ReturnType<typeof useComponent>,
-): boolean {
-  if (!validateComponentId(componentStore, command.id)) return false
-
-  const node = componentStore.findNodeById(componentStore.rootNode!, command.id) as any
-  if (!node) return false
-
-  node.rotation = command.rotation
-
-  console.log(`[Commands] Updated rotation for component ${command.id}`)
+  console.log(`[Commands] Updated geometry for component ${command.id}`)
   return true
 }
 
@@ -402,12 +340,8 @@ function executeCommand(
       return executeUpdateProp(command as UpdatePropCommand, componentStore)
     case 'update-style':
       return executeUpdateStyle(command as UpdateStyleCommand, componentStore)
-    case 'update-position':
-      return executeUpdatePosition(command as UpdatePositionCommand, componentStore)
-    case 'update-size':
-      return executeUpdateSize(command as UpdateSizeCommand, componentStore)
-    case 'update-rotation':
-      return executeUpdateRotation(command as UpdateRotationCommand, componentStore)
+    case 'update-geometry':
+      return executeUpdateGeometry(command as UpdateGeometryCommand, componentStore)
     case 'update-animation':
       return executeUpdateAnimation(command as UpdateAnimationCommand, componentStore)
     case 'add-component':

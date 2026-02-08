@@ -5,9 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
-import { useCanvasStore } from '@/stores/canvas'
 import { useHistoryStore } from '@/stores/history'
-import { useSizeStore } from '@/stores/size'
 
 // Components
 import Header from '@/components/Layout/Header/Header.vue'
@@ -18,10 +16,7 @@ import AIAssistDialog from '@/components/AIAssist/AIAssistDialog.vue'
 import { RuntimeRenderer } from '@vela/renderer'
 
 // Canvas Components (New Architecture)
-import CanvasViewport from '@/components/Canvas/CanvasViewport.vue'
-import CanvasStage from '@/components/Canvas/CanvasStage.vue'
-import ComponentRenderer from '@/components/Canvas/ComponentRenderer.vue'
-import SelectionLayer from '@/components/Canvas/selection/SelectionLayer.vue'
+import CanvasBoard from '@/components/Canvas/CanvasBoard.vue'
 
 // Services & Icons
 import * as projectService from '@/services/projects'
@@ -42,8 +37,6 @@ import {
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
 const compStore = useComponent()
-const canvasStore = useCanvasStore()
-const sizeStore = useSizeStore()
 const historyStore = useHistoryStore()
 const router = useRouter()
 
@@ -135,23 +128,7 @@ async function handleReset() {
     <template v-else>
       <!-- 1. Layer 0: Infinite Canvas -->
       <div class="canvas-layer">
-        <CanvasViewport v-if="!isSimulationMode" ref="viewportRef">
-          <CanvasStage
-            :width="sizeStore.width"
-            :height="sizeStore.height"
-            :background-color="sizeStore.canvasConfig.backgroundColor"
-            :show-grid="sizeStore.canvasConfig.showGrid"
-            :grid-size="sizeStore.canvasConfig.gridSize"
-            :grid-color="sizeStore.canvasConfig.gridColor"
-            @click-empty="compStore.clearSelection"
-          >
-            <ComponentRenderer v-if="rootNode?.children" :nodes="rootNode.children" />
-          </CanvasStage>
-
-          <template #overlay>
-            <SelectionLayer />
-          </template>
-        </CanvasViewport>
+        <CanvasBoard v-if="!isSimulationMode" />
 
         <RuntimeRenderer
           v-else

@@ -62,7 +62,7 @@ export function useTransform() {
         siblings,
       )
 
-      store.updateGeometryRaw(id, {
+      store.updateGeometry(id, {
         mode: 'free',
         x: Math.round(position.x),
         y: Math.round(position.y),
@@ -123,7 +123,7 @@ export function useTransform() {
       if (newW < 10) newW = 10
       if (newH < 10) newH = 10
 
-      store.updateGeometryRaw(id, {
+      store.updateGeometry(id, {
         mode: 'free',
         x: Math.round(newX),
         y: Math.round(newY),
@@ -166,7 +166,7 @@ export function useTransform() {
 
       const finalDeg = ev.shiftKey ? Math.round(deg / 15) * 15 : deg
 
-      store.updateGeometryRaw(id, {
+      store.updateGeometry(id, {
         mode: 'free',
         rotate: Math.round(finalDeg),
       })
