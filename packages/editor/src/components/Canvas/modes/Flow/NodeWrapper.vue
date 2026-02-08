@@ -7,7 +7,7 @@
     :data-component="componentLabel"
     :data-label="componentLabel"
     :data-node-id="nodeId"
-    :draggable="!isFreeParent"
+    :draggable="!isFreeParent && !isResizing"
     @click.stop="handleClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
@@ -18,7 +18,27 @@
     @drop="handleDrop"
   >
     <!-- Component content slot -->
-  <slot></slot>
+    <slot></slot>
+
+    <!-- Flow resize handles -->
+    <template v-if="showFlowResizeHandles">
+      <div class="flow-resize-handle handle-e" @mousedown.stop.prevent="handleFlowResizeStart('e', $event)" />
+      <div class="flow-resize-handle handle-s" @mousedown.stop.prevent="handleFlowResizeStart('s', $event)" />
+      <div class="flow-resize-handle handle-se" @mousedown.stop.prevent="handleFlowResizeStart('se', $event)" />
+    </template>
+
+    <template v-if="showFlowSpacingHints">
+      <div v-if="flowSpacingHints.top" class="flow-spacing-hint hint-top">mt {{ flowSpacingHints.top }}</div>
+      <div v-if="flowSpacingHints.right" class="flow-spacing-hint hint-right">
+        mr {{ flowSpacingHints.right }}
+      </div>
+      <div v-if="flowSpacingHints.bottom" class="flow-spacing-hint hint-bottom">
+        mb {{ flowSpacingHints.bottom }}
+      </div>
+      <div v-if="flowSpacingHints.left" class="flow-spacing-hint hint-left">
+        ml {{ flowSpacingHints.left }}
+      </div>
+    </template>
   </div>
 </template>
 
@@ -26,7 +46,7 @@
 import { computed, ref, inject, type CSSProperties } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, NodeStyle } from '@vela/core'
 import type { UseFlowDropReturn } from './useFlowDrop'
 
 interface Props {
@@ -51,18 +71,22 @@ const flowDrop = inject<UseFlowDropReturn>('flowDrop')
 
 // ========== Store ==========
 const componentStore = useComponent()
-const { selectedIds, hoveredId, rootNode } = storeToRefs(componentStore)
-const { selectComponent, toggleSelection, findNodeById, setHovered } = componentStore
+const { selectedId, selectedIds, hoveredId, rootNode } = storeToRefs(componentStore)
+const { selectComponent, toggleSelection, findNodeById, setHovered, updateStyle } = componentStore
 
 // ========== Refs ==========
 const wrapperRef = ref<HTMLDivElement | null>(null)
 const isDragging = ref(false)
 const isDragOver = ref(false)
+const isResizing = ref(false)
 const isFreeParent = computed(() => props.parentLayoutMode === 'free')
 
 // ========== Computed ==========
 const isSelected = computed(() => selectedIds.value.includes(props.nodeId))
 const isHovered = computed(() => hoveredId.value === props.nodeId)
+const showFlowResizeHandles = computed(
+  () => selectedId.value === props.nodeId && props.parentLayoutMode === 'flow',
+)
 
 const currentNode = computed(() => {
   if (props.node) return props.node
@@ -72,6 +96,44 @@ const currentNode = computed(() => {
 
 const componentLabel = computed(() => {
   return props.componentName || currentNode.value?.component || ''
+})
+
+const formatSpacingValue = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  if (typeof value === 'number') {
+    return `${Math.round(value)}px`
+  }
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  return null
+}
+
+const resolveSpacing = (style: NodeStyle, side: 'Top' | 'Right' | 'Bottom' | 'Left'): string | null => {
+  const specific = style[`margin${side}`]
+  if (specific !== undefined && specific !== null && specific !== '') {
+    return formatSpacingValue(specific)
+  }
+  return formatSpacingValue(style.margin)
+}
+
+const flowSpacingHints = computed(() => {
+  const style = currentNode.value?.style || {}
+  return {
+    top: resolveSpacing(style, 'Top'),
+    right: resolveSpacing(style, 'Right'),
+    bottom: resolveSpacing(style, 'Bottom'),
+    left: resolveSpacing(style, 'Left'),
+  }
+})
+
+const showFlowSpacingHints = computed(() => {
+  if (props.parentLayoutMode !== 'flow') return false
+  if (!isHovered.value && !isSelected.value) return false
+  const hints = flowSpacingHints.value
+  return Boolean(hints.top || hints.right || hints.bottom || hints.left)
 })
 
 /** 判断是否为容器组件 */
@@ -93,6 +155,7 @@ const wrapperClasses = computed(() => [
     'is-hovered': isHovered.value && !isSelected.value,
     'is-dragging': isDragging.value,
     'is-drag-over': isDragOver.value,
+    'is-resizing': isResizing.value,
     'is-container': isContainer.value,
     'is-empty': isEmpty.value,
     'is-free-parent': isFreeParent.value,
@@ -234,6 +297,94 @@ const handleDrop = (e: DragEvent) => {
   flowDrop.handleDrop(e, currentNode.value)
 }
 
+type FlowResizeHandle = 'e' | 's' | 'se'
+
+const toLengthNumber = (val: unknown): number | null => {
+  if (typeof val === 'number' && Number.isFinite(val)) return val
+  if (typeof val === 'string') {
+    const num = Number.parseFloat(val)
+    if (Number.isFinite(num)) return num
+  }
+  return null
+}
+
+const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
+  if (props.parentLayoutMode !== 'flow' || !currentNode.value || !wrapperRef.value) return
+
+  // Ensure current node is the active selection when resize starts
+  selectComponent(props.nodeId)
+  isResizing.value = true
+  setHovered(null)
+
+  const startX = e.clientX
+  const startY = e.clientY
+  const rect = wrapperRef.value.getBoundingClientRect()
+  const style = currentNode.value.style || {}
+
+  const baseWidth = toLengthNumber(style.width) ?? rect.width
+  const baseMinHeight = toLengthNumber(style.minHeight ?? style.height) ?? rect.height
+  const minWidth = 24
+  const minHeight = 24
+
+  let rafId = 0
+  let pendingWidth: number | undefined
+  let pendingMinHeight: number | undefined
+
+  const flushStyleUpdate = () => {
+    rafId = 0
+    const patch: Partial<NodeStyle> = {}
+
+    if (pendingWidth !== undefined) {
+      patch.width = Math.round(pendingWidth)
+    }
+    if (pendingMinHeight !== undefined) {
+      patch.minHeight = Math.round(pendingMinHeight)
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updateStyle(props.nodeId, patch)
+    }
+  }
+
+  const prevCursor = document.body.style.cursor
+  const prevUserSelect = document.body.style.userSelect
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor =
+    handle === 'e' ? 'ew-resize' : handle === 's' ? 'ns-resize' : 'nwse-resize'
+
+  const onMouseMove = (ev: MouseEvent) => {
+    const dx = ev.clientX - startX
+    const dy = ev.clientY - startY
+
+    if (handle === 'e' || handle === 'se') {
+      pendingWidth = Math.max(minWidth, baseWidth + dx)
+    }
+    if (handle === 's' || handle === 'se') {
+      pendingMinHeight = Math.max(minHeight, baseMinHeight + dy)
+    }
+
+    if (rafId === 0) {
+      rafId = requestAnimationFrame(flushStyleUpdate)
+    }
+  }
+
+  const onMouseUp = () => {
+    if (rafId !== 0) {
+      cancelAnimationFrame(rafId)
+      flushStyleUpdate()
+    }
+
+    document.body.style.cursor = prevCursor
+    document.body.style.userSelect = prevUserSelect
+    isResizing.value = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
+
 // ========== Event Handlers ==========
 const handleClick = (e: MouseEvent) => {
   // Ctrl/Cmd/Shift + Click: toggle multi-selection
@@ -344,5 +495,79 @@ const handleClick = (e: MouseEvent) => {
 
 .editor-node-wrapper.is-free-parent {
   position: absolute;
+}
+
+.flow-resize-handle {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #0d99ff;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(13, 153, 255, 0.28);
+  z-index: 12;
+}
+
+.flow-resize-handle.handle-e {
+  top: 50%;
+  right: -5px;
+  width: 10px;
+  height: 20px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.flow-resize-handle.handle-s {
+  bottom: -5px;
+  left: 50%;
+  width: 20px;
+  height: 10px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.flow-resize-handle.handle-se {
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.flow-spacing-hint {
+  position: absolute;
+  z-index: 11;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  background: rgba(254, 243, 199, 0.9);
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.flow-spacing-hint.hint-top {
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+}
+
+.flow-spacing-hint.hint-right {
+  top: 50%;
+  right: -42px;
+  transform: translateY(-50%);
+}
+
+.flow-spacing-hint.hint-bottom {
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+}
+
+.flow-spacing-hint.hint-left {
+  top: 50%;
+  left: -42px;
+  transform: translateY(-50%);
 }
 </style>
