@@ -1,4 +1,4 @@
-import type { NodeSchema, NodeStyle, NodeLayout } from '@vela/core'
+import type { NodeSchema, NodeStyle, NodeGeometry } from '@vela/core'
 
 /**
  * 命令接口
@@ -36,9 +36,9 @@ export type CommandType =
   | 'move-component'
   | 'update-props'
   | 'update-style'
-  | 'update-layout'
+  | 'update-geometry'
   | 'update-data-source'
-  | 'update-child-layout'
+  | 'update-container-layout'
   | 'batch'
 
 /**
@@ -91,19 +91,19 @@ export interface UpdateDataSourcePayload {
 }
 
 /**
- * 更新画布布局命令的参数
+ * 更新画布几何命令的参数
  */
-export interface UpdateLayoutPayload {
+export interface UpdateGeometryPayload {
   id: string
-  layout: Partial<NodeLayout>
+  geometry: Partial<NodeGeometry>
 }
 
 /**
- * 更新子节点布局模式命令的参数
+ * 更新容器布局模式命令的参数
  */
-export interface UpdateChildLayoutPayload {
+export interface UpdateContainerLayoutPayload {
   id: string
-  childLayout: NodeSchema['childLayout']
+  containerMode: 'free' | 'flow'
 }
 
 /**

@@ -126,7 +126,8 @@ import { useUIStore } from '@/stores/ui'
 import { useComponent } from '@/stores/component'
 import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
 import { storeToRefs } from 'pinia'
-import { convertLayout, type LayoutMode } from '@/utils/layoutConverter'
+import type { LayoutMode } from '@vela/core'
+import { convertLayout } from '@/utils/layoutConverter'
 
 const projectStore = useProjectStore()
 const uiStore = useUIStore()
@@ -143,8 +144,8 @@ const pagePath = ref('')
 // 当前布局模式
 const currentLayout = computed<LayoutMode>(() => {
   return (
-    (rootNode.value?.layoutMode as LayoutMode | undefined) ||
-    (currentPage.value?.config?.layout as LayoutMode | undefined) ||
+    (rootNode.value?.container?.mode as LayoutMode | undefined) ||
+    (currentPage.value?.config?.defaultLayoutMode as LayoutMode | undefined) ||
     'flow'
   )
 })
@@ -155,7 +156,7 @@ watch(
   (page) => {
     if (page) {
       pageName.value = page.name
-      pagePath.value = page.path.replace(/^\//, '')
+      pagePath.value = page.type === 'page' ? page.path.replace(/^\//, '') : ''
     }
   },
   { immediate: true },
@@ -166,8 +167,8 @@ watch(
   [currentPage, rootNode],
   ([page, root]) => {
     if (!page || !root) return
-    if (!root.layoutMode && page.config?.layout) {
-      componentStore.updateLayoutModeRaw(root.id, page.config.layout as LayoutMode)
+    if (!root.container?.mode && page.config?.defaultLayoutMode) {
+      componentStore.updateChildLayoutRaw(root.id, page.config.defaultLayoutMode as LayoutMode)
     }
   },
   { immediate: true },
@@ -183,7 +184,7 @@ function handleNameChange(value: string) {
 
 // 处理路径变更
 function handlePathChange(value: string) {
-  if (currentPage.value) {
+  if (currentPage.value && currentPage.value.type === 'page') {
     currentPage.value.path = value.startsWith('/') ? value : `/${value}`
     projectStore.saveStatus = 'unsaved'
   }
@@ -206,7 +207,7 @@ async function handleLayoutChange(mode: LayoutMode) {
       },
     )
 
-    projectStore.updatePageConfig({ layout: mode })
+    projectStore.updatePageConfig({ defaultLayoutMode: mode })
     uiStore.setCanvasMode(mode)
 
     if (rootNode.value) {

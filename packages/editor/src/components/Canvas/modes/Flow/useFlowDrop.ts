@@ -32,7 +32,8 @@ const MAX_NESTING_DEPTH = 10
  * 检查节点是否为容器类型
  */
 function isContainerNode(node: NodeSchema): boolean {
-  return CONTAINER_COMPONENTS.includes(node.componentName)
+  const name = node.component || node.componentName || ''
+  return CONTAINER_COMPONENTS.includes(name)
 }
 
 /**
@@ -385,7 +386,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     const { position, targetId, targetParentId } = state
     const targetNode = componentStore.findNodeById(rootNode, targetId)
-    const isFreeContainer = position === 'inside' && targetNode?.layoutMode === 'free'
+    const isFreeContainer = position === 'inside' && targetNode?.container?.mode === 'free'
 
     let x = 0
     let y = 0
@@ -394,10 +395,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       y = Math.max(0, Math.round(clientY - state.rect.top))
     }
 
+    const componentName = dropData.component || dropData.componentName
+
     // 创建新组件
     const newComponent: NodeSchema = {
       id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      componentName: dropData.componentName,
+      component: componentName,
       props: dropData.props || {},
       style: {
         width: isFreeContainer
@@ -411,11 +414,18 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
             ? `${dropData.height}px`
             : 'auto',
         height: isFreeContainer ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
-        x: isFreeContainer ? x : undefined,
-        y: isFreeContainer ? y : undefined,
         ...(dropData.style || {}),
       },
-      children: isContainerNode({ componentName: dropData.componentName } as NodeSchema)
+      geometry: isFreeContainer
+        ? {
+            mode: 'free',
+            x,
+            y,
+            width: dropData.width ?? dropData.style?.width ?? 120,
+            height: dropData.height ?? dropData.style?.height ?? 80,
+          }
+        : undefined,
+      children: isContainerNode({ component: componentName } as NodeSchema)
         ? []
         : undefined,
     }
@@ -438,7 +448,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     console.log(
-      `[useFlowDrop] Adding ${newComponent.componentName} to ${parentId} at index ${index}`,
+      `[useFlowDrop] Adding ${newComponent.component} to ${parentId} at index ${index}`,
     )
     const newId = componentStore.addComponent(parentId, newComponent, index)
 
@@ -484,11 +494,13 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       return false
     }
 
-    if (!dropData.componentName) {
+    const componentName = dropData.component || dropData.componentName
+
+    if (!componentName) {
       return false
     }
 
-    const rootLayoutMode = rootNode?.layoutMode === 'free' ? 'free' : 'flow'
+    const rootLayoutMode = rootNode?.container?.mode === 'free' ? 'free' : 'flow'
     let x = 0
     let y = 0
     if (rootLayoutMode === 'free') {
@@ -509,7 +521,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     // 添加新组件到根节点
     const newComponent: NodeSchema = {
       id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      componentName: dropData.componentName,
+      component: componentName,
       props: dropData.props || {},
       style: {
         width:
@@ -525,11 +537,19 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
               ? `${dropData.height}px`
               : 'auto',
         height: rootLayoutMode === 'free' ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
-        x: rootLayoutMode === 'free' ? x : undefined,
-        y: rootLayoutMode === 'free' ? y : undefined,
         ...(dropData.style || {}),
       },
-      children: isContainerNode({ componentName: dropData.componentName } as NodeSchema)
+      geometry:
+        rootLayoutMode === 'free'
+          ? {
+              mode: 'free',
+              x,
+              y,
+              width: dropData.width ?? dropData.style?.width ?? 120,
+              height: dropData.height ?? dropData.style?.height ?? 80,
+            }
+          : undefined,
+      children: isContainerNode({ component: componentName } as NodeSchema)
         ? []
         : undefined,
     }

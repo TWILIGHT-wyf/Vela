@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, watch } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, NodeStyle } from '@vela/core'
 import { ElMessage } from 'element-plus'
 import { cloneDeep } from 'lodash-es'
 import { useProjectStore } from '../project'
@@ -13,7 +13,7 @@ import {
   UpdateStyleCommand,
   UpdatePropsCommand,
   UpdateDataSourceCommand,
-  UpdateLayoutModeCommand,
+  UpdateChildLayoutCommand,
 } from '../commands/index'
 
 import { useComponentIndex } from './useComponentIndex'
@@ -93,7 +93,7 @@ export const useComponent = defineStore('component', () => {
   /**
    * 更新组件的 style（通过命令执行，支持撤销）
    */
-  function updateStyle(id: string, style: Record<string, unknown>) {
+  function updateStyle(id: string, style: Partial<NodeStyle>) {
     const node = indexCtx.nodeIndex.get(id)
     if (!node) {
       console.warn(`[ComponentStore] updateStyle - Node not found: ${id}`)
@@ -123,16 +123,16 @@ export const useComponent = defineStore('component', () => {
   /**
    * 更新组件的布局模式（通过命令执行，支持撤销）
    */
-  function updateLayoutMode(id: string, layoutMode: NodeSchema['layoutMode']) {
+  function updateContainerLayout(id: string, layoutMode: 'free' | 'flow') {
     const node = indexCtx.nodeIndex.get(id)
     if (!node) {
       console.warn(`[ComponentStore] Node not found: ${id}`)
       return
     }
-    if (node.layoutMode === layoutMode) return
+    if (node.container?.mode === layoutMode) return
 
     const historyStore = useHistoryStore()
-    const cmd = new UpdateLayoutModeCommand(id, layoutMode)
+    const cmd = new UpdateChildLayoutCommand(id, layoutMode)
     historyStore.executeCommand(cmd)
   }
 
@@ -219,24 +219,24 @@ export const useComponent = defineStore('component', () => {
   }
 
   /**
-   * Update component position (x, y in style)
+   * Update component position in geometry
    */
   function updateComponentPosition(id: string, x: number, y: number) {
-    updateStyle(id, { x, y })
+    styleCtx.updateGeometryRaw(id, { mode: 'free', x, y })
   }
 
   /**
-   * Update component size (width, height in style)
+   * Update component size in geometry
    */
   function updateComponentSize(id: string, width: number, height: number) {
-    updateStyle(id, { width, height })
+    styleCtx.updateGeometryRaw(id, { mode: 'free', width, height })
   }
 
   /**
-   * Update component rotation
+   * Update component rotation in geometry
    */
   function updateComponentRotation(id: string, rotate: number) {
-    updateStyle(id, { rotate })
+    styleCtx.updateGeometryRaw(id, { mode: 'free', rotate })
   }
 
   // ========== 响应式属性引用工厂（包装） ==========
@@ -302,7 +302,8 @@ export const useComponent = defineStore('component', () => {
     updateStyleRaw: styleCtx.updateStyleRaw,
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
-    updateLayoutModeRaw: styleCtx.updateLayoutModeRaw,
+    updateGeometryRaw: styleCtx.updateGeometryRaw,
+    updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
   })
 
   return {
@@ -344,7 +345,7 @@ export const useComponent = defineStore('component', () => {
     updateProps,
     updateStyle,
     updateDataSource,
-    updateLayoutMode,
+    updateContainerLayout,
     deleteComponent,
     deleteComponents,
     moveComponent,
@@ -362,7 +363,8 @@ export const useComponent = defineStore('component', () => {
     updateStyleRaw: styleCtx.updateStyleRaw,
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
-    updateLayoutModeRaw: styleCtx.updateLayoutModeRaw,
+    updateGeometryRaw: styleCtx.updateGeometryRaw,
+    updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
 
     // Clipboard
     clipboard: clipboardCtx.clipboard,

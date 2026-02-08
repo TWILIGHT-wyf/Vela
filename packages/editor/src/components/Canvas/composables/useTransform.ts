@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { throttle } from 'lodash-es'
-import type { NodeStyle } from '@vela/core'
+import type { NodeSchema } from '@vela/core'
 import { useCanvasContext } from './useCanvasContext'
 import { useSnapping } from './useSnapping'
 import { useComponent } from '@/stores/component'
@@ -28,7 +28,7 @@ export function useTransform() {
   }
 
   // --- Drag ---
-  const startDrag = (id: string, initialStyle: NodeStyle, e: MouseEvent) => {
+  const startDrag = (id: string, node: NodeSchema, e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -36,10 +36,11 @@ export function useTransform() {
     const startX = e.clientX
     const startY = e.clientY
 
-    const initialX = parseFloat(String(initialStyle.x)) || 0
-    const initialY = parseFloat(String(initialStyle.y)) || 0
-    const width = parseFloat(String(initialStyle.width)) || 100
-    const height = parseFloat(String(initialStyle.height)) || 100
+    const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
+    const initialX = geometry?.x ?? 0
+    const initialY = geometry?.y ?? 0
+    const width = Number(geometry?.width ?? node.style?.width ?? 100) || 100
+    const height = Number(geometry?.height ?? node.style?.height ?? 100) || 100
 
     const siblings = getSiblings(id)
 
@@ -61,7 +62,8 @@ export function useTransform() {
         siblings,
       )
 
-      store.updateStyle(id, {
+      store.updateGeometryRaw(id, {
+        mode: 'free',
         x: Math.round(position.x),
         y: Math.round(position.y),
       })
@@ -82,7 +84,7 @@ export function useTransform() {
   const startResize = (
     id: string,
     handle: ResizeHandle,
-    initialStyle: NodeStyle,
+    node: NodeSchema,
     e: MouseEvent,
   ) => {
     e.preventDefault()
@@ -92,10 +94,11 @@ export function useTransform() {
     const startX = e.clientX
     const startY = e.clientY
 
-    const initialX = parseFloat(String(initialStyle.x)) || 0
-    const initialY = parseFloat(String(initialStyle.y)) || 0
-    const initialW = parseFloat(String(initialStyle.width)) || 100
-    const initialH = parseFloat(String(initialStyle.height)) || 100
+    const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
+    const initialX = geometry?.x ?? 0
+    const initialY = geometry?.y ?? 0
+    const initialW = Number(geometry?.width ?? node.style?.width ?? 100) || 100
+    const initialH = Number(geometry?.height ?? node.style?.height ?? 100) || 100
 
     const onMove = throttle((ev: MouseEvent) => {
       const dx = (ev.clientX - startX) / scale.value
@@ -120,7 +123,8 @@ export function useTransform() {
       if (newW < 10) newW = 10
       if (newH < 10) newH = 10
 
-      store.updateStyle(id, {
+      store.updateGeometryRaw(id, {
+        mode: 'free',
         x: Math.round(newX),
         y: Math.round(newY),
         width: Math.round(newW),
@@ -139,18 +143,21 @@ export function useTransform() {
   }
 
   // --- Rotate ---
-  const startRotate = (id: string, initialStyle: NodeStyle, e: MouseEvent) => {
+  const startRotate = (id: string, node: NodeSchema, e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     isRotating.value = true
 
-    const cx = Number(initialStyle.x ?? 0) + Number(initialStyle.width ?? 100) / 2
-    const cy = Number(initialStyle.y ?? 0) + Number(initialStyle.height ?? 100) / 2
+    const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
+    const width = Number(geometry?.width ?? node.style?.width ?? 100) || 100
+    const height = Number(geometry?.height ?? node.style?.height ?? 100) || 100
+    const cx = Number(geometry?.x ?? 0) + width / 2
+    const cy = Number(geometry?.y ?? 0) + height / 2
 
     const center = toClientCoords(cx, cy)
     const startAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x)
-    const initialRotate = Number(initialStyle.rotate ?? 0)
+    const initialRotate = Number(geometry?.rotate ?? 0)
 
     const onMove = throttle((ev: MouseEvent) => {
       const angle = Math.atan2(ev.clientY - center.y, ev.clientX - center.x)
@@ -159,7 +166,8 @@ export function useTransform() {
 
       const finalDeg = ev.shiftKey ? Math.round(deg / 15) * 15 : deg
 
-      store.updateStyle(id, {
+      store.updateGeometryRaw(id, {
+        mode: 'free',
         rotate: Math.round(finalDeg),
       })
     }, 16)

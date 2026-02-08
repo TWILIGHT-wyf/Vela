@@ -91,14 +91,14 @@ const boxStyle = computed(() => {
   // Trigger reactivity explicitly via styleVersion
   const _v = store.styleVersion[node.id]
 
-  // Read positioning from node.layout, sizing from node.style
-  const layout = node.layout || {}
+  // Read free-mode positioning from node.geometry, sizing from geometry/style
+  const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
   const style = node.style || {}
-  const x = layout.x ?? 0
-  const y = layout.y ?? 0
-  const rotate = layout.rotate ?? 0
-  const width = style.width ?? 100
-  const height = style.height ?? 100
+  const x = geometry?.x ?? 0
+  const y = geometry?.y ?? 0
+  const rotate = geometry?.rotate ?? 0
+  const width = geometry?.width ?? style.width ?? 100
+  const height = geometry?.height ?? style.height ?? 100
 
   return {
     transform: `translate(${x}px, ${y}px) rotate(${rotate}deg)`,
@@ -114,20 +114,20 @@ const boxStyle = computed(() => {
 })
 
 const handleDragStart = (e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value?.style) {
-    startDrag(selectedId.value, selectedNode.value.style, e)
+  if (selectedId.value && selectedNode.value) {
+    startDrag(selectedId.value, selectedNode.value, e)
   }
 }
 
 const handleResizeStart = (handle: ResizeHandle, e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value?.style) {
-    startResize(selectedId.value, handle, selectedNode.value.style, e)
+  if (selectedId.value && selectedNode.value) {
+    startResize(selectedId.value, handle, selectedNode.value, e)
   }
 }
 
 const handleRotateStart = (e: MouseEvent) => {
-  if (selectedId.value && selectedNode.value?.style) {
-    startRotate(selectedId.value, selectedNode.value.style, e)
+  if (selectedId.value && selectedNode.value) {
+    startRotate(selectedId.value, selectedNode.value, e)
   }
 }
 </script>

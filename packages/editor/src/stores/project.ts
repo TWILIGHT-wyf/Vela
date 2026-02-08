@@ -64,12 +64,14 @@ export const useProjectStore = defineStore('project', () => {
   function normalizePageLayouts() {
     if (!Array.isArray(project.value.pages)) return
     for (const page of project.value.pages) {
-      if (!page.config) page.config = { defaultLayout: 'flow' }
-      if (page.config.defaultLayout !== 'flow' && page.config.defaultLayout !== 'free') {
-        page.config.defaultLayout = 'flow'
+      if (!page.config) page.config = { defaultLayoutMode: 'flow' }
+      if (page.config.defaultLayoutMode !== 'flow' && page.config.defaultLayoutMode !== 'free') {
+        page.config.defaultLayoutMode = 'flow'
       }
       if (page.children) {
-        page.children.childLayout = page.config.defaultLayout
+        page.children.container = {
+          mode: page.config.defaultLayoutMode,
+        }
       }
     }
   }
@@ -82,14 +84,14 @@ export const useProjectStore = defineStore('project', () => {
       name: 'Home',
       path: '/',
       config: {
-        defaultLayout: 'flow',
+        defaultLayoutMode: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: 'root',
         component: 'Page',
-        childLayout: 'flow',
+        container: { mode: 'flow' },
         props: {},
         style: {
           width: '100%',
@@ -121,14 +123,14 @@ export const useProjectStore = defineStore('project', () => {
       name,
       path: `/${name.toLowerCase()}`,
       config: {
-        defaultLayout: 'flow',
+        defaultLayoutMode: 'flow',
       },
       state: [],
       apis: [],
       children: {
         id: `root_${pageId}`,
         component: 'Page',
-        childLayout: 'flow',
+        container: { mode: 'flow' },
         props: {},
         style: {
           width: '100%',
@@ -159,8 +161,10 @@ export const useProjectStore = defineStore('project', () => {
   function updatePageConfig(config: Partial<PageConfig>) {
     if (currentPage.value && currentPage.value.config) {
       Object.assign(currentPage.value.config, config)
-      if (config.defaultLayout !== undefined && currentPage.value.children) {
-        currentPage.value.children.childLayout = config.defaultLayout
+      if (config.defaultLayoutMode !== undefined && currentPage.value.children) {
+        currentPage.value.children.container = {
+          mode: config.defaultLayoutMode,
+        }
       }
     }
   }
@@ -168,9 +172,9 @@ export const useProjectStore = defineStore('project', () => {
   function changePageLayout(pageId: string, layout: 'free' | 'flow'): boolean {
     const page = project.value.pages.find((p) => p.id === pageId)
     if (page && page.config) {
-      page.config.defaultLayout = layout
+      page.config.defaultLayoutMode = layout
       if (page.children) {
-        page.children.childLayout = layout
+        page.children.container = { mode: layout }
       }
       return true
     }

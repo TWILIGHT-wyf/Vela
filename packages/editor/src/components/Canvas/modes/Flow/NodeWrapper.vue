@@ -117,20 +117,20 @@ const wrapperStyle = computed<CSSProperties>(() => {
     return isContainer.value ? { width: '100%' } : {}
   }
 
-  // Free mode: read positioning from node.layout, sizing from node.style
+  // Free mode: read positioning from node.geometry, sizing from geometry/style
   if (props.parentLayoutMode === 'free') {
-    const layout = node.layout || {}
+    const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
     const style = node.style || {}
-    const rotate = Number(layout.rotate ?? 0)
+    const rotate = Number(geometry?.rotate ?? 0)
     const rotateTransform = rotate ? `rotate(${rotate}deg)` : undefined
 
     return {
       position: 'absolute',
-      left: formatValue(layout.x as number | undefined, 0),
-      top: formatValue(layout.y as number | undefined, 0),
-      width: formatValue(style.width as string | number | undefined, 'auto'),
-      height: formatValue(style.height as string | number | undefined, 'auto'),
-      zIndex: (style.zIndex as number | undefined) ?? 0,
+      left: formatValue(geometry?.x as number | undefined, 0),
+      top: formatValue(geometry?.y as number | undefined, 0),
+      width: formatValue((geometry?.width ?? style.width) as string | number | undefined, 'auto'),
+      height: formatValue((geometry?.height ?? style.height) as string | number | undefined, 'auto'),
+      zIndex: (geometry?.zIndex ?? (style.zIndex as number | undefined)) ?? 0,
       transform: rotateTransform || undefined,
       transformOrigin: rotateTransform ? 'center center' : undefined,
     }

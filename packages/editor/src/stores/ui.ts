@@ -90,7 +90,7 @@ export const useUIStore = defineStore('ui', () => {
   const { currentPage } = storeToRefs(projectStore)
 
   watch(
-    () => currentPage.value?.config?.layout,
+    () => currentPage.value?.config?.defaultLayoutMode,
     (newLayout) => {
       if (newLayout && newLayout !== canvasMode.value) {
         canvasMode.value = newLayout as 'free' | 'flow'

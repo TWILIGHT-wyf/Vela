@@ -362,24 +362,26 @@ const submitCreate = async () => {
       name: createForm.value.name,
       description: `${selectedCat?.label || ''}#${createForm.value.description}`, // 将类型标签存入描述方便解析
       schema: {
-        version: '1.5.0',
+        version: '2.0.0',
         name: createForm.value.name,
         description: createForm.value.description,
         config: {
-          layout: 'pc',
-          theme: 'light',
+          target: 'pc',
+          themeId: 'light',
         },
         pages: [
           {
             id: generateId('page'),
+            type: 'page',
             name: 'Home',
             path: '/',
             config: {
-              layout: 'free',
+              defaultLayoutMode: 'free',
             },
             children: {
               id: generateId('root'),
-              componentName: 'Page',
+              component: 'Page',
+              container: { mode: 'free' },
               props: {},
               style: {
                 width: '100%',

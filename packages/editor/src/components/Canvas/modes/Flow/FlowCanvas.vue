@@ -121,7 +121,7 @@ provide('flowDrop', flowDrop)
 const isRootDragOver = ref(false)
 
 const rootLayoutMode = computed(() =>
-  rootNode.value?.layoutMode === 'free' ? 'free' : 'flow',
+  rootNode.value?.container?.mode === 'free' ? 'free' : 'flow',
 )
 
 /**

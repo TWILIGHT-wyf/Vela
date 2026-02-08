@@ -1,4 +1,4 @@
-import type { NodeSchema, NodeStyle, NodeLayout } from '@vela/core'
+import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
 import type { Command, CommandType } from './types'
 
 /**
@@ -15,8 +15,8 @@ export interface ComponentStoreAccessor {
   updateStyleRaw(id: string, style: Partial<NodeStyle>): void
   updatePropsRaw(id: string, props: Record<string, unknown>): void
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
-  updateLayoutRaw(id: string, layout: Partial<NodeLayout>): void
-  updateChildLayoutRaw(id: string, childLayout: NodeSchema['childLayout']): void
+  updateGeometryRaw(id: string, geometry: Partial<NodeGeometry>): void
+  updateChildLayoutRaw(id: string, childLayout: 'free' | 'flow' | undefined): void
 }
 
 // Store accessor 将在初始化时设置
@@ -350,20 +350,20 @@ export class UpdateDataSourceCommand implements Command {
  * 更新画布布局命令
  * 用于自由定位模式下的 x/y/rotate 等变更
  */
-export class UpdateLayoutCommand implements Command {
-  readonly type: CommandType = 'update-layout'
+export class UpdateGeometryCommand implements Command {
+  readonly type: CommandType = 'update-geometry'
   readonly description: string
 
   private id: string
-  private newLayout: Partial<NodeLayout>
-  private oldLayout?: Partial<NodeLayout>
+  private newGeometry: Partial<NodeGeometry>
+  private oldGeometry?: Partial<NodeGeometry>
   private timestamp: number
 
-  constructor(id: string, newLayout: Partial<NodeLayout>) {
+  constructor(id: string, newGeometry: Partial<NodeGeometry>) {
     this.id = id
-    this.newLayout = structuredClone(newLayout)
+    this.newGeometry = structuredClone(newGeometry)
     this.timestamp = Date.now()
-    this.description = `Update layout of ${id}`
+    this.description = `Update geometry of ${id}`
   }
 
   execute(): void {
@@ -372,25 +372,22 @@ export class UpdateLayoutCommand implements Command {
 
     // 保存旧值
     if (node) {
-      this.oldLayout = {}
-      for (const key of Object.keys(this.newLayout)) {
-        this.oldLayout[key as keyof NodeLayout] = node.layout?.[key as keyof NodeLayout]
-      }
+      this.oldGeometry = node.geometry ? structuredClone(node.geometry) : undefined
     }
 
-    store.updateLayoutRaw(this.id, this.newLayout)
+    store.updateGeometryRaw(this.id, this.newGeometry)
   }
 
   undo(): void {
     const store = getStore()
-    if (this.oldLayout) {
-      store.updateLayoutRaw(this.id, this.oldLayout)
+    if (this.oldGeometry) {
+      store.updateGeometryRaw(this.id, this.oldGeometry)
     }
   }
 
   redo(): void {
     const store = getStore()
-    store.updateLayoutRaw(this.id, this.newLayout)
+    store.updateGeometryRaw(this.id, this.newGeometry)
   }
 
   /**
@@ -398,8 +395,8 @@ export class UpdateLayoutCommand implements Command {
    * 连续的同一组件布局更新可以合并（300ms 内，用于拖拽）
    */
   canMerge(other: Command): boolean {
-    if (other.type !== 'update-layout') return false
-    const otherCmd = other as UpdateLayoutCommand
+    if (other.type !== 'update-geometry') return false
+    const otherCmd = other as UpdateGeometryCommand
     return otherCmd.id === this.id && this.timestamp - otherCmd.timestamp < 300
   }
 
@@ -407,13 +404,13 @@ export class UpdateLayoutCommand implements Command {
    * 合并另一个命令
    */
   merge(other: Command): Command {
-    const otherCmd = other as UpdateLayoutCommand
-    const merged = new UpdateLayoutCommand(this.id, {
-      ...otherCmd.newLayout,
-      ...this.newLayout,
+    const otherCmd = other as UpdateGeometryCommand
+    const merged = new UpdateGeometryCommand(this.id, {
+      ...otherCmd.newGeometry,
+      ...this.newGeometry,
     })
-    // 保留最早的 oldLayout
-    merged.oldLayout = otherCmd.oldLayout
+    // 保留最早的 oldGeometry
+    merged.oldGeometry = otherCmd.oldGeometry
     return merged
   }
 }
@@ -422,17 +419,17 @@ export class UpdateLayoutCommand implements Command {
  * 更新子节点布局模式命令
  */
 export class UpdateChildLayoutCommand implements Command {
-  readonly type: CommandType = 'update-child-layout'
+  readonly type: CommandType = 'update-container-layout'
   readonly description: string
 
   private id: string
-  private newChildLayout: NodeSchema['childLayout']
-  private oldChildLayout?: NodeSchema['childLayout']
+  private newChildLayout: 'free' | 'flow' | undefined
+  private oldChildLayout?: 'free' | 'flow'
 
-  constructor(id: string, childLayout: NodeSchema['childLayout']) {
+  constructor(id: string, childLayout: 'free' | 'flow' | undefined) {
     this.id = id
     this.newChildLayout = childLayout
-    this.description = `Update child layout of ${id}`
+    this.description = `Update container layout of ${id}`
   }
 
   execute(): void {
@@ -440,7 +437,7 @@ export class UpdateChildLayoutCommand implements Command {
     const node = store.findNodeById(null, this.id)
 
     if (node) {
-      this.oldChildLayout = node.childLayout
+      this.oldChildLayout = node.container?.mode
     }
 
     store.updateChildLayoutRaw(this.id, this.newChildLayout)

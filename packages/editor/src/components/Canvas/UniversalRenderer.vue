@@ -86,11 +86,11 @@ const { resolvedProps } = useDataSourceAdapter(nodeRef)
 
 const effectiveParentLayoutMode = computed(() => props.parentLayoutMode || 'flow')
 const selfChildrenLayoutMode = computed(
-  () => props.node.childLayout || effectiveParentLayoutMode.value,
+  () => props.node.container?.mode || effectiveParentLayoutMode.value,
 )
 
 // Style Logic: Only strip sizing properties managed by wrapper
-// With layout/style separation, x/y/rotate live in node.layout (not style)
+// With layout/style separation, free-mode geometry lives in node.geometry
 const innerStyle = computed(() => {
   if (!props.node.style) return {}
   const style = { ...props.node.style }
@@ -101,7 +101,7 @@ const innerStyle = computed(() => {
   delete style.minHeight
 
   // Free layout containers need a positioning context for absolute children
-  if (props.node.childLayout === 'free') {
+  if (props.node.container?.mode === 'free') {
     style.position = 'relative'
   }
 

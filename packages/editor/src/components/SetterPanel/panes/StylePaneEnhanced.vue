@@ -285,16 +285,16 @@ const CONTAINER_COMPONENTS = [
 ]
 
 const isContainer = computed(() => {
-  return !!props.node && CONTAINER_COMPONENTS.includes(props.node.componentName)
+  return !!props.node && CONTAINER_COMPONENTS.includes(props.node.component || props.node.componentName || '')
 })
 
 const layoutModeValue = computed(() => {
-  return (props.node?.layoutMode || 'flow') as 'flow' | 'free'
+  return (props.node?.container?.mode || 'flow') as 'flow' | 'free'
 })
 
 function setLayoutMode(mode: 'flow' | 'free') {
   if (!props.node) return
-  componentStore.updateLayoutMode(props.node.id, mode)
+  componentStore.updateContainerLayout(props.node.id, mode)
 }
 
 // 获取当前组件的 Meta 样式配置（包含 styles 和 group='样式' 的 props）

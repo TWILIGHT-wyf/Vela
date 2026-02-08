@@ -568,8 +568,10 @@ function flattenNodeSchema(node: NodeSchema): any[] {
   const result: any[] = []
 
   function traverse(n: NodeSchema, groupId?: string) {
+    const componentName = n.component || n.componentName || ''
+
     // 跳过根节点（Page/Container），只处理其子节点
-    if (n.componentName === 'Page' || n.componentName === 'Container') {
+    if (componentName === 'Page' || componentName === 'Container') {
       if (n.children) {
         for (const child of n.children) {
           traverse(child, groupId)
@@ -578,18 +580,19 @@ function flattenNodeSchema(node: NodeSchema): any[] {
       return
     }
 
-    // 从 style 中提取位置和尺寸
+    // 从 geometry/style 中提取位置和尺寸
     const style = n.style || {}
+    const geometry = n.geometry?.mode === 'free' ? n.geometry : undefined
     const component = {
       id: n.id,
-      type: n.componentName,
+      type: componentName,
       position: {
-        x: typeof style.x === 'number' ? style.x : 0,
-        y: typeof style.y === 'number' ? style.y : 0,
+        x: geometry?.x ?? 0,
+        y: geometry?.y ?? 0,
       },
       size: {
-        width: typeof style.width === 'number' ? style.width : 100,
-        height: typeof style.height === 'number' ? style.height : 100,
+        width: typeof (geometry?.width ?? style.width) === 'number' ? (geometry?.width ?? style.width) : 100,
+        height: typeof (geometry?.height ?? style.height) === 'number' ? (geometry?.height ?? style.height) : 100,
       },
       props: n.props,
       style: n.style,

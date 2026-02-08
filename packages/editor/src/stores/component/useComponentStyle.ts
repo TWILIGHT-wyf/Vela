@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { NodeSchema, NodeStyle } from '@vela/core'
+import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
 import type { ComponentIndexContext } from './useComponentIndex'
 
 /**
@@ -78,16 +78,35 @@ export function useComponentStyle(
   }
 
   /**
+   * [Raw] 更新几何信息 - 不记录历史
+   */
+  function updateGeometryRaw(id: string, geometry: Partial<NodeGeometry>): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.geometry = {
+      ...(node.geometry || { mode: 'free' }),
+      ...geometry,
+    } as NodeGeometry
+
+    incrementVersion(id)
+    syncToProjectStore()
+  }
+
+  /**
    * [Raw] 更新布局模式 - 不记录历史
    */
-  function updateLayoutModeRaw(
+  function updateContainerLayoutRaw(
     id: string,
-    layoutMode: NodeSchema['layoutMode'],
+    layoutMode: 'free' | 'flow',
   ): void {
     const node = nodeIndex.get(id)
     if (!node) return
 
-    node.layoutMode = layoutMode
+    node.container = {
+      ...(node.container || {}),
+      mode: layoutMode,
+    }
     incrementVersion(id)
     syncToProjectStore()
   }
@@ -130,7 +149,7 @@ export function useComponentStyle(
     id: string,
     styleName: string,
     defaultValue: T | undefined,
-    updateStyle: (id: string, style: Record<string, unknown>) => void,
+    updateStyle: (id: string, style: Partial<NodeStyle>) => void,
   ): import('vue').WritableComputedRef<T> {
     return computed({
       get: () => {
@@ -167,7 +186,7 @@ export function useComponentStyle(
   function createStyleRefs(
     id: string,
     styleConfigs: Array<{ name: string; defaultValue?: unknown }>,
-    updateStyle: (id: string, style: Record<string, unknown>) => void,
+    updateStyle: (id: string, style: Partial<NodeStyle>) => void,
   ): Record<string, import('vue').WritableComputedRef<unknown>> {
     const refs: Record<string, import('vue').WritableComputedRef<unknown>> = {}
     for (const config of styleConfigs) {
@@ -187,7 +206,8 @@ export function useComponentStyle(
     updateStyleRaw,
     updatePropsRaw,
     updateDataSourceRaw,
-    updateLayoutModeRaw,
+    updateGeometryRaw,
+    updateContainerLayoutRaw,
 
     // Ref Factories
     createPropRef,
