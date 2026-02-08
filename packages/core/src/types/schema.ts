@@ -7,6 +7,7 @@ import {
   type AnyActionSchema,
 } from './action'
 import type { VariableSchema } from './data'
+import type { LayoutMode, NodeContainerLayout, NodeGeometry } from './layout'
 
 // 重新导出 Expression 类型
 export type { Expression, ValueOrExpression } from './expression'
@@ -70,51 +71,15 @@ export interface AnimationConfig {
 }
 
 // ============================================================================
-// 编辑器布局 (画布定位，仅编辑器使用)
-// ============================================================================
-
-/**
- * 编辑器画布布局
- * 仅用于编辑器中的自由定位模式
- * 代码生成时会转换为对应的 CSS
- */
-export interface NodeLayout {
-  /** 画布 X 坐标 (px) */
-  x?: number
-  /** 画布 Y 坐标 (px) */
-  y?: number
-  /** 旋转角度 (度) */
-  rotate?: number
-  /** 缩放比例 */
-  scale?: number
-  /** 是否锁定位置 */
-  locked?: boolean
-  /** 是否隐藏 (编辑器中) */
-  hidden?: boolean
-}
-
-// ============================================================================
 // 节点样式 (框架无关，纯 CSS)
 // ============================================================================
 
 /**
  * 节点样式
  * 框架无关的 CSS 样式描述
- * 注：x/y/rotate/scale 已移至 NodeLayout
+ * 注：编辑器中的坐标/旋转/锁定等信息统一放在 geometry 字段
  */
 export interface NodeStyle {
-  // === 兼容旧字段（建议迁移到 layout）===
-  /** @deprecated Use layout.x instead */
-  x?: number | string
-  /** @deprecated Use layout.y instead */
-  y?: number | string
-  /** @deprecated Use layout.rotate instead */
-  rotate?: number
-  /** @deprecated Use layout.locked instead */
-  locked?: boolean
-  /** @deprecated Use visibility instead */
-  visible?: boolean
-
   // === 尺寸 ===
   width?: number | string
   height?: number | string
@@ -316,13 +281,19 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    */
   props?: P
 
+  /**
+   * 组件数据源配置
+   * 运行时可用于自动拉取并回填 props/state
+   */
+  dataSource?: Record<string, unknown>
+
   // ========== 布局 ==========
   /**
-   * 编辑器画布布局
-   * 仅在自由定位模式下使用
-   * 代码生成时转换为 CSS position/transform
+   * 编辑器画布几何信息
+   * - free: 使用 x/y/zIndex/rotate 等绝对定位参数
+   * - flow: 使用顺序与尺寸约束参数
    */
-  layout?: NodeLayout
+  geometry?: NodeGeometry
 
   // ========== 样式 ==========
   /** 节点样式 (纯 CSS) */
@@ -408,24 +379,15 @@ export interface NodeSchema<P = Record<string, PropValue>> {
 
   // ========== 容器布局 ==========
   /**
-   * 子节点布局模式（仅容器组件有意义）
-   * - 'free': 子节点使用 NodeLayout (x, y) 绝对定位
-   * - 'flow': 子节点使用文档流（由 style 的 display/flex 控制）
-   *
-   * 省略时继承父容器的模式，根节点默认 'flow'
+   * 容器对子节点的布局配置（仅容器组件有意义）
+   * 省略时继承父容器模式，根容器默认 flow
    */
-  childLayout?: 'free' | 'flow'
-
-  /**
-   * 兼容旧字段
-   * @deprecated Use childLayout instead
-   */
-  layoutMode?: 'free' | 'flow'
+  container?: NodeContainerLayout
 
   // ========== 响应式 ==========
   /**
    * 不同断点下的样式覆盖
-   * key 为断点名称（匹配 PageViewportConfig.breakpoints 中的 key）
+   * key 为断点名称（匹配 PageCanvasConfig.breakpoints 中的 key）
    * value 为需要覆盖的样式属性（与 style 浅合并）
    *
    * @example
@@ -451,19 +413,31 @@ export interface NodeSchema<P = Record<string, PropValue>> {
 }
 
 /**
- * 获取节点组件名（兼容 component/componentName）
+ * 获取节点组件标识（兼容 component/componentName）
  */
-export function getNodeComponentName(node: Pick<NodeSchema, 'component' | 'componentName'>): string {
+export function getNodeComponent(node: Pick<NodeSchema, 'component' | 'componentName'>): string {
   return node.component || node.componentName || ''
 }
 
 /**
- * 获取节点布局模式（兼容 childLayout/layoutMode）
+ * @deprecated Use getNodeComponent instead
  */
-export function getNodeLayoutMode(
-  node: Pick<NodeSchema, 'childLayout' | 'layoutMode'>
-): 'free' | 'flow' | undefined {
-  return node.childLayout ?? node.layoutMode
+export function getNodeComponentName(node: Pick<NodeSchema, 'component' | 'componentName'>): string {
+  return getNodeComponent(node)
+}
+
+/**
+ * 获取容器布局模式
+ */
+export function getNodeContainerMode(node: Pick<NodeSchema, 'container'>): LayoutMode | undefined {
+  return node.container?.mode
+}
+
+/**
+ * @deprecated Use getNodeContainerMode instead
+ */
+export function getNodeLayoutMode(node: Pick<NodeSchema, 'container'>): LayoutMode | undefined {
+  return getNodeContainerMode(node)
 }
 
 /**

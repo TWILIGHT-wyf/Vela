@@ -2,23 +2,27 @@ import { z } from 'zod'
 
 /**
  * Registry for component property validation schemas.
- * Key: "{componentName}.{propName}"
+ * Key: "{component}.{prop}"
  * Value: ZodSchema
  */
 export const PropSchemaRegistry = new Map<string, z.ZodTypeAny>()
 
+function buildPropSchemaKey(component: string, prop: string): string {
+  return `${component}.${prop}`
+}
+
 /**
  * Register a schema for a component property
  */
-export function registerPropSchema(componentName: string, propName: string, schema: z.ZodTypeAny) {
-  PropSchemaRegistry.set(`${componentName}.${propName}`, schema)
+export function registerPropSchema(component: string, prop: string, schema: z.ZodTypeAny) {
+  PropSchemaRegistry.set(buildPropSchemaKey(component, prop), schema)
 }
 
 /**
  * Get schema for validation
  */
-export function getPropSchema(componentName: string, propName: string): z.ZodTypeAny | undefined {
-  return PropSchemaRegistry.get(`${componentName}.${propName}`)
+export function getPropSchema(component: string, prop: string): z.ZodTypeAny | undefined {
+  return PropSchemaRegistry.get(buildPropSchemaKey(component, prop))
 }
 
 // 预定义一些通用 Schema

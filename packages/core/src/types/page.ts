@@ -13,6 +13,7 @@ import {
   type AnyActionSchema,
 } from './action'
 import type { ExpressionInput } from './expression'
+import type { LayoutMode, PageCanvasConfig } from './layout'
 
 // ============================================================================
 // 页面 SEO 配置
@@ -180,54 +181,6 @@ export interface PageComputedSchema {
 }
 
 // ============================================================================
-// 页面视口配置
-// ============================================================================
-
-/**
- * 视口模式
- */
-export type ViewportMode = 'inherit' | 'fixed' | 'responsive'
-
-/**
- * 缩放模式
- */
-export type ScaleMode = 'none' | 'fit' | 'cover' | 'stretch' | 'width' | 'height'
-
-/**
- * 页面视口/画布配置
- * - inherit: 继承容器尺寸（适用于嵌套页面/插槽）
- * - fixed: 固定尺寸（适用于大屏）
- * - responsive: 响应式（适用于多端）
- */
-export interface PageViewportConfig {
-  /** 视口模式 */
-  mode?: ViewportMode
-  /** 设计稿宽度 */
-  designWidth?: number
-  /** 设计稿高度 */
-  designHeight?: number
-  /** 最小宽度 */
-  minWidth?: number
-  /** 最大宽度 */
-  maxWidth?: number
-  /** 最小高度 */
-  minHeight?: number
-  /** 最大高度 */
-  maxHeight?: number
-  /** 缩放模式 */
-  scaleMode?: ScaleMode
-  /** 响应式断点 */
-  breakpoints?: Record<string, number>
-  /** 安全区域 */
-  safeArea?: {
-    top?: number
-    right?: number
-    bottom?: number
-    left?: number
-  }
-}
-
-// ============================================================================
 // 页面运行时配置
 // ============================================================================
 
@@ -328,17 +281,16 @@ export interface PageActionValidationResult {
 export interface PageConfig {
   /** 页面主题标识（可选覆盖项目主题） */
   themeId?: string
-  /** 视口/画布配置 */
-  viewport?: PageViewportConfig
+  /** 页面画布配置 */
+  canvas?: PageCanvasConfig
   /** 运行时相关配置 */
   runtime?: PageRuntimeConfig
   /**
    * 页面默认布局模式
-   * - 'free': Dashboard 型自由定位（子节点使用 NodeLayout x/y 绝对定位）
-   * - 'flow': 网页型文档流（子节点使用 CSS 文档流）
-   * 默认 'flow'
+   * - free: Dashboard 型自由定位
+   * - flow: 网页型文档流
    */
-  defaultLayout?: 'free' | 'flow'
+  defaultLayoutMode?: LayoutMode
   /** 预留扩展字段 */
   custom?: Record<string, unknown>
 }
@@ -590,6 +542,7 @@ export function createRoutePage(id: string, path: string, name: string = '新页
     children: {
       id: `${id}_root`,
       component: 'Page',
+      container: { mode: 'flow' },
       children: [],
     },
   }
@@ -606,6 +559,7 @@ export function createFragmentPage(id: string, name: string = '片段'): Fragmen
     children: {
       id: `${id}_root`,
       component: 'Fragment',
+      container: { mode: 'flow' },
       children: [],
     },
   }
@@ -628,6 +582,7 @@ export function createDialogPage(id: string, name: string = '弹窗'): DialogPag
     children: {
       id: `${id}_root`,
       component: 'Dialog',
+      container: { mode: 'flow' },
       children: [],
     },
   }
@@ -646,6 +601,7 @@ export function createComponentPage(id: string, name: string = '组件'): Compon
     children: {
       id: `${id}_root`,
       component: 'Container',
+      container: { mode: 'flow' },
       children: [],
     },
   }
@@ -665,6 +621,7 @@ export function createDefaultLayout(id: string, name: string = '默认布局'): 
     children: {
       id: `${id}_root`,
       component: 'Layout',
+      container: { mode: 'flow' },
       children: [],
     },
   }

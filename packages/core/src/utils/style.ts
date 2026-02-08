@@ -1,5 +1,5 @@
 import type { NodeSchema, NodeStyle } from '../types/schema'
-import type { LayoutMode } from '../compat/legacy'
+import type { LayoutMode, NodeGeometry } from '../types/layout'
 
 /**
  * CSS 样式类型（不依赖 Vue）
@@ -31,34 +31,49 @@ export function parseStyleValue(value: unknown, defaultValue: number): number {
 /**
  * Extract position from NodeStyle
  */
-export function extractPosition(style: NodeStyle | undefined): { x: number; y: number } {
-  if (!style) return { x: 0, y: 0 }
+export function extractPosition(
+  style: NodeStyle | undefined,
+  geometry?: NodeGeometry,
+): { x: number; y: number } {
+  if (geometry?.mode === 'free') {
+    return {
+      x: geometry.x ?? 0,
+      y: geometry.y ?? 0,
+    }
+  }
 
   return {
-    x: style.x !== undefined ? parseStyleValue(style.x, 0) : parseStyleValue(style.left, 0),
-    y: style.y !== undefined ? parseStyleValue(style.y, 0) : parseStyleValue(style.top, 0),
+    x: parseStyleValue(style?.left, 0),
+    y: parseStyleValue(style?.top, 0),
   }
 }
 
 /**
  * Extract size from NodeStyle
  */
-export function extractSize(style: NodeStyle | undefined): { width: number; height: number } {
-  if (!style) return { width: 100, height: 100 }
+export function extractSize(
+  style: NodeStyle | undefined,
+  geometry?: NodeGeometry,
+): { width: number; height: number } {
+  if (!style && !geometry) return { width: 100, height: 100 }
+
+  const width = geometry?.width ?? style?.width
+  const height = geometry?.height ?? style?.height
 
   return {
-    width: parseStyleValue(style.width, 100),
-    height: parseStyleValue(style.height, 100),
+    width: parseStyleValue(width, 100),
+    height: parseStyleValue(height, 100),
   }
 }
 
 /**
  * Extract rotation from NodeStyle
  */
-export function extractRotation(style: NodeStyle | undefined): number {
+export function extractRotation(style: NodeStyle | undefined, geometry?: NodeGeometry): number {
+  if (geometry?.mode === 'free' && typeof geometry.rotate === 'number') {
+    return geometry.rotate
+  }
   if (!style) return 0
-
-  if (typeof style.rotate === 'number') return style.rotate
 
   const transform = style.transform || ''
   const match = transform.match(/rotate\(([-\d.]+)deg\)/)
@@ -79,18 +94,18 @@ export function extractZIndex(style: NodeStyle | undefined): number {
 /**
  * Check if node is locked
  */
-export function isNodeLocked(style: NodeStyle | undefined): boolean {
-  return style?.locked === true
+export function isNodeLocked(_style: NodeStyle | undefined, geometry?: NodeGeometry): boolean {
+  return geometry?.mode === 'free' && geometry.locked === true
 }
 
 /**
  * Check if node is visible
  */
-export function isNodeVisible(style: NodeStyle | undefined): boolean {
-  if (!style) return true
-  if ('visible' in style) {
-    return style.visible !== false
+export function isNodeVisible(style: NodeStyle | undefined, geometry?: NodeGeometry): boolean {
+  if (geometry?.mode === 'free' && geometry.hidden === true) {
+    return false
   }
+  if (!style) return true
   if (style.visibility === 'hidden') {
     return false
   }
@@ -103,6 +118,7 @@ export function isNodeVisible(style: NodeStyle | undefined): boolean {
 export function generateLayoutCSS(
   style: NodeStyle | undefined,
   mode: LayoutMode = 'free',
+  geometry?: NodeGeometry,
 ): ComponentCSSStyle {
   if (mode === 'flow') {
     const css: ComponentCSSStyle = {
@@ -122,44 +138,11 @@ export function generateLayoutCSS(
     return css
   }
 
-  if (mode === 'flex') {
-    // Flex Layout Mode: Use flex item properties
-    const css: ComponentCSSStyle = {
-      position: 'relative', // Flex items are relative by default
-    }
-
-    // Flex Item Properties
-    if (style?.flexGrow !== undefined) css.flexGrow = style.flexGrow
-    if (style?.flexShrink !== undefined) css.flexShrink = style.flexShrink
-    if (style?.flexBasis)
-      css.flexBasis = typeof style.flexBasis === 'number' ? `${style.flexBasis}px` : style.flexBasis
-    if (style?.alignSelf) css.alignSelf = style.alignSelf
-
-    // Spacing (Margin)
-    if (style?.margin) css.margin = style.margin as string
-
-    // Size (Flex items still respect width/height as base size)
-    if (style?.width) css.width = typeof style.width === 'number' ? `${style.width}px` : style.width
-    if (style?.height)
-      css.height = typeof style.height === 'number' ? `${style.height}px` : style.height
-
-    // Z-Index (Flex items support z-index)
-    if (style?.zIndex !== undefined) css.zIndex = style.zIndex
-
-    // Transform (Optional support in flex)
-    if (style?.rotate || style?.transform) {
-      const rotation = extractRotation(style)
-      css.transform = `rotate(${rotation}deg)`
-    }
-
-    return css
-  }
-
   // Default: Free layout (Absolute Positioning)
-  const position = extractPosition(style)
-  const size = extractSize(style)
-  const rotation = extractRotation(style)
-  const zIndex = extractZIndex(style)
+  const position = extractPosition(style, geometry)
+  const size = extractSize(style, geometry)
+  const rotation = extractRotation(style, geometry)
+  const zIndex = geometry?.mode === 'free' ? (geometry.zIndex ?? extractZIndex(style)) : extractZIndex(style)
 
   return {
     position: 'absolute',
@@ -189,8 +172,8 @@ export function generateVisualCSS(style: NodeStyle | undefined): ComponentCSSSty
   }
 
   // Visibility
-  if ('visible' in style && style.visible === false) {
-    css.display = 'none'
+  if (style.visibility === 'hidden') {
+    css.visibility = 'hidden'
   }
 
   // Background

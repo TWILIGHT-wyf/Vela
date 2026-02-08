@@ -51,7 +51,7 @@ export type NormalizedPageRef = Exclude<PageRef, string>
 /**
  * 路由页面引用字段
  */
-export type RouterPageRefKey = 'homePageId' | 'notFoundPageId' | 'loginPageId'
+export type RouterPageRefKey = 'homePage' | 'notFoundPage' | 'loginPage'
 
 /**
  * 标准化页面引用
@@ -64,13 +64,6 @@ export function normalizePageRef(pageRef: PageRef): NormalizedPageRef {
   return pageRef
 }
 
-function normalizeLegacyPagePath(path?: string): NormalizedPageRef | undefined {
-  if (!path) {
-    return undefined
-  }
-  return { type: 'path', path }
-}
-
 /**
  * 路由配置
  */
@@ -79,29 +72,21 @@ export interface RouterConfig {
   mode?: RouterMode
   /** 基础路径 */
   basePath?: string
-  /** 首页 (推荐使用 pageId) */
-  homePageId?: PageRef
+  /** 首页页面 */
+  homePage?: PageRef
   /** 404 页面 */
-  notFoundPageId?: PageRef
+  notFoundPage?: PageRef
   /** 登录页面 */
-  loginPageId?: PageRef
+  loginPage?: PageRef
   /** 路由重定向规则 */
   redirects?: Array<{
     from: string
     to: string | PageRef
   }>
-
-  // === 兼容旧字段 ===
-  /** @deprecated Use homePageId instead */
-  homePage?: string
-  /** @deprecated Use notFoundPageId instead */
-  notFoundPage?: string
-  /** @deprecated Use loginPageId instead */
-  loginPage?: string
 }
 
 /**
- * 获取路由配置中的页面引用（含旧字段兼容）
+ * 获取路由配置中的页面引用
  */
 export function getRouterPageRef(
   router: RouterConfig | undefined,
@@ -111,18 +96,12 @@ export function getRouterPageRef(
     return undefined
   }
 
-  const explicitRef = router[key]
-  if (explicitRef) {
-    return normalizePageRef(explicitRef)
+  const pageRef = router[key]
+  if (!pageRef) {
+    return undefined
   }
 
-  if (key === 'homePageId') {
-    return normalizeLegacyPagePath(router.homePage)
-  }
-  if (key === 'notFoundPageId') {
-    return normalizeLegacyPagePath(router.notFoundPage)
-  }
-  return normalizeLegacyPagePath(router.loginPage)
+  return normalizePageRef(pageRef)
 }
 
 /**
@@ -182,12 +161,6 @@ export interface ProjectConfig {
   router?: RouterConfig
   /** 构建配置 */
   build?: BuildConfig
-
-  // === 兼容旧字段 ===
-  /** @deprecated Use target instead */
-  layout?: 'mobile' | 'pc'
-  /** @deprecated Use themeId instead */
-  theme?: string
 }
 
 // ============================================================================
@@ -647,7 +620,7 @@ export function createDefaultProject(name: string = 'Untitled', id?: string): Pr
       target: 'pc',
       router: {
         mode: 'hash',
-        homePageId: { type: 'path', path: '/' },
+        homePage: { type: 'path', path: '/' },
       },
     },
     pages: [],

@@ -6,6 +6,7 @@
 // - compatibility: @vela/core/compat
 export * from './expression'
 export * from './action'
+export * from './layout'
 export * from './schema'
 export * from './project'
 export * from './material'

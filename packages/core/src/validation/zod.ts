@@ -40,14 +40,9 @@ const PropValueSchema = z.union([
 
 export const NodeStyleSchema = z
   .object({
-    // Layout
-    x: z.number().optional(),
-    y: z.number().optional(),
+    // Size
     width: z.union([z.number(), z.string()]).optional(),
     height: z.union([z.number(), z.string()]).optional(),
-
-    // Transform
-    rotate: z.number().optional(),
 
     // Flex
     display: z.string().optional(),
@@ -63,7 +58,7 @@ export const NodeStyleSchema = z
     // Visual
     backgroundColor: z.string().optional(),
     opacity: z.number().min(0).max(1).optional(),
-    visible: z.boolean().optional(),
+    visibility: z.enum(['visible', 'hidden']).optional(),
     zIndex: z.number().optional(),
   })
   .passthrough() // 允许任意 CSS
@@ -114,7 +109,7 @@ const ActionHandlersSchema = z.object({
   complete: ActionCallbackRefSchema.optional(),
 })
 
-export const ActionZodSchema = z
+export const ActionSchema = z
   .object({
     id: z.string(),
     type: z.string(), // 'setState', 'callApi', 'navigate', etc.
@@ -146,7 +141,7 @@ export const ActionZodSchema = z
   .passthrough()
 
 // 节点事件动作项：支持内联动作定义和动作引用
-const NodeEventActionSchema = z.union([ActionZodSchema, ActionLinkRefSchema])
+const NodeEventActionSchema = z.union([ActionSchema, ActionLinkRefSchema])
 
 // ==========================================
 // 4. 节点定义 (递归)
@@ -157,14 +152,46 @@ const BaseNodeSchema = z.object({
   component: z.string().optional(),
   title: z.string().optional(),
   props: z.record(z.string(), z.unknown()).optional(),
-  layout: z
+  dataSource: z.record(z.string(), z.unknown()).optional(),
+  geometry: z
     .object({
+      mode: z.enum(['free', 'flow']),
+      // free
       x: z.number().optional(),
       y: z.number().optional(),
+      zIndex: z.number().optional(),
       rotate: z.number().optional(),
-      scale: z.number().optional(),
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
       locked: z.boolean().optional(),
       hidden: z.boolean().optional(),
+      // size
+      width: z.union([z.number(), z.string()]).optional(),
+      height: z.union([z.number(), z.string()]).optional(),
+      minWidth: z.union([z.number(), z.string()]).optional(),
+      maxWidth: z.union([z.number(), z.string()]).optional(),
+      minHeight: z.union([z.number(), z.string()]).optional(),
+      maxHeight: z.union([z.number(), z.string()]).optional(),
+      // flow
+      order: z.number().optional(),
+    })
+    .optional(),
+  container: z
+    .object({
+      mode: z.enum(['free', 'flow']),
+      snapToGrid: z.boolean().optional(),
+      gridSize: z.number().optional(),
+      allowOverlap: z.boolean().optional(),
+      direction: z.enum(['row', 'column']).optional(),
+      wrap: z.enum(['nowrap', 'wrap', 'wrap-reverse']).optional(),
+      justify: z
+        .enum(['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'])
+        .optional(),
+      align: z.enum(['flex-start', 'center', 'flex-end', 'stretch', 'baseline']).optional(),
+      alignContent: z
+        .enum(['flex-start', 'center', 'flex-end', 'stretch', 'space-between', 'space-around'])
+        .optional(),
+      gap: z.union([z.number(), z.string()]).optional(),
     })
     .optional(),
   style: NodeStyleSchema.optional(),
@@ -202,7 +229,7 @@ const BaseNodeSchema = z.object({
 
   // 事件
   events: z.record(z.string(), z.array(NodeEventActionSchema)).optional(),
-  actions: z.array(ActionZodSchema).optional(),
+  actions: z.array(ActionSchema).optional(),
 
   // 动画
   animation: z
@@ -219,9 +246,6 @@ const BaseNodeSchema = z.object({
     })
     .optional(),
 
-  childLayout: z.enum(['free', 'flow']).optional(),
-  // 兼容旧字段
-  layoutMode: z.enum(['free', 'flow']).optional(),
   responsive: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
 }).superRefine((node, ctx) => {
   if (!node.component && !node.componentName) {
@@ -246,7 +270,7 @@ export const NodeZodSchema: z.ZodType<NodeSchemaType> = BaseNodeSchema.extend({
 // 5. 物料协议
 // ==========================================
 
-export const PropSchemaSchema = z.object({
+export const PropSchema = z.object({
   name: z.string(),
   label: z.string(),
   setter: z.string(), // 'StringSetter', etc.
@@ -254,14 +278,14 @@ export const PropSchemaSchema = z.object({
   group: z.string().optional(),
 })
 
-export const MaterialMetaSchema = z.object({
+export const MaterialMetaZodSchema = z.object({
   name: z.string(),
   title: z.string(),
   version: z.string(),
   category: z.string(),
   props: z.union([
-    z.array(PropSchemaSchema),
-    z.record(z.string(), PropSchemaSchema), // 支持 legacy object format
+    z.array(PropSchema),
+    z.record(z.string(), PropSchema), // 支持 legacy object format
   ]),
   assets: z
     .object({
@@ -287,7 +311,7 @@ const ValidationRuleSchema = z.object({
 })
 
 // 变量定义
-export const VariableSchemaSchema = z.object({
+export const VariableSchema = z.object({
   key: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'object', 'array', 'any']),
   defaultValue: z.unknown().optional(),
@@ -338,7 +362,7 @@ const ApiStateBindingSchema = z.object({
 })
 
 // API 定义
-export const ApiSchemaSchema = z.object({
+export const ApiSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
@@ -368,12 +392,37 @@ export const ApiSchemaSchema = z.object({
 // 7. 页面定义
 // ==========================================
 
-export const PageSchemaSchema = z.object({
+export const PageSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   children: NodeZodSchema,
-  state: z.array(VariableSchemaSchema).optional(),
-  apis: z.array(ApiSchemaSchema).optional(),
+  state: z.array(VariableSchema).optional(),
+  apis: z.array(ApiSchema).optional(),
 })
+
+/**
+ * @deprecated Use ActionSchema instead
+ */
+export const ActionZodSchema = ActionSchema
+/**
+ * @deprecated Use PropSchema instead
+ */
+export const PropSchemaSchema = PropSchema
+/**
+ * @deprecated Use MaterialMetaZodSchema instead
+ */
+export const MaterialMetaSchema = MaterialMetaZodSchema
+/**
+ * @deprecated Use VariableSchema instead
+ */
+export const VariableSchemaSchema = VariableSchema
+/**
+ * @deprecated Use ApiSchema instead
+ */
+export const ApiSchemaSchema = ApiSchema
+/**
+ * @deprecated Use PageSchema instead
+ */
+export const PageSchemaSchema = PageSchema

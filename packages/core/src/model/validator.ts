@@ -1,4 +1,4 @@
-import { NodeSchema, getNodeComponentName } from '../types/schema'
+import { NodeSchema, getNodeComponent } from '../types/schema'
 import { MaterialMeta } from '../types/material'
 
 /**
@@ -16,7 +16,7 @@ export class Validator {
     parent: NodeSchema | null,
     metaMap: Record<string, MaterialMeta>,
   ): void {
-    const component = getNodeComponentName(node)
+    const component = getNodeComponent(node)
     const meta = component ? metaMap[component] : undefined
 
     // 1. 物料存在性校验
@@ -43,7 +43,7 @@ export class Validator {
     _node: NodeSchema,
     metaMap: Record<string, MaterialMeta>,
   ) {
-    const parentComponent = getNodeComponentName(parent)
+    const parentComponent = getNodeComponent(parent)
     const parentMeta = parentComponent ? metaMap[parentComponent] : undefined
     if (parentMeta && parentMeta.isContainer === false) {
       throw new Error(`Cannot insert into non-container '${parentComponent}'`)
