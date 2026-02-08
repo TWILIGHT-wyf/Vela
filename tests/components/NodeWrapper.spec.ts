@@ -13,6 +13,13 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain(':data-id="nodeId"')
     expect(source).toContain(':data-component="componentLabel"')
     expect(source).toContain("'is-selected': isSelected.value")
+    expect(source).toContain('selectedIds.value.includes(props.nodeId)')
+  })
+
+  it('应支持修饰键点击切换多选', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    expect(source).toContain('toggleSelection')
+    expect(source).toContain('e.ctrlKey || e.metaKey || e.shiftKey')
   })
 
   it('free 父布局逻辑应使用 geometry 计算绝对定位', () => {
