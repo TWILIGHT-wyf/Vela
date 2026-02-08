@@ -14,7 +14,7 @@
 
     <!-- Transformed world layer -->
     <div class="canvas-world" :style="worldStyle">
-      <!-- Content (CanvasStage) -->
+      <!-- Content -->
       <slot />
 
       <!-- Overlay layer (Selection, SnapLines) -->

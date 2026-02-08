@@ -4,7 +4,6 @@
 
 // Components
 export { default as FlowCanvas } from './FlowCanvas.vue'
-export { default as FlowRenderer } from './FlowRenderer.vue'
 export { default as NodeWrapper } from './NodeWrapper.vue'
 export { default as DropIndicator } from './DropIndicator.vue'
 export { default as DropZone } from './DropZone.vue'
