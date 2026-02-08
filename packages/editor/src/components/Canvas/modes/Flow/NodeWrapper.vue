@@ -221,9 +221,13 @@ const wrapperStyle = computed<CSSProperties>(() => {
 
   // Flow mode: only width and minHeight matter
   const style = node.style || {}
+  const flowHeight = (style.height ?? style.minHeight) as string | number | undefined
+  const flowMinHeight = (style.minHeight ?? style.height) as string | number | undefined
   return {
     width: style.width || (isContainer.value ? '100%' : 'auto'),
-    minHeight: style.minHeight || style.height || 'auto',
+    // For ECharts-like components using 100% height, explicit height avoids 0-size init.
+    height: formatValue(flowHeight, 'auto'),
+    minHeight: formatValue(flowMinHeight, 'auto'),
   }
 })
 
@@ -403,7 +407,9 @@ const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
       patch.width = Math.round(pendingWidth)
     }
     if (pendingMinHeight !== undefined) {
-      patch.minHeight = Math.round(pendingMinHeight)
+      const nextHeight = Math.round(pendingMinHeight)
+      patch.minHeight = nextHeight
+      patch.height = nextHeight
     }
 
     if (Object.keys(patch).length > 0) {
