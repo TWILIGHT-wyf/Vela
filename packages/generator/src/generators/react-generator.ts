@@ -3,13 +3,10 @@
  * 基于 IR 中间表示生成 React TSX 代码
  */
 
-import * as t from '@babel/types'
-import generate from '@babel/generator'
 import type {
   IRNode,
   IRComponent,
   IRScriptContext,
-  IRStyleContext,
   IRDirective,
   IREvent,
   IRSlot,
@@ -53,24 +50,6 @@ const REACT_COMPONENT_MAP: Record<string, string> = {
   gaugeChart: 'ReactECharts',
   funnelChart: 'ReactECharts',
   sankeyChart: 'ReactECharts',
-}
-
-// 图表类型映射 (用于生成 ECharts option)
-const ECHARTS_TYPE_MAP: Record<string, string> = {
-  lineChart: 'line',
-  barChart: 'bar',
-  pieChart: 'pie',
-  doughnutChart: 'pie', // 圆环图是 pie 的变体
-  scatterChart: 'scatter',
-  radarChart: 'radar',
-  gaugeChart: 'gauge',
-  funnelChart: 'funnel',
-  sankeyChart: 'sankey',
-}
-
-// 判断是否是图表组件
-function isChartComponent(type: string): boolean {
-  return type in ECHARTS_TYPE_MAP
 }
 
 // ============================================================
@@ -175,13 +154,11 @@ export class ReactGenerator {
   }
 
   private generateElement(node: IRNode, indent: number): string {
-    const spaces = ' '.repeat(indent)
     const tagName = this.getReactComponentName(node.type)
 
     // 检查是否有 v-for 指令
     const forDirective = node.directives.find((d) => d.type === 'for')
     const ifDirective = node.directives.find((d) => d.type === 'if')
-    const showDirective = node.directives.find((d) => d.type === 'show')
 
     let element = ''
 
@@ -190,7 +167,7 @@ export class ReactGenerator {
       element = this.wrapWithCondition(
         ifDirective.condition!,
         () => this.generateBaseElement(node, tagName, indent, forDirective),
-        indent
+        indent,
       )
     } else {
       element = this.generateBaseElement(node, tagName, indent, forDirective)
@@ -208,7 +185,7 @@ export class ReactGenerator {
     node: IRNode,
     tagName: string,
     indent: number,
-    forDirective: IRDirective | undefined
+    forDirective: IRDirective | undefined,
   ): string {
     const spaces = ' '.repeat(indent)
     const attrs: string[] = []
@@ -235,16 +212,18 @@ export class ReactGenerator {
       attrs.push(`className="${node.classes.join(' ')}"`)
     }
 
-    // 生成 style
-    if (Object.keys(node.style).length > 0) {
-      const styleObj = this.convertStyleToReact(node.style as Record<string, unknown>)
-      attrs.push(`style={${JSON.stringify(styleObj)}}`)
-    }
-
-    // v-show -> style.display
+    // 生成 style（v-show 需要与静态样式合并，避免重复 style 属性）
+    const styleObj =
+      Object.keys(node.style).length > 0
+        ? this.convertStyleToReact(node.style as Record<string, unknown>)
+        : {}
     const showDirective = node.directives.find((d) => d.type === 'show')
     if (showDirective && showDirective.type === 'show') {
-      attrs.push(`style={{ ...style, display: ${showDirective.condition} ? undefined : 'none' }}`)
+      attrs.push(
+        `style={{ ...${JSON.stringify(styleObj)}, display: ${showDirective.condition} ? undefined : 'none' }}`,
+      )
+    } else if (Object.keys(styleObj).length > 0) {
+      attrs.push(`style={${JSON.stringify(styleObj)}}`)
     }
 
     // 生成 props
@@ -302,7 +281,11 @@ export class ReactGenerator {
     return `{${condition} && (\n${element}\n${spaces})}`
   }
 
-  private wrapWithMap(forDirective: IRDirective & { type: 'for' }, element: string, indent: number): string {
+  private wrapWithMap(
+    forDirective: IRDirective & { type: 'for' },
+    element: string,
+    indent: number,
+  ): string {
     const spaces = ' '.repeat(indent)
     return `{${forDirective.iterable}.map((${forDirective.itemName}, ${forDirective.indexName}) => (\n${element}\n${spaces}))}`
   }
@@ -331,11 +314,11 @@ export class ReactGenerator {
    * @param elementType - 元素类型（用于确定 onChange 的值获取方式）
    */
   private generateVModelProps(modelDirective: IRDirective, elementType: string): string[] {
-    if (modelDirective.type !== 'model' || !modelDirective.expression) {
+    if (modelDirective.type !== 'model' || !modelDirective.value) {
       return []
     }
 
-    const expression = modelDirective.expression
+    const expression = modelDirective.value
     const setterName = this.generateSetterName(expression)
     const props: string[] = []
 
@@ -343,19 +326,9 @@ export class ReactGenerator {
     switch (elementType.toLowerCase()) {
       case 'input':
       case 'textarea':
-        // 检查是否是 checkbox 或 radio（通过 modelDirective.arg 或其他方式）
-        const inputType = modelDirective.arg || 'text'
-        if (inputType === 'checkbox') {
-          props.push(`checked={${expression}}`)
-          props.push(`onChange={(e) => ${setterName}(e.target.checked)}`)
-        } else if (inputType === 'radio') {
-          props.push(`checked={${expression} === ${JSON.stringify(modelDirective.value)}}`)
-          props.push(`onChange={() => ${setterName}(${JSON.stringify(modelDirective.value)})}`)
-        } else {
-          // 普通文本输入
-          props.push(`value={${expression}}`)
-          props.push(`onChange={(e) => ${setterName}(e.target.value)}`)
-        }
+        // 默认转换为受控文本输入
+        props.push(`value={${expression}}`)
+        props.push(`onChange={(e) => ${setterName}(e.target.value)}`)
         break
 
       case 'select':
@@ -513,7 +486,8 @@ export class ReactGenerator {
       drop: 'onDrop',
     }
 
-    let reactName = map[eventName.toLowerCase()] || `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
+    let reactName =
+      map[eventName.toLowerCase()] || `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
 
     // 支持 capture 修饰符
     if (modifiers.includes('capture')) {
@@ -678,9 +652,7 @@ export class ReactGenerator {
     const data = ir.template.map((node) => ({
       id: node.id,
       props: Object.fromEntries(
-        node.props
-          .filter((p) => !p.isDynamic)
-          .map((p) => [p.name, p.value])
+        node.props.filter((p) => !p.isDynamic).map((p) => [p.name, p.value]),
       ),
       style: node.style,
     }))
@@ -723,7 +695,7 @@ export function generateReactFiles(ir: IRComponent): { tsx: string; css: string 
   const tsx = generator.generate(ir)
 
   // 生成 CSS
-  let css = `.runtime-container {
+  const css = `.runtime-container {
   position: relative;
   width: 100%;
   height: 100vh;

@@ -3,10 +3,9 @@
  * 生成完整的 React + TypeScript + Vite 项目结构
  */
 
-import { generateReactCode, generateReactFiles } from './react-generator'
+import { generateReactFiles } from './react-generator'
 import { transformToIRComponent } from '../transformer/schema-to-ir'
 import type { Component } from '../components'
-import type { IRComponent } from '../types/ir'
 
 // ============================================================
 // 类型定义
@@ -46,7 +45,7 @@ export interface GeneratedFile {
  */
 export function generateReactProject(
   project: ReactProject,
-  options: ReactExportOptions
+  options: ReactExportOptions,
 ): GeneratedFile[] {
   const files: GeneratedFile[] = []
   const ext = options.typescript ? 'tsx' : 'jsx'
@@ -60,7 +59,7 @@ export function generateReactProject(
 
   files.push({
     path: `vite.config.${configExt}`,
-    content: createViteConfig(options),
+    content: createViteConfig(),
   })
 
   if (options.typescript) {
@@ -88,7 +87,7 @@ export function generateReactProject(
 
   files.push({
     path: `src/App.${ext}`,
-    content: createAppComponent(project, options),
+    content: createAppComponent(project),
   })
 
   files.push({
@@ -189,7 +188,7 @@ function createPackageJson(project: ReactProject, options: ReactExportOptions): 
   deps['echarts'] = '^5.5.1'
   deps['echarts-for-react'] = '^3.0.2'
   deps['lodash-es'] = '^4.17.21'
-  // 注意：@vela/ui-react 组件库暂未发布，生成的代码可能需要手动调整组件导入
+  deps['@vela/ui-react'] = '^1.0.0'
 
   const devDeps: Record<string, string> = {
     vite: '^6.0.5',
@@ -236,7 +235,7 @@ function createPackageJson(project: ReactProject, options: ReactExportOptions): 
   return JSON.stringify(pkg, null, 2)
 }
 
-function createViteConfig(options: ReactExportOptions): string {
+function createViteConfig(): string {
   return `import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
@@ -253,44 +252,52 @@ export default defineConfig({
 }
 
 function createTsConfig(): string {
-  return JSON.stringify({
-    compilerOptions: {
-      target: 'ES2020',
-      useDefineForClassFields: true,
-      lib: ['ES2020', 'DOM', 'DOM.Iterable'],
-      module: 'ESNext',
-      skipLibCheck: true,
-      moduleResolution: 'bundler',
-      allowImportingTsExtensions: true,
-      resolveJsonModule: true,
-      isolatedModules: true,
-      noEmit: true,
-      jsx: 'react-jsx',
-      strict: true,
-      noUnusedLocals: true,
-      noUnusedParameters: true,
-      noFallthroughCasesInSwitch: true,
-      paths: {
-        '@/*': ['./src/*'],
+  return JSON.stringify(
+    {
+      compilerOptions: {
+        target: 'ES2020',
+        useDefineForClassFields: true,
+        lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+        module: 'ESNext',
+        skipLibCheck: true,
+        moduleResolution: 'bundler',
+        allowImportingTsExtensions: true,
+        resolveJsonModule: true,
+        isolatedModules: true,
+        noEmit: true,
+        jsx: 'react-jsx',
+        strict: true,
+        noUnusedLocals: true,
+        noUnusedParameters: true,
+        noFallthroughCasesInSwitch: true,
+        paths: {
+          '@/*': ['./src/*'],
+        },
       },
+      include: ['src'],
+      references: [{ path: './tsconfig.node.json' }],
     },
-    include: ['src'],
-    references: [{ path: './tsconfig.node.json' }],
-  }, null, 2)
+    null,
+    2,
+  )
 }
 
 function createTsConfigNode(): string {
-  return JSON.stringify({
-    compilerOptions: {
-      composite: true,
-      skipLibCheck: true,
-      module: 'ESNext',
-      moduleResolution: 'bundler',
-      allowSyntheticDefaultImports: true,
-      strict: true,
+  return JSON.stringify(
+    {
+      compilerOptions: {
+        composite: true,
+        skipLibCheck: true,
+        module: 'ESNext',
+        moduleResolution: 'bundler',
+        allowSyntheticDefaultImports: true,
+        strict: true,
+      },
+      include: ['vite.config.ts'],
     },
-    include: ['vite.config.ts'],
-  }, null, 2)
+    null,
+    2,
+  )
 }
 
 function createIndexHtml(projectName: string, options: ReactExportOptions): string {
@@ -342,15 +349,20 @@ ReactDOM.createRoot(document.getElementById('root')${options.typescript ? '!' : 
 `
 }
 
-function createAppComponent(project: ReactProject, options: ReactExportOptions): string {
-  const imports = project.pages.map((p) =>
-    `const ${toPascalCase(p.name)} = React.lazy(() => import('./pages/${toPascalCase(p.name)}'))`
-  ).join('\n')
+function createAppComponent(project: ReactProject): string {
+  const imports = project.pages
+    .map(
+      (p) =>
+        `const ${toPascalCase(p.name)} = React.lazy(() => import('./pages/${toPascalCase(p.name)}'))`,
+    )
+    .join('\n')
 
-  const routes = project.pages.map((p) => {
-    const path = p.route || `/${toKebabCase(p.name)}`
-    return `        <Route path="${path}" element={<${toPascalCase(p.name)} />} />`
-  }).join('\n')
+  const routes = project.pages
+    .map((p) => {
+      const path = p.route || `/${toKebabCase(p.name)}`
+      return `        <Route path="${path}" element={<${toPascalCase(p.name)} />} />`
+    })
+    .join('\n')
 
   const firstRoute = project.pages[0]?.route || `/${toKebabCase(project.pages[0]?.name || 'home')}`
 
@@ -410,11 +422,15 @@ ${routes.map((r) => `const ${r.name} = React.lazy(() => import('../pages/${r.nam
 const rootRoute = createRootRoute()
 
 // Page routes
-${routes.map((r) => `const ${r.id}Route = createRoute({
+${routes
+  .map(
+    (r) => `const ${r.id}Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '${r.path}',
   component: ${r.name},
-})`).join('\n\n')}
+})`,
+  )
+  .join('\n\n')}
 
 // Index route (redirect to first page)
 const indexRoute = createRoute({
@@ -475,7 +491,8 @@ body {
 }
 
 function createUseEventExecutor(options: ReactExportOptions): string {
-  const types = options.typescript ? `
+  const types = options.typescript
+    ? `
 interface EventAction {
   type: string
   targetId?: string
@@ -486,7 +503,8 @@ interface EventAction {
 interface ExecutorOptions {
   components: React.MutableRefObject<Record<string, unknown>[]>
 }
-` : ''
+`
+    : ''
 
   return `${types}
 import { useCallback } from 'react'
@@ -537,7 +555,8 @@ export function useEventExecutor(options${options.typescript ? ': ExecutorOption
 }
 
 function createUseDataBinding(options: ReactExportOptions): string {
-  const types = options.typescript ? `
+  const types = options.typescript
+    ? `
 interface DataBinding {
   sourceId: string
   sourcePath: string
@@ -550,7 +569,8 @@ interface ComponentData {
   props: Record<string, unknown>
   [key: string]: unknown
 }
-` : ''
+`
+    : ''
 
   return `${types}
 import { useEffect, useRef } from 'react'
@@ -676,17 +696,22 @@ export default [
 }
 
 function createPrettierConfig(): string {
-  return JSON.stringify({
-    semi: false,
-    singleQuote: true,
-    trailingComma: 'all',
-    printWidth: 100,
-    tabWidth: 2,
-  }, null, 2)
+  return JSON.stringify(
+    {
+      semi: false,
+      singleQuote: true,
+      trailingComma: 'all',
+      printWidth: 100,
+      tabWidth: 2,
+    },
+    null,
+    2,
+  )
 }
 
 function createChartComponent(options: ReactExportOptions): string {
-  const types = options.typescript ? `
+  const types = options.typescript
+    ? `
 import type { EChartsOption } from 'echarts'
 
 interface ChartProps {
@@ -697,7 +722,8 @@ interface ChartProps {
   className?: string
   onChartReady?: (chart: unknown) => void
 }
-` : ''
+`
+    : ''
 
   return `${types}
 import { useMemo } from 'react'
@@ -832,13 +858,15 @@ Thumbs.db
 // ============================================================
 
 function sanitizeName(name: string): string {
-  return name
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-zA-Z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase() || 'react-app'
+  return (
+    name
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase() || 'react-app'
+  )
 }
 
 function toPascalCase(str: string): string {
@@ -846,7 +874,7 @@ function toPascalCase(str: string): string {
     .replace(/[^a-zA-Z0-9]+/g, ' ')
     .split(' ')
     .filter(Boolean)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
     .join('')
 }
 
