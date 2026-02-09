@@ -14,11 +14,20 @@ function parseNumber(value: unknown, fallback: number): number {
   return fallback
 }
 
-function parseLength(value: LengthValue | undefined, fallback: number): number {
+function normalizeLengthValue(value: LengthValue | undefined): LengthValue | undefined {
   if (value === undefined) {
-    return fallback
+    return undefined
   }
-  return parseNumber(value, fallback)
+  if (typeof value === 'number') {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed) {
+      return trimmed
+    }
+  }
+  return undefined
 }
 
 function parseRotationFromTransform(style: NodeStyle | undefined): number {
@@ -47,25 +56,32 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
   const geometry = params.node.geometry
 
   const x =
-    nodeMode === 'free' && geometry?.mode === 'free'
-      ? geometry.x ?? parseNumber(style?.left, 0)
-      : parseNumber(style?.left, 0)
+    nodeMode === 'free'
+      ? geometry?.mode === 'free'
+        ? (geometry.x ?? parseNumber(style?.left, 0))
+        : parseNumber(style?.left, 0)
+      : 0
   const y =
-    nodeMode === 'free' && geometry?.mode === 'free'
-      ? geometry.y ?? parseNumber(style?.top, 0)
-      : parseNumber(style?.top, 0)
+    nodeMode === 'free'
+      ? geometry?.mode === 'free'
+        ? (geometry.y ?? parseNumber(style?.top, 0))
+        : parseNumber(style?.top, 0)
+      : 0
 
-  const width = parseLength(geometry?.width ?? style?.width, 100)
-  const height = parseLength(geometry?.height ?? style?.height, 100)
+  const width =
+    normalizeLengthValue(geometry?.width ?? style?.width) ?? (nodeMode === 'free' ? 100 : undefined)
+  const height =
+    normalizeLengthValue(geometry?.height ?? style?.height) ??
+    (nodeMode === 'free' ? 100 : undefined)
 
   const zIndex =
     geometry?.mode === 'free'
-      ? geometry.zIndex ?? parseNumber(style?.zIndex, 0)
+      ? (geometry.zIndex ?? parseNumber(style?.zIndex, 0))
       : parseNumber(style?.zIndex, 0)
 
   const rotate =
     geometry?.mode === 'free'
-      ? geometry.rotate ?? parseRotationFromTransform(style)
+      ? (geometry.rotate ?? parseRotationFromTransform(style))
       : parseRotationFromTransform(style)
 
   return {
@@ -80,4 +96,3 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
     order: geometry?.mode === 'flow' ? geometry.order : undefined,
   }
 }
-

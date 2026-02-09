@@ -1,12 +1,12 @@
-import type { LayoutMode, NodeSchema, PageSchema, ProjectSchema } from '@vela/core'
+import type { LayoutMode, LengthValue, NodeSchema, PageSchema, ProjectSchema } from '@vela/core'
 
 export interface NormalizedNodeLayout {
   mode: LayoutMode
   childMode: LayoutMode
   x: number
   y: number
-  width: number
-  height: number
+  width?: LengthValue
+  height?: LengthValue
   zIndex: number
   rotate: number
   order?: number
@@ -38,4 +38,3 @@ export interface NormalizedProject {
   pages: NormalizedPage[]
   pageIndex: Map<string, NormalizedPage>
 }
-

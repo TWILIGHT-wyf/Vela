@@ -1,4 +1,9 @@
-import type { ActionConfig, Component as LegacyRuntimeComponent, JSExpression, LoopConfig } from '../../components'
+import type {
+  ActionConfig,
+  Component as LegacyRuntimeComponent,
+  JSExpression,
+  LoopConfig,
+} from '../../components'
 import type { ReactPage, ReactProject } from '../../generators/react-project-generator'
 import type {
   Component as LegacyVueComponent,
@@ -111,13 +116,13 @@ function toLegacyEvents(
   const mapped: NonNullable<LegacyRuntimeComponent['events']> = {}
   for (const [eventName, actions] of Object.entries(events)) {
     const normalizedName =
-      eventName === 'mouseenter'
-        ? 'hover'
-        : eventName === 'dblclick'
-          ? 'doubleClick'
-          : eventName
+      eventName === 'mouseenter' ? 'hover' : eventName === 'dblclick' ? 'doubleClick' : eventName
 
-    if (normalizedName !== 'click' && normalizedName !== 'hover' && normalizedName !== 'doubleClick') {
+    if (
+      normalizedName !== 'click' &&
+      normalizedName !== 'hover' &&
+      normalizedName !== 'doubleClick'
+    ) {
       diagnostics.push(
         createDiagnostic(
           'warning',
@@ -135,27 +140,55 @@ function toLegacyEvents(
   return Object.keys(mapped).length > 0 ? mapped : undefined
 }
 
+function toLegacyCssLength(value: unknown, fallback: number): string {
+  if (typeof value === 'number') {
+    return `${value}px`
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed) {
+      return trimmed
+    }
+  }
+  return `${fallback}px`
+}
+
+function toLegacyNumericSize(value: unknown, fallback: number): number {
+  if (typeof value === 'number') {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value)
+    if (!Number.isNaN(parsed)) {
+      return parsed
+    }
+  }
+  return fallback
+}
+
 function buildLegacyStyle(node: IRNode): Record<string, unknown> {
   const style: Record<string, unknown> = { ...(node.style as Record<string, unknown> | undefined) }
   const rotate = node.layout.rotate
+  const width = toLegacyCssLength(node.layout.width, 100)
+  const height = toLegacyCssLength(node.layout.height, 100)
 
   if (node.layout.mode === 'free') {
     style.position = 'absolute'
     style.left = `${node.layout.x}px`
     style.top = `${node.layout.y}px`
-    style.width = `${node.layout.width}px`
-    style.height = `${node.layout.height}px`
+    style.width = width
+    style.height = height
     style.zIndex = node.layout.zIndex
     if (rotate !== 0) {
       style.transform = `rotate(${rotate}deg)`
     }
   } else {
     style.position = style.position || 'relative'
-    if (style.width === undefined) {
-      style.width = `${node.layout.width}px`
+    if (style.width === undefined && node.layout.width !== undefined) {
+      style.width = toLegacyCssLength(node.layout.width, 100)
     }
-    if (style.height === undefined) {
-      style.height = `${node.layout.height}px`
+    if (style.height === undefined && node.layout.height !== undefined) {
+      style.height = toLegacyCssLength(node.layout.height, 100)
     }
     if (node.layout.order !== undefined) {
       style.order = node.layout.order
@@ -211,8 +244,8 @@ function toLegacyRuntimeComponent(
       y: node.layout.y,
     },
     size: {
-      width: node.layout.width,
-      height: node.layout.height,
+      width: toLegacyNumericSize(node.layout.width, 100),
+      height: toLegacyNumericSize(node.layout.height, 100),
     },
     rotation: node.layout.rotate,
     zindex: node.layout.zIndex,
@@ -312,7 +345,7 @@ function toLegacyVuePage(
   return {
     id: page.id,
     name: page.name,
-    route: page.type === 'page' ? (page.path || `/${toSlug(page.name)}`) : undefined,
+    route: page.type === 'page' ? page.path || `/${toSlug(page.name)}` : undefined,
     components,
   }
 }
@@ -329,14 +362,11 @@ export function toLegacyVueProject(
   }
 }
 
-function toLegacyReactPage(
-  page: IRPage,
-  diagnostics: CompileDiagnostic[],
-): ReactPage {
+function toLegacyReactPage(page: IRPage, diagnostics: CompileDiagnostic[]): ReactPage {
   return {
     id: page.id,
     name: page.name,
-    route: page.type === 'page' ? (page.path || `/${toSlug(page.name)}`) : undefined,
+    route: page.type === 'page' ? page.path || `/${toSlug(page.name)}` : undefined,
     components: toLegacyRuntimeComponents(page, diagnostics),
   }
 }
@@ -351,4 +381,3 @@ export function toLegacyReactProject(
     pages: project.pages.map((page) => toLegacyReactPage(page, diagnostics)),
   }
 }
-
