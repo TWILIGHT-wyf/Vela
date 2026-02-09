@@ -1,5 +1,5 @@
 {
-  "name": "@vela-studio/ui",
+  "name": "@vela/ui",
   "version": "1.0.1",
   "description": "Vela LowCode UI Component Library - Data visualization components for Vue 3",
   "keywords": [
