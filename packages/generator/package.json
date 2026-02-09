@@ -12,10 +12,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./projectGenerator": {
-      "types": "./dist/projectGenerator.d.ts",
-      "import": "./dist/projectGenerator.js",
-      "require": "./dist/projectGenerator.cjs"
+    "./compat": {
+      "types": "./dist/compat.d.ts",
+      "import": "./dist/compat.js",
+      "require": "./dist/compat.cjs"
     }
   },
   "files": [

@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/projectGenerator.ts'],
+  entry: ['src/index.ts', 'src/compat.ts'],
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,
