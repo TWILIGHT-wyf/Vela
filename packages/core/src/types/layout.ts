@@ -1,9 +1,10 @@
 /**
  * 布局模式
  * - free: 自由布局（画布绝对定位）
- * - flow: 流式布局（文档流）
+ * - flow: 历史兼容模式（已下线，不再作为编辑入口）
+ * - grid: 网格编排（整个画布为 CSS Grid，组件以 fr 比例填满）
  */
-export type LayoutMode = 'free' | 'flow'
+export type LayoutMode = 'free' | 'flow' | 'grid'
 
 /**
  * 长度值
@@ -39,7 +40,8 @@ export interface FreeNodeGeometry extends NodeSize {
 }
 
 /**
- * 流式布局几何信息（编辑器画布）
+ * 历史 flow 几何信息（编辑器画布）
+ * 说明：类型名沿用 FlowNodeGeometry 以保持兼容
  */
 export interface FlowNodeGeometry extends NodeSize {
   mode: 'flow'
@@ -47,9 +49,21 @@ export interface FlowNodeGeometry extends NodeSize {
 }
 
 /**
+ * 网格编排几何信息（编辑器画布）
+ * 组件通过 gridColumnStart/End、gridRowStart/End 占据精确区域
+ */
+export interface GridNodeGeometry extends NodeSize {
+  mode: 'grid'
+  gridColumnStart: number // 1-based column line
+  gridColumnEnd: number // 1-based column line (exclusive)
+  gridRowStart: number // 1-based row line
+  gridRowEnd: number // 1-based row line (exclusive)
+}
+
+/**
  * 节点几何定义（仅编辑器使用）
  */
-export type NodeGeometry = FreeNodeGeometry | FlowNodeGeometry
+export type NodeGeometry = FreeNodeGeometry | FlowNodeGeometry | GridNodeGeometry
 
 /**
  * 自由容器布局配置
@@ -62,34 +76,34 @@ export interface FreeContainerLayout {
 }
 
 /**
- * 流式容器布局配置
+ * 历史 flow 容器布局配置
+ * 说明：接口名沿用 FlowContainerLayout 以保持兼容
  */
 export interface FlowContainerLayout {
   mode: 'flow'
   direction?: 'row' | 'column'
   wrap?: 'nowrap' | 'wrap' | 'wrap-reverse'
-  justify?:
-    | 'flex-start'
-    | 'center'
-    | 'flex-end'
-    | 'space-between'
-    | 'space-around'
-    | 'space-evenly'
+  justify?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly'
   align?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline'
-  alignContent?:
-    | 'flex-start'
-    | 'center'
-    | 'flex-end'
-    | 'stretch'
-    | 'space-between'
-    | 'space-around'
+  alignContent?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'space-between' | 'space-around'
   gap?: LengthValue
+}
+
+/**
+ * 网格编排容器布局配置
+ * columns/rows 为 fr 模板字符串，如 '1fr 2fr' 或 '1fr 1fr 1fr'
+ */
+export interface GridContainerLayout {
+  mode: 'grid'
+  columns: string // e.g. '1fr 1fr' or '2fr 1fr'
+  rows: string // e.g. '1fr 1fr'
+  gap?: number // px
 }
 
 /**
  * 容器对子节点的布局定义
  */
-export type NodeContainerLayout = FreeContainerLayout | FlowContainerLayout
+export type NodeContainerLayout = FreeContainerLayout | FlowContainerLayout | GridContainerLayout
 
 /**
  * 页面画布模式

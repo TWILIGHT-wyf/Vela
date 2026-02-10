@@ -104,7 +104,13 @@ export interface NodeStyle {
   display?: 'block' | 'inline' | 'inline-block' | 'flex' | 'inline-flex' | 'grid' | 'none'
   flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse'
   flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse'
-  justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly'
+  justifyContent?:
+    | 'flex-start'
+    | 'center'
+    | 'flex-end'
+    | 'space-between'
+    | 'space-around'
+    | 'space-evenly'
   alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline'
   alignContent?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'space-between' | 'space-around'
   gap?: number | string
@@ -207,12 +213,7 @@ export function isNodeEventActionLinkRef(action: NodeEventAction): action is Act
   if (typeof action === 'string') {
     return true
   }
-  return (
-    typeof action === 'object' &&
-    action !== null &&
-    'type' in action &&
-    action.type === 'ref'
-  )
+  return typeof action === 'object' && action !== null && 'type' in action && action.type === 'ref'
 }
 
 /**
@@ -380,7 +381,7 @@ export interface NodeSchema<P = Record<string, PropValue>> {
   // ========== 容器布局 ==========
   /**
    * 容器对子节点的布局配置（仅容器组件有意义）
-   * 省略时继承父容器模式，根容器默认 flow
+   * 省略时继承父容器模式，根容器默认 grid
    */
   container?: NodeContainerLayout
 
@@ -422,7 +423,9 @@ export function getNodeComponent(node: Pick<NodeSchema, 'component' | 'component
 /**
  * @deprecated Use getNodeComponent instead
  */
-export function getNodeComponentName(node: Pick<NodeSchema, 'component' | 'componentName'>): string {
+export function getNodeComponentName(
+  node: Pick<NodeSchema, 'component' | 'componentName'>,
+): string {
   return getNodeComponent(node)
 }
 
@@ -443,9 +446,7 @@ export function getNodeLayoutMode(node: Pick<NodeSchema, 'container'>): LayoutMo
 /**
  * 收集节点树内每个节点定义的动作 ID
  */
-export function collectNodeActionIdMap(
-  root?: NodeSchema
-): Record<string, Set<string>> {
+export function collectNodeActionIdMap(root?: NodeSchema): Record<string, Set<string>> {
   const idMap: Record<string, Set<string>> = {}
   if (!root) {
     return idMap
@@ -478,7 +479,7 @@ export function collectNodeActionIdMap(
  */
 export function validateNodeEventActionRefs(
   root: NodeSchema | undefined,
-  context: NodeActionRefValidationContext = {}
+  context: NodeActionRefValidationContext = {},
 ): NodeActionRefValidationIssue[] {
   if (!root) {
     return []

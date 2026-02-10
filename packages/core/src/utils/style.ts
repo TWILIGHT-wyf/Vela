@@ -16,6 +16,12 @@ export interface AnimationStyle {
   animationFillMode?: string
 }
 
+function toCssLength(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'number') return `${value}px`
+  return String(value)
+}
+
 /**
  * Parse a style value to a number
  */
@@ -121,19 +127,102 @@ export function generateLayoutCSS(
   geometry?: NodeGeometry,
 ): ComponentCSSStyle {
   if (mode === 'flow') {
-    const css: ComponentCSSStyle = {
-      position: style?.position || 'relative',
+    const css: ComponentCSSStyle = {}
+
+    if (style?.position !== undefined) {
+      css.position = style.position
     }
 
-    if (style?.width !== undefined) {
-      css.width = typeof style.width === 'number' ? `${style.width}px` : style.width
+    const width = toCssLength(style?.width)
+    if (width !== undefined) css.width = width
+    const height = toCssLength(style?.height)
+    if (height !== undefined) css.height = height
+    const minWidth = toCssLength(style?.minWidth)
+    if (minWidth !== undefined) css.minWidth = minWidth
+    const maxWidth = toCssLength(style?.maxWidth)
+    if (maxWidth !== undefined) css.maxWidth = maxWidth
+    const minHeight = toCssLength(style?.minHeight)
+    if (minHeight !== undefined) css.minHeight = minHeight
+    const maxHeight = toCssLength(style?.maxHeight)
+    if (maxHeight !== undefined) css.maxHeight = maxHeight
+
+    const margin = toCssLength(style?.margin)
+    if (margin !== undefined) css.margin = margin
+    const marginTop = toCssLength(style?.marginTop)
+    if (marginTop !== undefined) css.marginTop = marginTop
+    const marginRight = toCssLength(style?.marginRight)
+    if (marginRight !== undefined) css.marginRight = marginRight
+    const marginBottom = toCssLength(style?.marginBottom)
+    if (marginBottom !== undefined) css.marginBottom = marginBottom
+    const marginLeft = toCssLength(style?.marginLeft)
+    if (marginLeft !== undefined) css.marginLeft = marginLeft
+
+    const padding = toCssLength(style?.padding)
+    if (padding !== undefined) css.padding = padding
+    const paddingTop = toCssLength(style?.paddingTop)
+    if (paddingTop !== undefined) css.paddingTop = paddingTop
+    const paddingRight = toCssLength(style?.paddingRight)
+    if (paddingRight !== undefined) css.paddingRight = paddingRight
+    const paddingBottom = toCssLength(style?.paddingBottom)
+    if (paddingBottom !== undefined) css.paddingBottom = paddingBottom
+    const paddingLeft = toCssLength(style?.paddingLeft)
+    if (paddingLeft !== undefined) css.paddingLeft = paddingLeft
+
+    if (style?.display !== undefined) css.display = style.display
+    if (style?.flexDirection !== undefined) css.flexDirection = style.flexDirection
+    if (style?.flexWrap !== undefined) css.flexWrap = style.flexWrap
+    if (style?.justifyContent !== undefined) css.justifyContent = style.justifyContent
+    if (style?.alignItems !== undefined) css.alignItems = style.alignItems
+    if (style?.alignContent !== undefined) css.alignContent = style.alignContent
+    const gap = toCssLength(style?.gap)
+    if (gap !== undefined) css.gap = gap
+    const rowGap = toCssLength(style?.rowGap)
+    if (rowGap !== undefined) css.rowGap = rowGap
+    const columnGap = toCssLength(style?.columnGap)
+    if (columnGap !== undefined) css.columnGap = columnGap
+
+    if (style?.gridTemplateColumns !== undefined)
+      css.gridTemplateColumns = style.gridTemplateColumns
+    if (style?.gridTemplateRows !== undefined) css.gridTemplateRows = style.gridTemplateRows
+    if (style?.gridColumn !== undefined) css.gridColumn = style.gridColumn
+    if (style?.gridRow !== undefined) css.gridRow = style.gridRow
+
+    if (style?.order !== undefined) css.order = style.order
+    if (style?.flexGrow !== undefined) css.flexGrow = style.flexGrow
+    if (style?.flexShrink !== undefined) css.flexShrink = style.flexShrink
+    const flexBasis = toCssLength(style?.flexBasis)
+    if (flexBasis !== undefined) css.flexBasis = flexBasis
+    if (style?.alignSelf !== undefined) css.alignSelf = style.alignSelf
+    if (style?.zIndex !== undefined) css.zIndex = style.zIndex
+    if (style?.overflow !== undefined) css.overflow = style.overflow
+    if (style?.overflowX !== undefined) css.overflowX = style.overflowX
+    if (style?.overflowY !== undefined) css.overflowY = style.overflowY
+
+    return css
+  }
+
+  // Adaptive Grid layout (fr-based)
+  if (mode === 'grid') {
+    const css: ComponentCSSStyle = {}
+
+    if (geometry?.mode === 'grid') {
+      css.gridColumn = `${geometry.gridColumnStart} / ${geometry.gridColumnEnd}`
+      css.gridRow = `${geometry.gridRowStart} / ${geometry.gridRowEnd}`
     }
-    if (style?.height !== undefined) {
-      css.height = typeof style.height === 'number' ? `${style.height}px` : style.height
-    }
-    if (style?.zIndex !== undefined) {
-      css.zIndex = style.zIndex
-    }
+
+    css.width = '100%'
+    css.height = '100%'
+
+    const margin = toCssLength(style?.margin)
+    if (margin !== undefined) css.margin = margin
+    const marginTop = toCssLength(style?.marginTop)
+    if (marginTop !== undefined) css.marginTop = marginTop
+    const marginRight = toCssLength(style?.marginRight)
+    if (marginRight !== undefined) css.marginRight = marginRight
+    const marginBottom = toCssLength(style?.marginBottom)
+    if (marginBottom !== undefined) css.marginBottom = marginBottom
+    const marginLeft = toCssLength(style?.marginLeft)
+    if (marginLeft !== undefined) css.marginLeft = marginLeft
 
     return css
   }
@@ -142,7 +231,8 @@ export function generateLayoutCSS(
   const position = extractPosition(style, geometry)
   const size = extractSize(style, geometry)
   const rotation = extractRotation(style, geometry)
-  const zIndex = geometry?.mode === 'free' ? (geometry.zIndex ?? extractZIndex(style)) : extractZIndex(style)
+  const zIndex =
+    geometry?.mode === 'free' ? (geometry.zIndex ?? extractZIndex(style)) : extractZIndex(style)
 
   return {
     position: 'absolute',
@@ -226,9 +316,7 @@ export function generateVisualCSS(style: NodeStyle | undefined): ComponentCSSSty
 export function generateAnimationCSS(animation: NodeSchema['animation']): AnimationStyle {
   if (!animation) return {}
 
-  const legacyClassName =
-    animation.className ||
-    (animation as unknown as { class?: string }).class
+  const legacyClassName = animation.className || (animation as unknown as { class?: string }).class
 
   if (!legacyClassName) return {}
 

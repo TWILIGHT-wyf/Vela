@@ -22,18 +22,6 @@ const JSExpressionSchema = z.object({
   mock: z.unknown().optional(),
 })
 
-// 属性值 (静态或表达式)
-const PropValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-  ExpressionSchema,
-  JSExpressionSchema, // 兼容旧版
-  z.array(z.unknown()),
-  z.record(z.string(), z.unknown()),
-])
-
 // ==========================================
 // 2. 样式与布局
 // ==========================================
@@ -147,115 +135,132 @@ const NodeEventActionSchema = z.union([ActionSchema, ActionLinkRefSchema])
 // 4. 节点定义 (递归)
 // ==========================================
 
-const BaseNodeSchema = z.object({
-  id: z.string(),
-  component: z.string().optional(),
-  title: z.string().optional(),
-  props: z.record(z.string(), z.unknown()).optional(),
-  dataSource: z.record(z.string(), z.unknown()).optional(),
-  geometry: z
-    .object({
-      mode: z.enum(['free', 'flow']),
-      // free
-      x: z.number().optional(),
-      y: z.number().optional(),
-      zIndex: z.number().optional(),
-      rotate: z.number().optional(),
-      scaleX: z.number().optional(),
-      scaleY: z.number().optional(),
-      locked: z.boolean().optional(),
-      hidden: z.boolean().optional(),
-      // size
-      width: z.union([z.number(), z.string()]).optional(),
-      height: z.union([z.number(), z.string()]).optional(),
-      minWidth: z.union([z.number(), z.string()]).optional(),
-      maxWidth: z.union([z.number(), z.string()]).optional(),
-      minHeight: z.union([z.number(), z.string()]).optional(),
-      maxHeight: z.union([z.number(), z.string()]).optional(),
-      // flow
-      order: z.number().optional(),
-    })
-    .optional(),
-  container: z
-    .object({
-      mode: z.enum(['free', 'flow']),
-      snapToGrid: z.boolean().optional(),
-      gridSize: z.number().optional(),
-      allowOverlap: z.boolean().optional(),
-      direction: z.enum(['row', 'column']).optional(),
-      wrap: z.enum(['nowrap', 'wrap', 'wrap-reverse']).optional(),
-      justify: z
-        .enum(['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'])
-        .optional(),
-      align: z.enum(['flex-start', 'center', 'flex-end', 'stretch', 'baseline']).optional(),
-      alignContent: z
-        .enum(['flex-start', 'center', 'flex-end', 'stretch', 'space-between', 'space-around'])
-        .optional(),
-      gap: z.union([z.number(), z.string()]).optional(),
-    })
-    .optional(),
-  style: NodeStyleSchema.optional(),
+const BaseNodeSchema = z
+  .object({
+    id: z.string(),
+    component: z.string().optional(),
+    title: z.string().optional(),
+    props: z.record(z.string(), z.unknown()).optional(),
+    dataSource: z.record(z.string(), z.unknown()).optional(),
+    geometry: z
+      .object({
+        mode: z.enum(['free', 'flow', 'grid']),
+        // free
+        x: z.number().optional(),
+        y: z.number().optional(),
+        zIndex: z.number().optional(),
+        rotate: z.number().optional(),
+        scaleX: z.number().optional(),
+        scaleY: z.number().optional(),
+        locked: z.boolean().optional(),
+        hidden: z.boolean().optional(),
+        // size
+        width: z.union([z.number(), z.string()]).optional(),
+        height: z.union([z.number(), z.string()]).optional(),
+        minWidth: z.union([z.number(), z.string()]).optional(),
+        maxWidth: z.union([z.number(), z.string()]).optional(),
+        minHeight: z.union([z.number(), z.string()]).optional(),
+        maxHeight: z.union([z.number(), z.string()]).optional(),
+        // flow
+        order: z.number().optional(),
+        // grid
+        gridColumnStart: z.number().int().positive().optional(),
+        gridColumnEnd: z.number().int().positive().optional(),
+        gridRowStart: z.number().int().positive().optional(),
+        gridRowEnd: z.number().int().positive().optional(),
+      })
+      .optional(),
+    container: z
+      .object({
+        mode: z.enum(['free', 'flow', 'grid']),
+        snapToGrid: z.boolean().optional(),
+        gridSize: z.number().optional(),
+        allowOverlap: z.boolean().optional(),
+        direction: z.enum(['row', 'column']).optional(),
+        wrap: z.enum(['nowrap', 'wrap', 'wrap-reverse']).optional(),
+        justify: z
+          .enum([
+            'flex-start',
+            'center',
+            'flex-end',
+            'space-between',
+            'space-around',
+            'space-evenly',
+          ])
+          .optional(),
+        align: z.enum(['flex-start', 'center', 'flex-end', 'stretch', 'baseline']).optional(),
+        alignContent: z
+          .enum(['flex-start', 'center', 'flex-end', 'stretch', 'space-between', 'space-around'])
+          .optional(),
+        gap: z.union([z.number(), z.string()]).optional(),
+        // grid
+        columns: z.string().optional(),
+        rows: z.string().optional(),
+      })
+      .optional(),
+    style: NodeStyleSchema.optional(),
 
-  // 插槽
-  slot: z.string().optional(),
-  slotProps: z.string().optional(),
+    // 插槽
+    slot: z.string().optional(),
+    slotProps: z.string().optional(),
 
-  // 引用
-  ref: z.string().optional(),
+    // 引用
+    ref: z.string().optional(),
 
-  // 兼容旧版
-  componentName: z.string().optional(),
-  slotName: z.string().optional(),
+    // 兼容旧版
+    componentName: z.string().optional(),
+    slotName: z.string().optional(),
 
-  // 渲染控制
-  renderIf: z.union([z.boolean(), ExpressionSchema, JSExpressionSchema]).optional(),
-  repeat: z
-    .object({
-      source: z.union([z.array(z.unknown()), ExpressionSchema, JSExpressionSchema]),
-      itemKey: z.string().optional(),
-      itemAlias: z.string().optional(),
-      indexAlias: z.string().optional(),
-    })
-    .optional(),
-  // 兼容旧版
-  condition: z.union([z.boolean(), ExpressionSchema, JSExpressionSchema]).optional(),
-  loop: z
-    .object({
-      data: z.union([z.array(z.unknown()), ExpressionSchema, JSExpressionSchema]),
-      itemArg: z.string().optional(),
-      indexArg: z.string().optional(),
-    })
-    .optional(),
+    // 渲染控制
+    renderIf: z.union([z.boolean(), ExpressionSchema, JSExpressionSchema]).optional(),
+    repeat: z
+      .object({
+        source: z.union([z.array(z.unknown()), ExpressionSchema, JSExpressionSchema]),
+        itemKey: z.string().optional(),
+        itemAlias: z.string().optional(),
+        indexAlias: z.string().optional(),
+      })
+      .optional(),
+    // 兼容旧版
+    condition: z.union([z.boolean(), ExpressionSchema, JSExpressionSchema]).optional(),
+    loop: z
+      .object({
+        data: z.union([z.array(z.unknown()), ExpressionSchema, JSExpressionSchema]),
+        itemArg: z.string().optional(),
+        indexArg: z.string().optional(),
+      })
+      .optional(),
 
-  // 事件
-  events: z.record(z.string(), z.array(NodeEventActionSchema)).optional(),
-  actions: z.array(ActionSchema).optional(),
+    // 事件
+    events: z.record(z.string(), z.array(NodeEventActionSchema)).optional(),
+    actions: z.array(ActionSchema).optional(),
 
-  // 动画
-  animation: z
-    .object({
-      name: z.string(),
-      className: z.string().optional(),
-      // 兼容旧字段
-      class: z.string().optional(),
-      duration: z.number().default(700),
-      delay: z.number().default(0),
-      iterations: z.union([z.number(), z.literal('infinite')]).optional(),
-      easing: z.string().optional(),
-      trigger: z.enum(['init', 'load', 'hover', 'click', 'visible']).default('init'),
-    })
-    .optional(),
+    // 动画
+    animation: z
+      .object({
+        name: z.string(),
+        className: z.string().optional(),
+        // 兼容旧字段
+        class: z.string().optional(),
+        duration: z.number().default(700),
+        delay: z.number().default(0),
+        iterations: z.union([z.number(), z.literal('infinite')]).optional(),
+        easing: z.string().optional(),
+        trigger: z.enum(['init', 'load', 'hover', 'click', 'visible']).default('init'),
+      })
+      .optional(),
 
-  responsive: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
-}).superRefine((node, ctx) => {
-  if (!node.component && !node.componentName) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Node requires "component" or legacy "componentName"',
-      path: ['component'],
-    })
-  }
-})
+    responsive: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+  })
+  .superRefine((node, ctx) => {
+    if (!node.component && !node.componentName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Node requires "component" or legacy "componentName"',
+        path: ['component'],
+      })
+    }
+  })
 
 export type NodeSchemaType = z.infer<typeof BaseNodeSchema> & {
   children?: NodeSchemaType[]
@@ -263,7 +268,12 @@ export type NodeSchemaType = z.infer<typeof BaseNodeSchema> & {
 
 export const NodeZodSchema: z.ZodType<NodeSchemaType> = BaseNodeSchema.extend({
   children: z.lazy(() => z.array(NodeZodSchema)).optional(),
-  slots: z.record(z.string(), z.lazy(() => z.array(NodeZodSchema))).optional(),
+  slots: z
+    .record(
+      z.string(),
+      z.lazy(() => z.array(NodeZodSchema)),
+    )
+    .optional(),
 })
 
 // ==========================================
@@ -370,7 +380,9 @@ export const ApiSchema = z.object({
   url: z.union([z.string(), ExpressionSchema, JSExpressionSchema]),
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']),
   contentType: z.enum(['json', 'form', 'formdata', 'raw', 'none']).optional(),
-  headers: z.record(z.string(), z.union([z.string(), ExpressionSchema, JSExpressionSchema])).optional(),
+  headers: z
+    .record(z.string(), z.union([z.string(), ExpressionSchema, JSExpressionSchema]))
+    .optional(),
   params: z.record(z.string(), z.unknown()).optional(),
   body: z.unknown().optional(),
   timeout: z.number().optional(),
