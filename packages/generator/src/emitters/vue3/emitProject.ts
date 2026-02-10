@@ -1,5 +1,7 @@
 import type { IRNode, IRPage, IRProject } from '../../pipeline/ir/ir'
 import { createDiagnostic, type CompileDiagnostic } from '../../pipeline/validate/diagnostics'
+import { VUE_TAG_MAP, resolveVueComponentTag } from '@vela/core/contracts'
+import { buildNodeStyleFromIR } from '../shared/buildStyle'
 
 export interface VueEmitterOptions {
   language: 'ts' | 'js'
@@ -25,45 +27,6 @@ interface ExpressionLike {
   mock?: unknown
 }
 
-const WRAPPER_COMPONENTS = new Set(['page', 'fragment', 'layout', 'dialog'])
-
-const HTML_TAGS = new Set([
-  'a',
-  'article',
-  'aside',
-  'button',
-  'div',
-  'footer',
-  'form',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'header',
-  'img',
-  'input',
-  'label',
-  'li',
-  'main',
-  'nav',
-  'ol',
-  'p',
-  'section',
-  'select',
-  'span',
-  'table',
-  'tbody',
-  'td',
-  'textarea',
-  'th',
-  'thead',
-  'tr',
-  'ul',
-  'video',
-])
-
 const CSS_UNITLESS_PROPERTIES = new Set([
   'fontWeight',
   'lineHeight',
@@ -75,65 +38,8 @@ const CSS_UNITLESS_PROPERTIES = new Set([
   'zoom',
 ])
 
-const VUE_COMPONENT_MAP: Record<string, string> = {
-  lineChart: 'lineChart',
-  barChart: 'barChart',
-  pieChart: 'pieChart',
-  doughnutChart: 'doughnutChart',
-  scatterChart: 'scatterChart',
-  radarChart: 'radarChart',
-  gaugeChart: 'gaugeChart',
-  funnelChart: 'funnelChart',
-  sankeyChart: 'sankeyChart',
-  Text: 'vText',
-  box: 'vBox',
-  stat: 'vStat',
-  countUp: 'vCountUp',
-  progress: 'vProgress',
-  badge: 'vBadge',
-  table: 'vTable',
-  list: 'vList',
-  timeline: 'vTimeline',
-  cardGrid: 'vCardGrid',
-  pivot: 'vPivot',
-  select: 'vSelect',
-  multiSelect: 'vMultiSelect',
-  dateRange: 'vDateRange',
-  searchBox: 'vSearchBox',
-  slider: 'vSlider',
-  switch: 'vSwitch',
-  checkboxGroup: 'vCheckboxGroup',
-  buttonGroup: 'vButtonGroup',
-  row: 'vRow',
-  col: 'vCol',
-  flex: 'vFlex',
-  grid: 'vGrid',
-  modal: 'vModal',
-  panel: 'vPanel',
-  tabs: 'vTabs',
-  Container: 'vContainer',
-  image: 'vImage',
-  video: 'vVideo',
-  markdown: 'vMarkdown',
-  html: 'vHtml',
-  iframe: 'vIframe',
-  Group: 'vGroup',
-  map: 'vMap',
-  marker: 'vMarker',
-  heatLayer: 'vHeatLayer',
-  geoJsonLayer: 'vGeoJsonLayer',
-  clusterLayer: 'vClusterLayer',
-  tileLayer: 'vTileLayer',
-  vectorLayer: 'vVectorLayer',
-  legend: 'vLegend',
-  scale: 'vScale',
-  layers: 'vLayers',
-  scripting: 'vScripting',
-  state: 'vState',
-  trigger: 'vTrigger',
-}
-
-const VUE_LIBRARY_COMPONENTS = new Set(Object.values(VUE_COMPONENT_MAP))
+// VUE_COMPONENT_MAP is now VUE_TAG_MAP, imported from @vela/core/contracts
+const VUE_LIBRARY_COMPONENTS = new Set(Object.values(VUE_TAG_MAP))
 
 function toPascalCase(value: string): string {
   const normalized = value
@@ -219,22 +125,8 @@ function normalizeCssValue(property: string, value: string | number): string {
   return `${value}px`
 }
 
-function resolveVueTag(component: string): string {
-  const normalized = component.trim()
-  if (!normalized) {
-    return 'div'
-  }
-
-  const lower = normalized.toLowerCase()
-  if (WRAPPER_COMPONENTS.has(lower)) {
-    return 'div'
-  }
-  if (HTML_TAGS.has(lower)) {
-    return lower
-  }
-
-  return VUE_COMPONENT_MAP[normalized] || normalized
-}
+// resolveVueTag is now resolveVueComponentTag, imported from @vela/core/contracts
+const resolveVueTag = resolveVueComponentTag
 
 function collectVueImports(node: IRNode, collector: Set<string>): void {
   const tag = resolveVueTag(node.component)
@@ -311,56 +203,8 @@ function collectNodeRuntimeMaps(root: IRNode | undefined): {
   return { nodeEvents, nodeActions }
 }
 
-function buildNodeStyle(node: IRNode): Record<string, string | number> {
-  const style: Record<string, string | number> = {}
-  const rawStyle = node.style as Record<string, unknown> | undefined
-
-  if (rawStyle) {
-    for (const [key, value] of Object.entries(rawStyle)) {
-      if (typeof value === 'string' || typeof value === 'number') {
-        style[key] = value
-      }
-    }
-  }
-
-  if (node.layout.mode === 'free') {
-    style.position = 'absolute'
-    style.left = `${node.layout.x}px`
-    style.top = `${node.layout.y}px`
-    if (style.width === undefined && node.layout.width !== undefined) {
-      style.width = node.layout.width
-    }
-    if (style.height === undefined && node.layout.height !== undefined) {
-      style.height = node.layout.height
-    }
-    if (style.zIndex === undefined) {
-      style.zIndex = node.layout.zIndex
-    }
-  } else {
-    if (style.width === undefined && node.layout.width !== undefined) {
-      style.width = node.layout.width
-    }
-    if (style.height === undefined && node.layout.height !== undefined) {
-      style.height = node.layout.height
-    }
-    if (style.order === undefined && node.layout.order !== undefined) {
-      style.order = node.layout.order
-    }
-  }
-
-  if (node.layout.rotate !== 0) {
-    const existingTransform = typeof style.transform === 'string' ? style.transform : ''
-    if (existingTransform.includes('rotate(')) {
-      style.transform = existingTransform
-    } else if (existingTransform) {
-      style.transform = `${existingTransform} rotate(${node.layout.rotate}deg)`
-    } else {
-      style.transform = `rotate(${node.layout.rotate}deg)`
-    }
-  }
-
-  return style
-}
+// buildNodeStyle is now imported from shared/buildStyle as buildNodeStyleFromIR
+const buildNodeStyle = buildNodeStyleFromIR
 
 function toVueStyleAttribute(node: IRNode): string {
   const style = buildNodeStyle(node)

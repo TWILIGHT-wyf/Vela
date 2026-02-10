@@ -1,5 +1,6 @@
 import type { IRPage, IRProject } from '../../pipeline/ir/ir'
 import { createDiagnostic, type CompileDiagnostic } from '../../pipeline/validate/diagnostics'
+import { REACT_TAG_MAP, WRAPPER_COMPONENTS, HTML_TAGS } from '@vela/core/contracts'
 
 export interface ReactEmitterOptions {
   typescript: boolean
@@ -435,78 +436,18 @@ declare module '@tanstack/react-router' {
 
 function createNodeRendererRuntime(typescript: boolean): string {
   const tsNoCheck = typescript ? '// @ts-nocheck\n' : ''
+
+  // Serialize maps from the unified registry so generated code stays in sync
+  const wrapperArr = JSON.stringify([...WRAPPER_COMPONENTS])
+  const htmlArr = JSON.stringify([...HTML_TAGS])
+  const reactMapStr = JSON.stringify(REACT_TAG_MAP, null, 2)
+
   return `${tsNoCheck}import { createElement } from 'react'
 import * as VelaUI from '@vela/ui-react'
 
-const WRAPPER_COMPONENTS = new Set(['page', 'fragment', 'layout', 'dialog'])
-const HTML_TAGS = new Set([
-  'a',
-  'article',
-  'aside',
-  'button',
-  'div',
-  'footer',
-  'form',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'header',
-  'img',
-  'input',
-  'label',
-  'li',
-  'main',
-  'nav',
-  'ol',
-  'p',
-  'section',
-  'select',
-  'span',
-  'table',
-  'tbody',
-  'td',
-  'textarea',
-  'th',
-  'thead',
-  'tr',
-  'ul',
-  'video',
-])
-const REACT_COMPONENT_MAP = {
-  Text: 'Text',
-  box: 'Box',
-  stat: 'Stat',
-  countUp: 'CountUp',
-  progress: 'Progress',
-  badge: 'Badge',
-  table: 'Table',
-  list: 'List',
-  select: 'Select',
-  row: 'Row',
-  col: 'Col',
-  flex: 'Flex',
-  grid: 'Grid',
-  modal: 'Modal',
-  panel: 'Panel',
-  tabs: 'Tabs',
-  Container: 'Container',
-  image: 'Image',
-  video: 'Video',
-  Group: 'Group',
-  map: 'Map',
-  lineChart: 'ReactECharts',
-  barChart: 'ReactECharts',
-  pieChart: 'ReactECharts',
-  doughnutChart: 'ReactECharts',
-  scatterChart: 'ReactECharts',
-  radarChart: 'ReactECharts',
-  gaugeChart: 'ReactECharts',
-  funnelChart: 'ReactECharts',
-  sankeyChart: 'ReactECharts',
-}
+const WRAPPER_COMPONENTS = new Set(${wrapperArr})
+const HTML_TAGS = new Set(${htmlArr})
+const REACT_COMPONENT_MAP = ${reactMapStr}
 
 function isExpressionLike(value) {
   return Boolean(value) && typeof value === 'object' && typeof value.type === 'string' && typeof value.value === 'string'

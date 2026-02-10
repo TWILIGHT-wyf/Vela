@@ -13,44 +13,7 @@ import type {
   IRProp,
 } from '../types/ir'
 
-// ============================================================
-// React 组件名映射
-// ============================================================
-
-const REACT_COMPONENT_MAP: Record<string, string> = {
-  // 基础组件映射到 React 组件名
-  Text: 'Text',
-  box: 'Box',
-  stat: 'Stat',
-  countUp: 'CountUp',
-  progress: 'Progress',
-  badge: 'Badge',
-  table: 'Table',
-  list: 'List',
-  select: 'Select',
-  row: 'Row',
-  col: 'Col',
-  flex: 'Flex',
-  grid: 'Grid',
-  modal: 'Modal',
-  panel: 'Panel',
-  tabs: 'Tabs',
-  Container: 'Container',
-  image: 'Image',
-  video: 'Video',
-  Group: 'Group',
-  map: 'Map',
-  // 图表组件 - 使用 ReactECharts (echarts-for-react)
-  lineChart: 'ReactECharts',
-  barChart: 'ReactECharts',
-  pieChart: 'ReactECharts',
-  doughnutChart: 'ReactECharts',
-  scatterChart: 'ReactECharts',
-  radarChart: 'ReactECharts',
-  gaugeChart: 'ReactECharts',
-  funnelChart: 'ReactECharts',
-  sankeyChart: 'ReactECharts',
-}
+import { REACT_TAG_MAP as REACT_COMPONENT_MAP } from '@vela/core/contracts'
 
 // ============================================================
 // React 生成器类
