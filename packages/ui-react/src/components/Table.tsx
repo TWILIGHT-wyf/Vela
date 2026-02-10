@@ -1,38 +1,93 @@
 import React, { forwardRef } from 'react'
 
+export interface TableColumnSchema {
+  prop: string
+  label: React.ReactNode
+  width?: number | string
+  align?: 'left' | 'center' | 'right'
+}
+
+/**
+ * React-specific column type (extends canonical schema with render function)
+ */
 export interface TableColumn<T = unknown> {
+  /** @canonical Maps to `prop` from schema */
   key: string
+  /** @canonical Maps to `label` from schema */
   title: React.ReactNode
+  /** @deprecated Use `key` or canonical `prop` */
   dataIndex?: string
   width?: number | string
   align?: 'left' | 'center' | 'right'
   render?: (value: unknown, record: T, index: number) => React.ReactNode
 }
 
-export interface TableProps<T = unknown> extends Omit<React.HTMLAttributes<HTMLTableElement>, 'children'> {
-  columns: TableColumn<T>[]
-  dataSource: T[]
+/**
+ * Normalize a canonical TableColumnSchema to React's TableColumn format.
+ */
+function normalizeColumn(col: TableColumnSchema | TableColumn): TableColumn {
+  if ('prop' in col && !('key' in col)) {
+    // Canonical schema column → React column
+    return {
+      key: col.prop,
+      title: col.label,
+      dataIndex: col.prop,
+      width: col.width,
+      align: col.align,
+    }
+  }
+  // Already React-native column
+  return col as TableColumn
+}
+
+export interface TableProps<T = unknown>
+  extends Omit<React.HTMLAttributes<HTMLTableElement>, 'children'> {
+  /** @canonical Schema prop name (array of {prop, label}) */
+  columns?: (TableColumnSchema | TableColumn<T>)[]
+  /** @canonical Schema prop name */
+  data?: T[]
+  /** @deprecated Use `data` */
+  dataSource?: T[]
   rowKey?: string | ((record: T) => string)
   loading?: boolean
+  /** @canonical Schema prop name */
+  border?: boolean
+  /** @deprecated Use `border` */
   bordered?: boolean
+  /** @canonical Schema prop name */
+  stripe?: boolean
+  /** @deprecated Use `stripe` */
   striped?: boolean
-  size?: 'small' | 'medium' | 'large'
+  size?: 'small' | 'default' | 'medium' | 'large'
   emptyText?: React.ReactNode
+  maxHeight?: number | string
 }
 
 export const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({
-    columns,
-    dataSource,
-    rowKey = 'id',
-    loading = false,
-    bordered = false,
-    striped = false,
-    size = 'medium',
-    emptyText = 'No Data',
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      columns: rawColumns = [],
+      data,
+      dataSource,
+      rowKey = 'id',
+      loading = false,
+      border,
+      bordered = false,
+      stripe,
+      striped = false,
+      size = 'medium',
+      emptyText = 'No Data',
+      maxHeight,
+      style,
+      ...props
+    },
+    ref,
+  ) => {
+    // Canonical props take priority
+    const resolvedData = data ?? dataSource ?? []
+    const resolvedBordered = border ?? bordered
+    const resolvedStriped = stripe ?? striped
+    const columns = rawColumns.map(normalizeColumn)
     const getRowKey = (record: unknown, index: number): string => {
       if (typeof rowKey === 'function') {
         return rowKey(record)
@@ -47,6 +102,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 
     const paddingMap = {
       small: '8px 12px',
+      default: '10px 14px',
       medium: '12px 16px',
       large: '16px 20px',
     }
@@ -54,11 +110,22 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
     const cellStyle: React.CSSProperties = {
       padding: paddingMap[size],
       borderBottom: '1px solid #f0f0f0',
-      ...(bordered && { border: '1px solid #f0f0f0' }),
+      ...(resolvedBordered && { border: '1px solid #f0f0f0' }),
     }
 
     return (
-      <div style={{ position: 'relative', ...style }}>
+      <div
+        style={{
+          position: 'relative',
+          ...(maxHeight
+            ? {
+                maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight,
+                overflowY: 'auto',
+              }
+            : {}),
+          ...style,
+        }}
+      >
         {loading && (
           <div
             style={{
@@ -102,7 +169,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
             </tr>
           </thead>
           <tbody>
-            {dataSource.length === 0 ? (
+            {resolvedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
@@ -112,11 +179,11 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
                 </td>
               </tr>
             ) : (
-              dataSource.map((record, index) => (
+              resolvedData.map((record, index) => (
                 <tr
                   key={getRowKey(record, index)}
                   style={{
-                    backgroundColor: striped && index % 2 === 1 ? '#fafafa' : undefined,
+                    backgroundColor: resolvedStriped && index % 2 === 1 ? '#fafafa' : undefined,
                   }}
                 >
                   {columns.map((col) => {
@@ -130,9 +197,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
                           width: col.width,
                         }}
                       >
-                        {col.render
-                          ? col.render(value, record, index)
-                          : (value as React.ReactNode)}
+                        {col.render ? col.render(value, record, index) : (value as React.ReactNode)}
                       </td>
                     )
                   })}
@@ -143,7 +208,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
         </table>
       </div>
     )
-  }
+  },
 )
 
 Table.displayName = 'Table'

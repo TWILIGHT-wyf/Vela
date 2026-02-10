@@ -1,5 +1,7 @@
 import React, { forwardRef, useState, useRef, useEffect, useCallback } from 'react'
 
+export type SliderMark = React.ReactNode
+
 export interface SliderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   value?: number
   defaultValue?: number
@@ -10,28 +12,31 @@ export interface SliderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   onAfterChange?: (value: number) => void
   disabled?: boolean
   showTooltip?: boolean
-  marks?: Record<number, React.ReactNode>
+  marks?: Record<number, SliderMark>
   trackColor?: string
   railColor?: string
 }
 
 export const Slider = forwardRef<HTMLDivElement, SliderProps>(
-  ({
-    value: controlledValue,
-    defaultValue = 0,
-    min = 0,
-    max = 100,
-    step = 1,
-    onChange,
-    onAfterChange,
-    disabled = false,
-    showTooltip = true,
-    marks,
-    trackColor = '#1890ff',
-    railColor = '#e8e8e8',
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      value: controlledValue,
+      defaultValue = 0,
+      min = 0,
+      max = 100,
+      step = 1,
+      onChange,
+      onAfterChange,
+      disabled = false,
+      showTooltip = true,
+      marks,
+      trackColor = '#1890ff',
+      railColor = '#e8e8e8',
+      style,
+      ...props
+    },
+    ref,
+  ) => {
     const [internalValue, setInternalValue] = useState(defaultValue)
     const [isDragging, setIsDragging] = useState(false)
     const [showTip, setShowTip] = useState(false)
@@ -40,22 +45,25 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
     const value = controlledValue ?? internalValue
     const percentage = ((value - min) / (max - min)) * 100
 
-    const updateValue = useCallback((clientX: number) => {
-      if (!railRef.current || disabled) return
+    const updateValue = useCallback(
+      (clientX: number) => {
+        if (!railRef.current || disabled) return
 
-      const rect = railRef.current.getBoundingClientRect()
-      const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-      let newValue = min + percent * (max - min)
+        const rect = railRef.current.getBoundingClientRect()
+        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+        let newValue = min + percent * (max - min)
 
-      // Apply step
-      newValue = Math.round(newValue / step) * step
-      newValue = Math.max(min, Math.min(max, newValue))
+        // Apply step
+        newValue = Math.round(newValue / step) * step
+        newValue = Math.max(min, Math.min(max, newValue))
 
-      if (controlledValue === undefined) {
-        setInternalValue(newValue)
-      }
-      onChange?.(newValue)
-    }, [min, max, step, disabled, onChange, controlledValue])
+        if (controlledValue === undefined) {
+          setInternalValue(newValue)
+        }
+        onChange?.(newValue)
+      },
+      [min, max, step, disabled, onChange, controlledValue],
+    )
 
     const handleMouseDown = (e: React.MouseEvent) => {
       if (disabled) return
@@ -167,28 +175,29 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
           </div>
 
           {/* Marks */}
-          {marks && Object.entries(marks).map(([markValue, label]) => {
-            const markPercent = ((Number(markValue) - min) / (max - min)) * 100
-            return (
-              <div
-                key={markValue}
-                style={{
-                  position: 'absolute',
-                  left: `${markPercent}%`,
-                  top: '12px',
-                  transform: 'translateX(-50%)',
-                  fontSize: '12px',
-                  color: '#666',
-                }}
-              >
-                {label}
-              </div>
-            )
-          })}
+          {marks &&
+            Object.entries(marks).map(([markValue, label]) => {
+              const markPercent = ((Number(markValue) - min) / (max - min)) * 100
+              return (
+                <div
+                  key={markValue}
+                  style={{
+                    position: 'absolute',
+                    left: `${markPercent}%`,
+                    top: '12px',
+                    transform: 'translateX(-50%)',
+                    fontSize: '12px',
+                    color: '#666',
+                  }}
+                >
+                  {label}
+                </div>
+              )
+            })}
         </div>
       </div>
     )
-  }
+  },
 )
 
 Slider.displayName = 'Slider'

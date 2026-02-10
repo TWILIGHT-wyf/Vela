@@ -1,6 +1,9 @@
 import React, { forwardRef, useEffect, useRef } from 'react'
 
 export interface ModalProps {
+  /** @canonical Schema prop name */
+  visible?: boolean
+  /** @deprecated Use `visible` */
   open?: boolean
   title?: React.ReactNode
   footer?: React.ReactNode | null
@@ -9,7 +12,14 @@ export interface ModalProps {
   width?: number | string
   centered?: boolean
   closable?: boolean
+  /** @canonical Schema prop name */
+  closeOnClickModal?: boolean
+  /** @deprecated Use `closeOnClickModal` */
   maskClosable?: boolean
+  fullscreen?: boolean
+  showFooter?: boolean
+  cancelText?: string
+  confirmText?: string
   destroyOnClose?: boolean
   zIndex?: number
   children?: React.ReactNode
@@ -18,26 +28,38 @@ export interface ModalProps {
 }
 
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({
-    open = false,
-    title,
-    footer,
-    onOk,
-    onCancel,
-    width = 520,
-    centered = false,
-    closable = true,
-    maskClosable = true,
-    destroyOnClose = false,
-    zIndex = 1000,
-    children,
-    style,
-    bodyStyle,
-  }, ref) => {
+  (
+    {
+      visible,
+      open = false,
+      title,
+      footer,
+      onOk,
+      onCancel,
+      width = 520,
+      centered = false,
+      closable = true,
+      closeOnClickModal,
+      maskClosable = true,
+      fullscreen = false,
+      showFooter,
+      cancelText = 'Cancel',
+      confirmText = 'OK',
+      destroyOnClose = false,
+      zIndex = 1000,
+      children,
+      style,
+      bodyStyle,
+    },
+    ref,
+  ) => {
+    // Canonical props take priority
+    const resolvedOpen = visible ?? open
+    const resolvedMaskClosable = closeOnClickModal ?? maskClosable
     const contentRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-      if (open) {
+      if (resolvedOpen) {
         document.body.style.overflow = 'hidden'
       } else {
         document.body.style.overflow = ''
@@ -45,14 +67,14 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       return () => {
         document.body.style.overflow = ''
       }
-    }, [open])
+    }, [resolvedOpen])
 
-    if (!open && destroyOnClose) {
+    if (!resolvedOpen && destroyOnClose) {
       return null
     }
 
     const handleMaskClick = (e: React.MouseEvent) => {
-      if (maskClosable && e.target === e.currentTarget) {
+      if (resolvedMaskClosable && e.target === e.currentTarget) {
         onCancel?.()
       }
     }
@@ -69,7 +91,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             backgroundColor: '#fff',
           }}
         >
-          Cancel
+          {cancelText}
         </button>
         <button
           onClick={onOk}
@@ -82,19 +104,23 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             color: '#fff',
           }}
         >
-          OK
+          {confirmText}
         </button>
       </div>
     )
+
+    // Determine if footer should be shown
+    const shouldShowFooter = showFooter !== undefined ? showFooter : footer !== null
 
     return (
       <div
         ref={ref}
         style={{
           position: 'fixed',
-          inset: 0,
+          inset: fullscreen ? 0 : undefined,
+          ...(fullscreen ? {} : { top: 0, left: 0, right: 0, bottom: 0 }),
           zIndex,
-          display: open ? 'block' : 'none',
+          display: resolvedOpen ? 'block' : 'none',
         }}
       >
         {/* Mask */}
@@ -113,7 +139,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             top: centered ? '50%' : '100px',
             left: '50%',
             transform: centered ? 'translate(-50%, -50%)' : 'translateX(-50%)',
-            width: typeof width === 'number' ? `${width}px` : width,
+            width: fullscreen ? '100vw' : typeof width === 'number' ? `${width}px` : width,
+            height: fullscreen ? '100vh' : undefined,
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
@@ -149,11 +176,9 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             )}
           </div>
           {/* Body */}
-          <div style={{ padding: '24px', ...bodyStyle }}>
-            {children}
-          </div>
+          <div style={{ padding: '24px', ...bodyStyle }}>{children}</div>
           {/* Footer */}
-          {footer !== null && (
+          {shouldShowFooter && (
             <div
               style={{
                 padding: '16px 24px',
@@ -166,7 +191,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         </div>
       </div>
     )
-  }
+  },
 )
 
 Modal.displayName = 'Modal'

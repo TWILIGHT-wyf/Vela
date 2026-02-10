@@ -1,38 +1,72 @@
 import React, { forwardRef } from 'react'
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  /** @canonical Schema prop name */
+  value?: string | number
+  /** @deprecated Use `value` */
   count?: number | string
+  /** @canonical Schema prop name */
+  isDot?: boolean
+  /** @deprecated Use `isDot` */
   dot?: boolean
+  /** Semantic color type (canonical) */
+  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  /** Custom badge color */
   color?: string
+  hidden?: boolean
   offset?: [number, number]
   showZero?: boolean
+  /** @canonical Schema prop name */
+  max?: number
+  /** @deprecated Use `max` */
   overflowCount?: number
 }
 
-export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({
-    count,
-    dot = false,
-    color = '#ff4d4f',
-    offset,
-    showZero = false,
-    overflowCount = 99,
-    style,
-    children,
-    ...props
-  }, ref) => {
-    const displayCount = typeof count === 'number'
-      ? count > overflowCount ? `${overflowCount}+` : count
-      : count
+const TYPE_COLOR_MAP: Record<string, string> = {
+  primary: '#409eff',
+  success: '#67c23a',
+  warning: '#e6a23c',
+  danger: '#f56c6c',
+  info: '#909399',
+}
 
-    const shouldShow = dot || (count !== undefined && (count !== 0 || showZero))
+export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
+  (
+    {
+      value,
+      count,
+      isDot,
+      dot = false,
+      type,
+      color = '#ff4d4f',
+      hidden = false,
+      offset,
+      showZero = false,
+      max,
+      overflowCount = 99,
+      style,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
+    // Canonical props take priority
+    const resolvedCount = value ?? count
+    const resolvedDot = isDot ?? dot
+    const resolvedMax = max ?? overflowCount
+    const resolvedColor = type ? (TYPE_COLOR_MAP[type] ?? color) : color
+    const displayCount =
+      typeof resolvedCount === 'number'
+        ? resolvedCount > resolvedMax
+          ? `${resolvedMax}+`
+          : resolvedCount
+        : resolvedCount
+
+    const shouldShow =
+      !hidden && (resolvedDot || (resolvedCount !== undefined && (resolvedCount !== 0 || showZero)))
 
     return (
-      <span
-        ref={ref}
-        style={{ position: 'relative', display: 'inline-flex', ...style }}
-        {...props}
-      >
+      <span ref={ref} style={{ position: 'relative', display: 'inline-flex', ...style }} {...props}>
         {children}
         {shouldShow && (
           <span
@@ -41,26 +75,26 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
               top: offset?.[1] ?? 0,
               right: offset?.[0] ?? 0,
               transform: 'translate(50%, -50%)',
-              backgroundColor: color,
+              backgroundColor: resolvedColor,
               color: '#fff',
-              fontSize: dot ? 0 : '12px',
+              fontSize: resolvedDot ? 0 : '12px',
               fontWeight: 500,
-              minWidth: dot ? '8px' : '20px',
-              height: dot ? '8px' : '20px',
-              borderRadius: dot ? '50%' : '10px',
-              padding: dot ? 0 : '0 6px',
+              minWidth: resolvedDot ? '8px' : '20px',
+              height: resolvedDot ? '8px' : '20px',
+              borderRadius: resolvedDot ? '50%' : '10px',
+              padding: resolvedDot ? 0 : '0 6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 0 0 1px #fff',
             }}
           >
-            {!dot && displayCount}
+            {!resolvedDot && displayCount}
           </span>
         )}
       </span>
     )
-  }
+  },
 )
 
 Badge.displayName = 'Badge'

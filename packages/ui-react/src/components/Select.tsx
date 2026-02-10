@@ -9,27 +9,41 @@ export interface SelectOption {
 export interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   value?: string | number
   defaultValue?: string | number
-  options: SelectOption[]
+  options?: SelectOption[]
   onChange?: (value: string | number) => void
   placeholder?: string
   disabled?: boolean
+  /** @canonical Schema prop name */
+  clearable?: boolean
+  /** @deprecated Use `clearable` */
   allowClear?: boolean
-  size?: 'small' | 'medium' | 'large'
+  /** @canonical Schema prop name */
+  filterable?: boolean
+  multiple?: boolean
+  size?: 'small' | 'default' | 'medium' | 'large'
 }
 
 export const Select = forwardRef<HTMLDivElement, SelectProps>(
-  ({
-    value: controlledValue,
-    defaultValue,
-    options,
-    onChange,
-    placeholder = 'Please select',
-    disabled = false,
-    allowClear = false,
-    size = 'medium',
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      value: controlledValue,
+      defaultValue,
+      options = [],
+      onChange,
+      placeholder = 'Please select',
+      disabled = false,
+      clearable,
+      allowClear = false,
+      filterable,
+      size = 'medium',
+      style,
+      ...props
+    },
+    ref,
+  ) => {
+    // Canonical props take priority
+    const resolvedClearable = clearable ?? allowClear
+    void filterable
     const [internalValue, setInternalValue] = useState<string | number | undefined>(defaultValue)
     const [isOpen, setIsOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -39,6 +53,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(
 
     const heightMap = {
       small: '28px',
+      default: '32px',
       medium: '36px',
       large: '44px',
     }
@@ -73,7 +88,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(
     return (
       <div
         ref={(el) => {
-          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
+          ;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
           if (typeof ref === 'function') ref(el)
           else if (ref) ref.current = el
         }}
@@ -100,7 +115,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(
             {selectedOption?.label ?? placeholder}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {allowClear && value && (
+            {resolvedClearable && value && (
               <span
                 onClick={handleClear}
                 style={{ color: '#999', fontSize: '12px', cursor: 'pointer' }}
@@ -154,7 +169,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(
         )}
       </div>
     )
-  }
+  },
 )
 
 Select.displayName = 'Select'

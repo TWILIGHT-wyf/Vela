@@ -6,7 +6,8 @@ export interface CheckboxOption {
   disabled?: boolean
 }
 
-export interface CheckboxGroupProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface CheckboxGroupProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> {
   value?: (string | number)[]
   defaultValue?: (string | number)[]
   options: CheckboxOption[]
@@ -17,25 +18,26 @@ export interface CheckboxGroupProps extends Omit<React.HTMLAttributes<HTMLDivEle
 }
 
 export const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
-  ({
-    value: controlledValue,
-    defaultValue = [],
-    options,
-    onChange,
-    disabled = false,
-    direction = 'horizontal',
-    gap = 16,
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      value: controlledValue,
+      defaultValue = [],
+      options,
+      onChange,
+      disabled = false,
+      direction = 'horizontal',
+      gap = 16,
+      style,
+      ...props
+    },
+    ref,
+  ) => {
     const [internalValue, setInternalValue] = useState<(string | number)[]>(defaultValue)
     const value = controlledValue ?? internalValue
 
     const handleChange = (optValue: string | number) => {
       const isChecked = value.includes(optValue)
-      const newValue = isChecked
-        ? value.filter((v) => v !== optValue)
-        : [...value, optValue]
+      const newValue = isChecked ? value.filter((v) => v !== optValue) : [...value, optValue]
 
       if (controlledValue === undefined) {
         setInternalValue(newValue)
@@ -104,7 +106,7 @@ export const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
         })}
       </div>
     )
-  }
+  },
 )
 
 CheckboxGroup.displayName = 'CheckboxGroup'

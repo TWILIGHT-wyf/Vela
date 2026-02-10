@@ -1,23 +1,36 @@
 import React, { forwardRef, useState } from 'react'
 
 export interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  /** @canonical Schema prop name — alias for `src` */
+  url?: string
   fallback?: string
+  /** @canonical Schema prop name — fallback display text */
+  errorText?: string
   preview?: boolean
   fit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down'
+  lazy?: boolean
   placeholder?: React.ReactNode
 }
 
 export const Image = forwardRef<HTMLImageElement, ImageProps>(
-  ({
-    src,
-    alt = '',
-    fallback = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f0f0f0" width="100" height="100"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dy=".3em">No Image</text></svg>',
-    preview = false,
-    fit = 'cover',
-    placeholder,
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      url,
+      src: srcProp,
+      alt = '',
+      errorText,
+      fallback = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f0f0f0" width="100" height="100"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dy=".3em">No Image</text></svg>',
+      preview = false,
+      fit = 'cover',
+      lazy,
+      placeholder,
+      style,
+      ...props
+    },
+    ref,
+  ) => {
+    // Canonical `url` takes priority over `src`
+    const src = url ?? srcProp
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
@@ -32,6 +45,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(
     }
 
     const imageSrc = error ? fallback : src
+    const imageAlt = error && errorText ? errorText : alt
 
     return (
       <>
@@ -53,7 +67,8 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(
           <img
             ref={ref}
             src={imageSrc}
-            alt={alt}
+            alt={imageAlt}
+            loading={lazy ? 'lazy' : undefined}
             onLoad={handleLoad}
             onError={handleError}
             onClick={preview ? () => setShowPreview(true) : undefined}
@@ -91,7 +106,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(
         )}
       </>
     )
-  }
+  },
 )
 
 Image.displayName = 'Image'

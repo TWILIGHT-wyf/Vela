@@ -6,7 +6,8 @@ export interface MultiSelectOption {
   disabled?: boolean
 }
 
-export interface MultiSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface MultiSelectProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> {
   value?: (string | number)[]
   defaultValue?: (string | number)[]
   options: MultiSelectOption[]
@@ -19,19 +20,22 @@ export interface MultiSelectProps extends Omit<React.HTMLAttributes<HTMLDivEleme
 }
 
 export const MultiSelect = forwardRef<HTMLDivElement, MultiSelectProps>(
-  ({
-    value: controlledValue,
-    defaultValue = [],
-    options,
-    onChange,
-    placeholder = 'Please select',
-    disabled = false,
-    allowClear = false,
-    maxTagCount = 3,
-    size = 'medium',
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      value: controlledValue,
+      defaultValue = [],
+      options,
+      onChange,
+      placeholder = 'Please select',
+      disabled = false,
+      allowClear = false,
+      maxTagCount = 3,
+      size = 'medium',
+      style,
+      ...props
+    },
+    ref,
+  ) => {
     const [internalValue, setInternalValue] = useState<(string | number)[]>(defaultValue)
     const [isOpen, setIsOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -58,9 +62,7 @@ export const MultiSelect = forwardRef<HTMLDivElement, MultiSelectProps>(
     const handleSelect = (opt: MultiSelectOption) => {
       if (opt.disabled) return
       const isSelected = value.includes(opt.value)
-      const newValue = isSelected
-        ? value.filter((v) => v !== opt.value)
-        : [...value, opt.value]
+      const newValue = isSelected ? value.filter((v) => v !== opt.value) : [...value, opt.value]
 
       if (controlledValue === undefined) {
         setInternalValue(newValue)
@@ -91,7 +93,7 @@ export const MultiSelect = forwardRef<HTMLDivElement, MultiSelectProps>(
     return (
       <div
         ref={(el) => {
-          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
+          ;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
           if (typeof ref === 'function') ref(el)
           else if (ref) ref.current = el
         }}
@@ -248,7 +250,7 @@ export const MultiSelect = forwardRef<HTMLDivElement, MultiSelectProps>(
         )}
       </div>
     )
-  }
+  },
 )
 
 MultiSelect.displayName = 'MultiSelect'

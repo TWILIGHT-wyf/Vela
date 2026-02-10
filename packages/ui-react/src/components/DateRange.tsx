@@ -1,11 +1,12 @@
-import React, { forwardRef, useState, useRef, useEffect } from 'react'
+import React, { forwardRef, useState } from 'react'
 
 export interface DateRangeValue {
   start?: Date | string
   end?: Date | string
 }
 
-export interface DateRangeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface DateRangeProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> {
   value?: DateRangeValue
   defaultValue?: DateRangeValue
   onChange?: (value: DateRangeValue) => void
@@ -17,45 +18,23 @@ export interface DateRangeProps extends Omit<React.HTMLAttributes<HTMLDivElement
   size?: 'small' | 'medium' | 'large'
 }
 
-const formatDate = (date: Date | string | undefined, format: string): string => {
-  if (!date) return ''
-  const d = typeof date === 'string' ? new Date(date) : date
-  if (isNaN(d.getTime())) return ''
-
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-
-  return format
-    .replace('YYYY', String(year))
-    .replace('MM', month)
-    .replace('DD', day)
-}
-
-const parseDate = (str: string): Date | undefined => {
-  if (!str) return undefined
-  const d = new Date(str)
-  return isNaN(d.getTime()) ? undefined : d
-}
-
 export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
-  ({
-    value: controlledValue,
-    defaultValue = {},
-    onChange,
-    placeholder = ['Start date', 'End date'],
-    disabled = false,
-    allowClear = true,
-    format = 'YYYY-MM-DD',
-    separator = '~',
-    size = 'medium',
-    style,
-    ...props
-  }, ref) => {
+  (
+    {
+      value: controlledValue,
+      defaultValue = {},
+      onChange,
+      placeholder = ['Start date', 'End date'],
+      disabled = false,
+      allowClear = true,
+      separator = '~',
+      size = 'medium',
+      style,
+      ...props
+    },
+    ref,
+  ) => {
     const [internalValue, setInternalValue] = useState<DateRangeValue>(defaultValue)
-    const [isStartOpen, setIsStartOpen] = useState(false)
-    const [isEndOpen, setIsEndOpen] = useState(false)
-    const containerRef = useRef<HTMLDivElement>(null)
 
     const value = controlledValue ?? internalValue
 
@@ -66,17 +45,6 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
     }
 
     const { height, fontSize } = sizeMap[size]
-
-    useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-          setIsStartOpen(false)
-          setIsEndOpen(false)
-        }
-      }
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
 
     const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = { ...value, start: e.target.value || undefined }
@@ -114,11 +82,7 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
 
     return (
       <div
-        ref={(el) => {
-          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
-          if (typeof ref === 'function') ref(el)
-          else if (ref) ref.current = el
-        }}
+        ref={ref}
         style={{
           position: 'relative',
           display: 'inline-flex',
@@ -135,14 +99,7 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
         {...props}
       >
         {/* Calendar Icon */}
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#999"
-          strokeWidth="2"
-        >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
           <line x1="16" y1="2" x2="16" y2="6" />
           <line x1="8" y1="2" x2="8" y2="6" />
@@ -152,7 +109,13 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
         {/* Start Date Input */}
         <input
           type="date"
-          value={value.start ? (typeof value.start === 'string' ? value.start : value.start.toISOString().split('T')[0]) : ''}
+          value={
+            value.start
+              ? typeof value.start === 'string'
+                ? value.start
+                : value.start.toISOString().split('T')[0]
+              : ''
+          }
           onChange={handleStartChange}
           placeholder={placeholder[0]}
           disabled={disabled}
@@ -165,7 +128,13 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
         {/* End Date Input */}
         <input
           type="date"
-          value={value.end ? (typeof value.end === 'string' ? value.end : value.end.toISOString().split('T')[0]) : ''}
+          value={
+            value.end
+              ? typeof value.end === 'string'
+                ? value.end
+                : value.end.toISOString().split('T')[0]
+              : ''
+          }
           onChange={handleEndChange}
           placeholder={placeholder[1]}
           disabled={disabled}
@@ -188,7 +157,7 @@ export const DateRange = forwardRef<HTMLDivElement, DateRangeProps>(
         )}
       </div>
     )
-  }
+  },
 )
 
 DateRange.displayName = 'DateRange'
