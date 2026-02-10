@@ -11,12 +11,12 @@ test.describe('Editor V2 Core Functions', () => {
 
   test('Should support Drag & Drop from Material Panel', async ({ page }) => {
     // 1. 展开组件库 (默认已展开)
-    // 搜索 BaseButton (以防折叠)
+    // 搜索 Button (以防折叠)
     await page.fill('.material-panel-content input', 'Button')
 
     // 定位组件项
     // 根据 MaterialPanel.vue，item 有 .grid-item class 和 item-label
-    const materialItem = page.locator('.grid-item').filter({ hasText: '基础按钮' }).first()
+    const materialItem = page.locator('.grid-item').filter({ hasText: '按钮' }).first()
     await expect(materialItem).toBeVisible()
 
     // 2. 执行拖拽 (使用手动 dispatchEvent 模拟 Drop，因为 dragTo 对 HTML5 DnD 支持不稳定)
@@ -27,8 +27,8 @@ test.describe('Editor V2 Core Functions', () => {
     await canvas.evaluate((el) => {
       const mockSchema = {
         id: 'test-button-' + Date.now(),
-        componentName: 'BaseButton',
-        component: 'BaseButton', // 兼容性字段
+        componentName: 'Button',
+        component: 'Button',
         props: { text: 'Test Button', type: 'primary' },
         style: { width: 120, height: 40 },
         children: [],
@@ -49,7 +49,7 @@ test.describe('Editor V2 Core Functions', () => {
     })
 
     // 3. 验证画布中出现了组件
-    // NodeWrapper -> UnifiedComponent -> BaseButton -> button.v-button
+    // NodeWrapper -> UnifiedComponent -> Button -> button.v-button
     // 查找文本内容为 "Test Button" 的组件
     await expect(page.locator('.editor-canvas-viewport .v-button')).toBeVisible({ timeout: 5000 })
   })
@@ -60,7 +60,7 @@ test.describe('Editor V2 Core Functions', () => {
     await canvas.evaluate((el) => {
       const mockSchema = {
         id: 'select-test-btn',
-        componentName: 'BaseButton',
+        componentName: 'Button',
         props: { text: 'Select Me' },
         style: { width: 120, height: 40, x: 100, y: 100 },
         children: [],

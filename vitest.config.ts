@@ -9,12 +9,12 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@vela/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
       '@vela/core/types': path.resolve(__dirname, 'packages/core/src/types/index.ts'),
       '@vela/core/runtime': path.resolve(__dirname, 'packages/core/src/runtime/index.ts'),
       '@vela/core/validation': path.resolve(__dirname, 'packages/core/src/validation/index.ts'),
       '@vela/core/contracts': path.resolve(__dirname, 'packages/core/src/contracts/index.ts'),
       '@vela/core/utils': path.resolve(__dirname, 'packages/core/src/utils/index.ts'),
+      '@vela/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
       '@vela/ui': path.resolve(__dirname, 'packages/ui/index.ts'),
       '@vela/renderer': path.resolve(__dirname, 'packages/renderer/src/index.ts'),
       '@vela/generator': path.resolve(__dirname, 'packages/generator/src/index.ts'),
