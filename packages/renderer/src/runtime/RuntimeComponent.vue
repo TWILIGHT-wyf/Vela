@@ -12,7 +12,7 @@
   >
     <!-- Text component special handling -->
     <template v-if="resolvedComponent === 'Text'">
-      {{ node.props?.text }}
+      {{ resolvedTextContent }}
     </template>
 
     <!-- Recursive children rendering -->
@@ -36,6 +36,7 @@
 import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
 import { getComponent, hasComponent } from '@vela/materials'
 import { getNodeComponent, type NodeSchema } from '@vela/core'
+import { isWrapperComponent } from '@vela/core/contracts'
 import { useComponentStyle } from '../composables/useComponentStyle'
 import { useComponentDataSource } from './useComponentDataSource'
 import type { RuntimeMode } from '../types'
@@ -90,12 +91,14 @@ const resolvedComponent = computed(() => getNodeComponent(props.node))
 const componentType = computed(() => {
   const name = resolvedComponent.value
 
-  // Built-in type mapping for common elements
+  if (isWrapperComponent(name)) {
+    return 'div'
+  }
+
+  // Built-in type mapping: wrapper/structural components resolve to div
   const typeMap: Record<string, string> = {
     Text: 'div',
-    Group: 'div',
-    Container: 'div',
-    Page: 'div', // Root container for pages
+    Page: 'div',
   }
 
   // Try material registry first
@@ -114,10 +117,7 @@ const componentType = computed(() => {
 
 // ========== Styles (via shared composable) ==========
 const nodeRef = toRef(props, 'node')
-const {
-  computedStyle: baseComputedStyle,
-  locked,
-} = useComponentStyle(nodeRef, {
+const { computedStyle: baseComputedStyle, locked } = useComponentStyle(nodeRef, {
   includeLayout: props.includeLayout,
   includeAnimation: true,
 })
@@ -151,8 +151,7 @@ const computedClasses = computed(() => {
 
   const animation = props.node.animation
   const className =
-    animation?.className ||
-    (animation as unknown as { class?: string } | undefined)?.class
+    animation?.className || (animation as unknown as { class?: string } | undefined)?.class
 
   if (animation && className) {
     const trigger = animation.trigger || 'init'
@@ -176,14 +175,31 @@ const computedClasses = computed(() => {
   return classes
 })
 
+const resolvedTextContent = computed(() => {
+  if (props.node.component !== 'Text') return ''
+  const propsRecord = (props.node.props || {}) as Record<string, unknown>
+  return propsRecord.content ?? propsRecord.text ?? propsRecord.value ?? ''
+})
+
 // ========== Component Props ==========
 const componentProps = computed(() => {
   const compProps: Record<string, unknown> = {}
 
   if (props.node.props) {
     for (const [key, value] of Object.entries(props.node.props)) {
-      // Skip text prop for Text component (rendered via interpolation)
-      if (resolvedComponent.value === 'Text' && key === 'text') continue
+      if (resolvedComponent.value === 'Text') {
+        if (key === 'content') {
+          compProps.content = value
+          continue
+        }
+        if (key === 'text' || key === 'value') {
+          // Backward compatible aliases -> canonical content
+          if (compProps.content === undefined) {
+            compProps.content = value
+          }
+          continue
+        }
+      }
       compProps[key] = value
     }
   }

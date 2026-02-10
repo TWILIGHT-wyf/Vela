@@ -1,4 +1,4 @@
-import { computed, type Ref, type ComputedRef, unref, type CSSProperties, shallowRef, watch } from 'vue'
+import { computed, type Ref, type ComputedRef, unref, type CSSProperties, watch } from 'vue'
 import type { NodeSchema, NodeStyle } from '@vela/core'
 import {
   extractPosition,
@@ -27,6 +27,31 @@ export interface UseComponentStyleOptions {
 interface StyleCacheEntry {
   key: string
   value: CSSProperties
+}
+
+function inferLayoutMode(
+  style: NodeStyle | undefined,
+  geometry: NodeSchema['geometry'] | undefined,
+): 'free' | 'flow' | 'grid' {
+  if (geometry?.mode === 'free' || geometry?.mode === 'flow' || geometry?.mode === 'grid') {
+    return geometry.mode
+  }
+
+  const position = style?.position
+  if (position === 'absolute' || position === 'fixed') {
+    return 'free'
+  }
+
+  if (
+    style?.left !== undefined ||
+    style?.top !== undefined ||
+    style?.right !== undefined ||
+    style?.bottom !== undefined
+  ) {
+    return 'free'
+  }
+
+  return 'flow'
 }
 
 /**
@@ -89,6 +114,10 @@ export function useComponentStyle(
     }
     return undefined
   })
+
+  const layoutMode = computed<'free' | 'flow' | 'grid'>(() =>
+    inferLayoutMode(styleRef.value, geometryRef.value),
+  )
 
   // ========== Granular Layout Properties ==========
 
@@ -177,14 +206,16 @@ export function useComponentStyle(
 
   // Full layout style (uses core utility for complete layout)
   const layoutStyle = computed<CSSProperties>(() => {
-    const cacheKey = generateCacheKey(styleRef.value, 'layout')
+    const cacheKey = `layout:${layoutMode.value}:${JSON.stringify(styleRef.value)}:${JSON.stringify(
+      geometryRef.value,
+    )}`
     if (enableCache && styleCache.has(cacheKey)) {
       return styleCache.get(cacheKey)!.value
     }
 
     const result = generateLayoutCSS(
       styleRef.value,
-      geometryRef.value?.mode || 'free',
+      layoutMode.value,
       geometryRef.value,
     ) as CSSProperties
 
@@ -234,9 +265,6 @@ export function useComponentStyle(
 
   // ========== Combined Styles ==========
 
-  // Use shallowRef for the final computed style to reduce reactive overhead
-  const _computedStyleCache = shallowRef<CSSProperties>({})
-
   const computedStyle = computed<CSSProperties>(() => {
     const base: CSSProperties = {}
 
@@ -257,8 +285,7 @@ export function useComponentStyle(
   const animationClasses = computed(() => {
     const animation = animationRef.value
     const className =
-      animation?.className ||
-      (animation as unknown as { class?: string } | undefined)?.class
+      animation?.className || (animation as unknown as { class?: string } | undefined)?.class
     if (!className) return []
     return ['animated', className]
   })
