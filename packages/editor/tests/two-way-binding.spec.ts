@@ -52,7 +52,7 @@ export interface ComponentTestCase {
  */
 export const COMPONENT_TEST_CASES: ComponentTestCase[] = [
   {
-    componentName: 'BaseButton',
+    componentName: 'Button',
     displayName: '按钮',
     initialProps: {
       text: '按钮',
@@ -66,7 +66,12 @@ export const COMPONENT_TEST_CASES: ComponentTestCase[] = [
     ],
     styleUpdates: [
       { styleName: 'width', oldValue: 100, newValue: 200, description: '修改宽度' },
-      { styleName: 'backgroundColor', oldValue: undefined, newValue: '#ff0000', description: '修改背景色' },
+      {
+        styleName: 'backgroundColor',
+        oldValue: undefined,
+        newValue: '#ff0000',
+        description: '修改背景色',
+      },
     ],
   },
   {
@@ -78,7 +83,12 @@ export const COMPONENT_TEST_CASES: ComponentTestCase[] = [
       color: '#333333',
     },
     propsUpdates: [
-      { propName: 'content', oldValue: 'Hello World', newValue: '你好世界', description: '修改文本内容' },
+      {
+        propName: 'content',
+        oldValue: 'Hello World',
+        newValue: '你好世界',
+        description: '修改文本内容',
+      },
       { propName: 'fontSize', oldValue: 14, newValue: 24, description: '修改字体大小' },
       { propName: 'color', oldValue: '#333333', newValue: '#ff0000', description: '修改文字颜色' },
     ],
@@ -113,7 +123,12 @@ export const COMPONENT_TEST_CASES: ComponentTestCase[] = [
     styleUpdates: [
       { styleName: 'width', oldValue: 200, newValue: 400, description: '修改容器宽度' },
       { styleName: 'height', oldValue: 200, newValue: 300, description: '修改容器高度' },
-      { styleName: 'backgroundColor', oldValue: '#ffffff', newValue: '#f0f0f0', description: '修改背景色' },
+      {
+        styleName: 'backgroundColor',
+        oldValue: '#ffffff',
+        newValue: '#f0f0f0',
+        description: '修改背景色',
+      },
     ],
   },
 ]

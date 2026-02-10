@@ -47,9 +47,9 @@
             <el-form-item label="子节点布局">
               <el-radio-group
                 :model-value="layoutModeValue"
-                @update:model-value="(val: 'flow' | 'free') => setLayoutMode(val)"
+                @update:model-value="(val: 'grid' | 'free') => setLayoutMode(val)"
               >
-                <el-radio-button label="flow">流式布局</el-radio-button>
+                <el-radio-button label="grid">网格编排</el-radio-button>
                 <el-radio-button label="free">自由布局</el-radio-button>
               </el-radio-group>
             </el-form-item>
@@ -125,9 +125,7 @@
               <el-color-picker
                 :model-value="getStyleValue('backgroundColor')"
                 show-alpha
-                @update:model-value="
-                  (val: string | null) => setStyleValue('backgroundColor', val)
-                "
+                @update:model-value="(val: string | null) => setStyleValue('backgroundColor', val)"
               />
             </el-form-item>
 
@@ -285,14 +283,17 @@ const CONTAINER_COMPONENTS = [
 ]
 
 const isContainer = computed(() => {
-  return !!props.node && CONTAINER_COMPONENTS.includes(props.node.component || props.node.componentName || '')
+  return (
+    !!props.node &&
+    CONTAINER_COMPONENTS.includes(props.node.component || props.node.componentName || '')
+  )
 })
 
 const layoutModeValue = computed(() => {
-  return (props.node?.container?.mode || 'flow') as 'flow' | 'free'
+  return (props.node?.container?.mode === 'free' ? 'free' : 'grid') as 'grid' | 'free'
 })
 
-function setLayoutMode(mode: 'flow' | 'free') {
+function setLayoutMode(mode: 'grid' | 'free') {
   if (!props.node) return
   componentStore.updateContainerLayout(props.node.id, mode)
 }
@@ -308,14 +309,11 @@ const metaStyles = computed<NamedStyleConfig[]>(() => {
   // 1. Native Styles
   if (meta?.styles) {
     styles.push(
-      ...Object.entries(meta.styles).map(([name, config]) => {
-        const { name: _n, ...rest } = config
-        return {
-          name,
-          ...rest,
-          isProp: false,
-        }
-      }),
+      ...Object.entries(meta.styles).map(([name, config]) => ({
+        ...config,
+        name,
+        isProp: false,
+      })),
     )
   }
 
@@ -323,15 +321,12 @@ const metaStyles = computed<NamedStyleConfig[]>(() => {
   if (meta?.props) {
     styles.push(
       ...Object.entries(meta.props)
-        .filter(([_, config]) => config.group === '样式')
-        .map(([name, config]) => {
-          const { name: _n, ...rest } = config
-          return {
-            name,
-            ...rest,
-            isProp: true,
-          }
-        }),
+        .filter(([, config]) => config.group === '样式')
+        .map(([name, config]) => ({
+          ...config,
+          name,
+          isProp: true,
+        })),
     )
   }
 
@@ -368,7 +363,7 @@ function getStyleValue(styleName: string, defaultValue?: unknown): unknown {
   if (!props.node) return defaultValue
 
   // 订阅版本号变化以触发响应式更新
-  const _v = componentStore.styleVersion[props.node.id]
+  void componentStore.styleVersion[props.node.id]
 
   const nodeStyle = props.node.style || {}
   const value = nodeStyle[styleName as keyof typeof nodeStyle]
@@ -391,7 +386,7 @@ function getMetaStyleValue(style: NamedStyleConfig): unknown {
   if (!props.node) return style.defaultValue
 
   // 订阅版本号变化以触发响应式更新
-  const _v = componentStore.styleVersion[props.node.id]
+  void componentStore.styleVersion[props.node.id]
 
   if (style.isProp) {
     const nodeProps = props.node.props || {}

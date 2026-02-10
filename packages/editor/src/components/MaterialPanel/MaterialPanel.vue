@@ -68,25 +68,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Component } from 'vue'
 import type { MaterialMeta, NodeSchema } from '@vela/core'
-import {
-  DocumentCopy,
-  Search,
-  Upload,
-  Box,
-  Pointer,
-  EditPen,
-  Grid,
-  Picture,
-  Files,
-  PieChart,
-  Monitor,
-  Tools,
-  DataLine,
-  Histogram,
-} from '@element-plus/icons-vue'
+import { DocumentCopy, Search, Upload, Box } from '@element-plus/icons-vue'
 import { generateId } from '@vela/core'
 import type { PropValue } from '@vela/core/types/expression'
 import {
@@ -94,10 +79,7 @@ import {
   extractDefaultProps,
   getCategoryConfig,
   getComponentIcon,
-  getMaterialsWithUI,
-  sortCategoriesByOrder,
   type CategoryConfig,
-  type MaterialItem,
 } from '@vela/materials'
 
 // --- 类型定义 ---
@@ -146,18 +128,11 @@ const categories = computed<Category[]>(() => {
   })
 
   // 按配置的顺序排序
-  const sortedResult = result.sort((a, b) => {
+  return result.sort((a, b) => {
     const orderA = getCategoryConfig(a.title).order
     const orderB = getCategoryConfig(b.title).order
     return orderA - orderB
   })
-
-  // 默认展开前三个分类
-  if (activeNames.value.length === 0) {
-    activeNames.value = sortedResult.slice(0, 3).map((cat) => cat.title)
-  }
-
-  return sortedResult
 })
 
 // --- 搜索过滤 ---
@@ -171,9 +146,7 @@ const filteredCategories = computed(() => {
 
   for (const category of categories.value) {
     const matchedItems = category.items.filter(
-      (item) =>
-        item.label.toLowerCase().includes(query) ||
-        item.name.toLowerCase().includes(query),
+      (item) => item.label.toLowerCase().includes(query) || item.name.toLowerCase().includes(query),
     )
 
     if (matchedItems.length > 0) {
@@ -184,12 +157,24 @@ const filteredCategories = computed(() => {
     }
   }
 
-  // 搜索时自动展开所有分类
-  if (filtered.length > 0) {
-    activeNames.value = filtered.map((cat) => cat.title)
-  }
-
   return filtered
+})
+
+watch(
+  categories,
+  (list) => {
+    if (activeNames.value.length === 0 && list.length > 0) {
+      activeNames.value = list.slice(0, 3).map((cat) => cat.title)
+    }
+  },
+  { immediate: true },
+)
+
+watch(filteredCategories, (list) => {
+  if (!searchQuery.value.trim()) return
+  if (list.length > 0) {
+    activeNames.value = list.map((cat) => cat.title)
+  }
 })
 
 // --- 拖拽处理 (适配 V1.5 架构) ---
@@ -226,8 +211,6 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'copy'
     event.dataTransfer.setData('application/x-vela', JSON.stringify(nodeSchema))
-    // Add text/plain fallback for better compatibility
-    event.dataTransfer.setData('text/plain', JSON.stringify(nodeSchema))
   }
 }
 </script>

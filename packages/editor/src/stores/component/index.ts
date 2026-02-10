@@ -15,6 +15,7 @@ import {
   UpdatePropsCommand,
   UpdateDataSourceCommand,
   UpdateChildLayoutCommand,
+  UpdateGridTemplateCommand,
 } from '../commands/index'
 
 import { useComponentIndex } from './useComponentIndex'
@@ -47,12 +48,13 @@ export const useComponent = defineStore('component', () => {
     if (currentPage && treeCtx.rootNode.value) {
       currentPage.children = cloneDeep(treeCtx.rootNode.value)
       const rootMode = treeCtx.rootNode.value.container?.mode
-      if (rootMode === 'free' || rootMode === 'flow') {
+      if (rootMode === 'free' || rootMode === 'flow' || rootMode === 'grid') {
+        const normalizedMode = rootMode === 'free' ? 'free' : 'grid'
         if (!currentPage.config) {
           currentPage.config = {}
         }
-        if (currentPage.config.defaultLayoutMode !== rootMode) {
-          currentPage.config.defaultLayoutMode = rootMode
+        if (currentPage.config.defaultLayoutMode !== normalizedMode) {
+          currentPage.config.defaultLayoutMode = normalizedMode
         }
       }
       projectStore.saveStatus = 'unsaved'
@@ -148,7 +150,7 @@ export const useComponent = defineStore('component', () => {
   /**
    * 更新组件的布局模式（通过命令执行，支持撤销）
    */
-  function updateContainerLayout(id: string, layoutMode: 'free' | 'flow') {
+  function updateContainerLayout(id: string, layoutMode: 'free' | 'flow' | 'grid') {
     const node = indexCtx.nodeIndex.get(id)
     if (!node) {
       console.warn(`[ComponentStore] Node not found: ${id}`)
@@ -158,6 +160,18 @@ export const useComponent = defineStore('component', () => {
 
     const historyStore = useHistoryStore()
     const cmd = new UpdateChildLayoutCommand(id, layoutMode)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
+   * 更新自适应网格模板（通过命令执行，支持撤销）
+   */
+  function updateGridTemplate(id: string, columns: string, rows: string) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node || node.container?.mode !== 'grid') return
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateGridTemplateCommand(id, columns, rows)
     historyStore.executeCommand(cmd)
   }
 
@@ -225,11 +239,6 @@ export const useComponent = defineStore('component', () => {
     if (!treeCtx.rootNode.value) return []
     return treeCtx.flattenTree(treeCtx.rootNode.value)
   })
-
-  /**
-   * @deprecated Use selectedNode instead
-   */
-  const selectComponentRef = computed(() => selectionCtx.selectedNode.value)
 
   /**
    * @deprecated Use selectedNode instead
@@ -329,6 +338,7 @@ export const useComponent = defineStore('component', () => {
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
     updateGeometryRaw: styleCtx.updateGeometryRaw,
     updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
+    updateGridTemplateRaw: styleCtx.updateGridTemplateRaw,
   })
 
   return {
@@ -348,14 +358,52 @@ export const useComponent = defineStore('component', () => {
 
     // Utilities
     findNodeById: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
-      // Support both old API (node, targetId) and simplified API (targetId)
-      const id = typeof nodeOrId === 'string' ? nodeOrId : targetId!
-      return indexCtx.findNodeById(id)
+      // Simplified API: findNodeById(id)
+      if (typeof nodeOrId === 'string') {
+        return indexCtx.findNodeById(nodeOrId)
+      }
+
+      // Legacy API: findNodeById(root, id) - search within provided subtree.
+      // If root is null/undefined, fallback to global index lookup for backward compatibility.
+      if (!targetId) {
+        return null
+      }
+
+      if (!nodeOrId) {
+        return indexCtx.findNodeById(targetId)
+      }
+
+      let matched: NodeSchema | null = null
+      indexCtx.traverse(nodeOrId, (node) => {
+        if (!matched && node.id === targetId) {
+          matched = node
+        }
+      })
+      return matched
     },
     findParentNode: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
-      // Support both old API (node, targetId) and simplified API (targetId)
-      const id = typeof nodeOrId === 'string' ? nodeOrId : targetId!
-      return indexCtx.findParentNode(id)
+      // Simplified API: findParentNode(id)
+      if (typeof nodeOrId === 'string') {
+        return indexCtx.findParentNode(nodeOrId)
+      }
+
+      // Legacy API: findParentNode(root, id) - search parent within provided subtree.
+      // If root is null/undefined, fallback to global index lookup for backward compatibility.
+      if (!targetId) {
+        return null
+      }
+
+      if (!nodeOrId) {
+        return indexCtx.findParentNode(targetId)
+      }
+
+      let matchedParent: NodeSchema | null = null
+      indexCtx.traverse(nodeOrId, (node, parent) => {
+        if (!matchedParent && node.id === targetId) {
+          matchedParent = parent
+        }
+      })
+      return matchedParent
     },
     getComponentById,
     getNodeIndex: indexCtx.getNodeIndex,
@@ -372,6 +420,7 @@ export const useComponent = defineStore('component', () => {
     updateGeometry,
     updateDataSource,
     updateContainerLayout,
+    updateGridTemplate,
     deleteComponent,
     deleteComponents,
     moveComponent,
@@ -391,6 +440,7 @@ export const useComponent = defineStore('component', () => {
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
     updateGeometryRaw: styleCtx.updateGeometryRaw,
     updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
+    updateGridTemplateRaw: styleCtx.updateGridTemplateRaw,
 
     // Clipboard
     clipboard: clipboardCtx.clipboard,

@@ -39,6 +39,7 @@ export type CommandType =
   | 'update-geometry'
   | 'update-data-source'
   | 'update-container-layout'
+  | 'update-grid-template'
   | 'batch'
 
 /**
@@ -103,7 +104,7 @@ export interface UpdateGeometryPayload {
  */
 export interface UpdateContainerLayoutPayload {
   id: string
-  containerMode: 'free' | 'flow'
+  containerMode: 'free' | 'flow' | 'grid'
 }
 
 /**

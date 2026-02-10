@@ -5,10 +5,7 @@ import type { ComponentIndexContext } from './useComponentIndex'
 /**
  * 组件样式和属性管理
  */
-export function useComponentStyle(
-  indexCtx: ComponentIndexContext,
-  syncToProjectStore: () => void,
-) {
+export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProjectStore: () => void) {
   const { nodeIndex } = indexCtx
 
   /**
@@ -96,17 +93,28 @@ export function useComponentStyle(
   /**
    * [Raw] 更新布局模式 - 不记录历史
    */
-  function updateContainerLayoutRaw(
-    id: string,
-    layoutMode: 'free' | 'flow',
-  ): void {
+  function updateContainerLayoutRaw(id: string, layoutMode: 'free' | 'flow' | 'grid'): void {
     const node = nodeIndex.get(id)
     if (!node) return
 
     node.container = {
       ...(node.container || {}),
       mode: layoutMode,
-    }
+    } as NodeSchema['container']
+    incrementVersion(id)
+    syncToProjectStore()
+  }
+
+  /**
+   * [Raw] 更新自适应网格模板 - 不记录历史
+   */
+  function updateGridTemplateRaw(id: string, columns: string, rows: string): void {
+    const node = nodeIndex.get(id)
+    if (!node || node.container?.mode !== 'grid') return
+
+    const container = node.container as unknown as Record<string, unknown>
+    container.columns = columns
+    container.rows = rows
     incrementVersion(id)
     syncToProjectStore()
   }
@@ -127,7 +135,7 @@ export function useComponentStyle(
     return computed({
       get: () => {
         // 订阅版本号变化以触发响应式更新
-        const _v = styleVersion.value[id]
+        void styleVersion.value[id]
         const node = nodeIndex.get(id)
         const value = node?.props?.[propName]
         return (value !== undefined ? value : defaultValue) as T
@@ -154,7 +162,7 @@ export function useComponentStyle(
     return computed({
       get: () => {
         // 订阅版本号变化以触发响应式更新
-        const _v = styleVersion.value[id]
+        void styleVersion.value[id]
         const node = nodeIndex.get(id)
         const value = node?.style?.[styleName as keyof typeof node.style]
         return (value !== undefined ? value : defaultValue) as T
@@ -195,6 +203,30 @@ export function useComponentStyle(
     return refs
   }
 
+  /**
+   * [Raw] 更新响应式断点样式覆盖 - 不记录历史
+   * Writes to node.responsive[breakpoint] instead of node.style
+   */
+  function updateResponsiveStyleRaw(
+    id: string,
+    breakpoint: string,
+    style: Partial<NodeStyle>,
+  ): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    if (!node.responsive) {
+      node.responsive = {}
+    }
+    node.responsive[breakpoint] = {
+      ...(node.responsive[breakpoint] || {}),
+      ...style,
+    }
+
+    incrementVersion(id)
+    syncToProjectStore()
+  }
+
   return {
     // State
     styleVersion,
@@ -208,6 +240,8 @@ export function useComponentStyle(
     updateDataSourceRaw,
     updateGeometryRaw,
     updateContainerLayoutRaw,
+    updateGridTemplateRaw,
+    updateResponsiveStyleRaw,
 
     // Ref Factories
     createPropRef,

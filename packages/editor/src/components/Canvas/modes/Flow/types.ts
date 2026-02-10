@@ -1,3 +1,5 @@
+import type { PropValue, LengthValue } from '@vela/core'
+
 /**
  * 流式布局拖拽相关类型定义
  */
@@ -30,6 +32,8 @@ export interface DropIndicatorState {
   rect: DropIndicatorRect | null
   /** 插入位置 */
   position: DropPosition
+  /** 父容器排列方向 (用于指示器方向) */
+  direction: 'row' | 'column'
   /** 目标节点 ID */
   targetId: string | null
   /** 目标节点的父节点 ID */
@@ -40,7 +44,9 @@ export interface DropIndicatorState {
  * 拖拽数据格式（通过 dataTransfer 传递）
  */
 export interface FlowDropData {
-  /** 组件名称（新增组件时使用） */
+  /** 组件名称 (来自 NodeSchema.component) */
+  component?: string
+  /** 组件名称（旧字段，保持兼容） */
   componentName?: string
   /** 节点 ID（移动组件时使用） */
   nodeId?: string
@@ -49,7 +55,7 @@ export interface FlowDropData {
   /** 默认高度 */
   height?: number
   /** 默认属性 */
-  props?: Record<string, any>
+  props?: Record<string, PropValue>
   /** 默认样式 */
-  style?: Record<string, any>
+  style?: Record<string, LengthValue | undefined>
 }

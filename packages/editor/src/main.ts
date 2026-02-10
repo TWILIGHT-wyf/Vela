@@ -15,6 +15,7 @@ import './styles/theme.css'
 
 // 导入物料包
 import { componentMap } from '@vela/materials'
+import { RESERVED_COMPONENT_NAMES } from '@vela/core/contracts'
 
 const app = createApp(App)
 
@@ -23,31 +24,8 @@ app.use(ElementPlus)
 app.use(createPinia())
 app.use(router)
 
-// 需要添加前缀的组件名，避免与 HTML 原生标签或 Element Plus 内部组件冲突
-const RESERVED_NAMES = new Set([
-  'Button',
-  'Input',
-  'Select',
-  'Option',
-  'Form',
-  'Table',
-  'Dialog',
-  'Menu',
-  'Image',
-  'Link',
-  'Text',
-  'Icon',
-  'Container',
-  'Header',
-  'Footer',
-  'Main',
-  'Aside',
-  'Col',
-  'Row',
-  'Progress',
-  'Slider',
-  'Switch',
-])
+// Reserved names imported from @vela/core/contracts (RESERVED_COMPONENT_NAMES)
+const RESERVED_NAMES = RESERVED_COMPONENT_NAMES
 
 // 异步加载 Element Plus Icons 和注册物料组件
 const initializeComponents = async () => {

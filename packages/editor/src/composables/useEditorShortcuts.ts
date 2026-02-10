@@ -1,6 +1,7 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
+import type { NodeStyle } from '@vela/core'
 
 export function useEditorShortcuts(
   options: {
@@ -24,13 +25,28 @@ export function useEditorShortcuts(
     selectComponents,
     findParentNode,
     updateGeometry,
+    updateStyle,
     clearSelection,
   } = compStore
 
-  const isNodeFreeMovable = (node: NonNullable<typeof selectedNodes.value[number]>) => {
+  const isNodeFreeMovable = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
     if (node.geometry?.mode === 'free') return true
     const parent = findParentNode(node.id)
     return parent?.container?.mode === 'free'
+  }
+
+  const isNodeGridLayout = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
+    const parent = findParentNode(node.id)
+    return !parent || parent.container?.mode !== 'free'
+  }
+
+  const parseMarginNumber = (val: unknown): number => {
+    if (typeof val === 'number' && Number.isFinite(val)) return val
+    if (typeof val === 'string') {
+      const num = Number.parseFloat(val)
+      return Number.isFinite(num) ? num : 0
+    }
+    return 0
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -103,6 +119,7 @@ export function useEditorShortcuts(
       if (e.key === 'ArrowDown') dy = 1
 
       if (dx !== 0 || dy !== 0) {
+        // Free mode: nudge position
         const movableNodes = selectedNodes.value.filter((node) => isNodeFreeMovable(node))
         if (movableNodes.length > 0) {
           e.preventDefault()
@@ -117,6 +134,32 @@ export function useEditorShortcuts(
               y: nextY,
             })
           })
+          return
+        }
+
+        // Grid mode: nudge margin
+        const gridNodes = selectedNodes.value.filter((node) => isNodeGridLayout(node))
+        if (gridNodes.length > 0) {
+          e.preventDefault()
+          const step = e.shiftKey ? (options.nudgeLargeStep ?? 10) : (options.nudgeStep ?? 1)
+          gridNodes.forEach((node) => {
+            const style = node.style || {}
+            const patch: Partial<NodeStyle> = {}
+
+            if (dy !== 0) {
+              const currentMarginTop = parseMarginNumber(style.marginTop)
+              patch.marginTop = Math.round(currentMarginTop + dy * step)
+            }
+            if (dx !== 0) {
+              const currentMarginLeft = parseMarginNumber(style.marginLeft)
+              patch.marginLeft = Math.round(currentMarginLeft + dx * step)
+            }
+
+            if (Object.keys(patch).length > 0) {
+              updateStyle(node.id, patch)
+            }
+          })
+          return
         }
         return
       }

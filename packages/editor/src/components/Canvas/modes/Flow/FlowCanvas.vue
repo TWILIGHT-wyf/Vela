@@ -9,6 +9,10 @@
     <div class="flow-workspace" :style="workspaceStyle">
       <div
         class="simulation-page"
+        :class="{
+          'show-bounds': uiStore.canvasSettings.showCanvasBounds,
+          'is-grid-mode': rootLayoutMode === 'grid',
+        }"
         :style="pageStyle"
         @dragover.prevent="handleRootDragOver"
         @dragleave="handleRootDragLeave"
@@ -46,10 +50,11 @@
             </svg>
           </div>
           <p class="empty-title">页面暂无内容</p>
-          <p class="empty-hint">请从左侧拖入容器或组件</p>
+          <p class="empty-hint">请从左侧拖入组件到网格编排画布</p>
         </div>
 
-        <SelectionLayer v-if="rootLayoutMode === 'free'" />
+        <MarginOverlay v-if="rootLayoutMode === 'grid'" />
+        <SelectionLayer />
       </div>
     </div>
 
@@ -58,6 +63,7 @@
       :visible="flowDrop.indicator.value.visible"
       :rect="flowDrop.indicator.value.rect"
       :position="flowDrop.indicator.value.position"
+      :direction="flowDrop.indicator.value.direction"
     />
 
     <!-- Context Menu -->
@@ -71,11 +77,13 @@
 
     <div class="interaction-hint">
       <span>Ctrl/Cmd/Shift + 点击：多选</span>
-      <span>选中组件后拖拽边缘手柄：调整宽高</span>
+      <span v-if="rootLayoutMode === 'grid'">拖拽边缘手柄：调整 fr 比例</span>
+      <span v-else>选中组件后拖拽边缘手柄：调整宽高</span>
       <span>悬停节点可查看 margin 标注</span>
       <span>拖拽橙色外侧线：调整 margin</span>
-      <span v-if="rootLayoutMode === 'free'">方向键微调（Shift 加速）</span>
+      <span>方向键微调（Shift 加速）</span>
       <span v-if="rootLayoutMode === 'free'">Alt + 拖拽：临时关闭吸附</span>
+      <button class="zoom-fit-btn" @click="handleZoomToFit" title="Ctrl+0: Zoom to Fit">Fit</button>
     </div>
   </div>
 </template>
@@ -83,6 +91,7 @@
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import type { GridContainerLayout } from '@vela/core'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
 import { useSizeStore } from '@/stores/size'
@@ -91,6 +100,7 @@ import NodeWrapper from './NodeWrapper.vue'
 import DropIndicator from './DropIndicator.vue'
 import ContextMenu from './ContextMenu.vue'
 import SelectionLayer from '../../selection/SelectionLayer.vue'
+import MarginOverlay from '../../guides/MarginOverlay.vue'
 import { useFlowDrop } from './useFlowDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -132,9 +142,28 @@ provide('flowDrop', flowDrop)
 // ========== Root drag state ==========
 const isRootDragOver = ref(false)
 
-const rootLayoutMode = computed(() =>
-  rootNode.value?.container?.mode === 'free' ? 'free' : 'flow',
-)
+const rootLayoutMode = computed(() => {
+  const mode = rootNode.value?.container?.mode
+  if (mode === 'free') return 'free'
+  return 'grid'
+})
+
+// Adaptive grid (fr-based) properties
+const adaptiveGridColumns = computed(() => {
+  const container = rootNode.value?.container
+  if (container?.mode === 'grid') return (container as GridContainerLayout).columns || '1fr'
+  return '1fr'
+})
+const adaptiveGridRows = computed(() => {
+  const container = rootNode.value?.container
+  if (container?.mode === 'grid') return (container as GridContainerLayout).rows || '1fr'
+  return '1fr'
+})
+const adaptiveGridGap = computed(() => {
+  const container = rootNode.value?.container
+  if (container?.mode === 'grid') return (container as GridContainerLayout).gap ?? 8
+  return 8
+})
 
 /**
  * 页面样式 - 模拟 A4/自定义尺寸的白色页面
@@ -143,6 +172,14 @@ const pageStyle = computed(() => {
   const base: Record<string, string> = {
     width: `${canvasWidth.value}px`,
     minHeight: `${canvasHeight.value}px`,
+  }
+
+  if (rootLayoutMode.value === 'grid') {
+    base['--vela-adaptive-columns'] = adaptiveGridColumns.value
+    base['--vela-adaptive-rows'] = adaptiveGridRows.value
+    base['--vela-adaptive-gap'] = `${adaptiveGridGap.value}px`
+    base.height = `${canvasHeight.value}px`
+    delete base.minHeight
   }
 
   if (!props.embedded) {
@@ -173,18 +210,38 @@ const handleWheel = (e: WheelEvent) => {
   }
 }
 
+/**
+ * Ctrl+0: Zoom-to-fit
+ */
+const handleZoomToFitKey = (e: KeyboardEvent) => {
+  const isMac = navigator.platform.toUpperCase().includes('MAC')
+  const ctrlKey = isMac ? e.metaKey : e.ctrlKey
+  if (ctrlKey && e.key === '0') {
+    e.preventDefault()
+    handleZoomToFit()
+  }
+}
+
+const handleZoomToFit = () => {
+  const vp = viewportRef.value
+  if (!vp) return
+  uiStore.zoomToFit(vp.clientWidth, vp.clientHeight)
+}
+
 // ========== Keyboard Shortcuts ==========
 // (Refactored to useEditorShortcuts)
 
 onMounted(() => {
   if (!props.embedded) {
     window.addEventListener('wheel', handleWheel, { passive: false })
+    window.addEventListener('keydown', handleZoomToFitKey)
   }
 })
 
 onUnmounted(() => {
   if (!props.embedded) {
     window.removeEventListener('wheel', handleWheel)
+    window.removeEventListener('keydown', handleZoomToFitKey)
   }
 })
 
@@ -222,7 +279,9 @@ function handleMenuAction(action: string) {
       componentStore.pasteNodes()
       break
     case 'delete':
-      if (componentStore.selectedId) {
+      if (componentStore.selectedIds.length > 0) {
+        componentStore.deleteComponents([...componentStore.selectedIds])
+      } else if (componentStore.selectedId) {
         componentStore.deleteComponent(componentStore.selectedId)
       }
       break
@@ -343,6 +402,25 @@ const handleRootDrop = (e: DragEvent) => {
     transform 0.1s ease-out; /* Smooth zoom */
 }
 
+.simulation-page.is-grid-mode {
+  display: grid;
+  grid-template-columns: var(--vela-adaptive-columns, 1fr);
+  grid-template-rows: var(--vela-adaptive-rows, 1fr);
+  gap: var(--vela-adaptive-gap, 8px);
+  box-sizing: border-box;
+}
+
+/* Canvas boundary indicator */
+.simulation-page.show-bounds::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 2px;
+}
+
 /* 空状态占位 */
 .empty-page-placeholder {
   display: flex;
@@ -357,6 +435,11 @@ const handleRootDrop = (e: DragEvent) => {
   transition:
     border-color 0.2s ease,
     background 0.2s ease;
+}
+
+.simulation-page.is-grid-mode .empty-page-placeholder {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
 }
 
 .empty-page-placeholder.drag-over {
@@ -468,5 +551,22 @@ const handleRootDrop = (e: DragEvent) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   pointer-events: none;
   z-index: 20;
+}
+
+.zoom-fit-btn {
+  pointer-events: auto;
+  padding: 2px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.zoom-fit-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 </style>

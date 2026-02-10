@@ -1,5 +1,12 @@
 import { ref } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import {
+  buildFrTemplate,
+  countTracks,
+  parseFrTemplate,
+  type GridContainerLayout,
+  type GridNodeGeometry,
+  type NodeSchema,
+} from '@vela/core'
 import { cloneDeep } from 'lodash-es'
 import type { ComponentIndexContext } from './useComponentIndex'
 import type { ComponentSelectionContext } from './useComponentSelection'
@@ -19,6 +26,57 @@ export function useComponentTree(
    * 当前页面的组件树根节点
    */
   const rootNode = ref<NodeSchema | null>(null)
+
+  function clampInt(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, Math.round(value)))
+  }
+
+  function normalizeGridContainer(parent: NodeSchema | null | undefined) {
+    if (!parent || parent.container?.mode !== 'grid') return
+
+    const container = parent.container as GridContainerLayout
+    const children = parent.children || []
+    const normalizedColumns =
+      typeof container.columns === 'string' && container.columns.trim().length > 0
+        ? container.columns
+        : '1fr'
+    const colCount = Math.max(1, countTracks(normalizedColumns))
+
+    container.columns = normalizedColumns
+
+    const targetRowCount = Math.max(children.length, 1)
+    const rowValues = parseFrTemplate(container.rows || '1fr')
+
+    while (rowValues.length < targetRowCount) {
+      rowValues.push(1)
+    }
+    while (rowValues.length > targetRowCount) {
+      rowValues.pop()
+    }
+
+    container.rows = buildFrTemplate(rowValues)
+
+    children.forEach((child, index) => {
+      const existingGeometry =
+        child.geometry?.mode === 'grid' ? (child.geometry as GridNodeGeometry) : undefined
+
+      const colStart = clampInt(existingGeometry?.gridColumnStart ?? 1, 1, colCount)
+      const colEnd = clampInt(
+        existingGeometry?.gridColumnEnd ?? colCount + 1,
+        colStart + 1,
+        colCount + 1,
+      )
+
+      child.geometry = {
+        ...(existingGeometry || {}),
+        mode: 'grid',
+        gridColumnStart: colStart,
+        gridColumnEnd: colEnd,
+        gridRowStart: index + 1,
+        gridRowEnd: index + 2,
+      }
+    })
+  }
 
   /**
    * 扁平化树为数组
@@ -56,7 +114,6 @@ export function useComponentTree(
     }
 
     const newComponent = cloneDeep(component)
-    const effectiveParentId = parentId || rootNode.value.id
 
     if (!parentId) {
       if (!rootNode.value.children) {
@@ -69,6 +126,7 @@ export function useComponentTree(
         rootNode.value.children.push(newComponent)
       }
 
+      normalizeGridContainer(rootNode.value)
       indexNode(newComponent, rootNode.value.id)
       syncToProjectStore()
       return newComponent.id
@@ -90,6 +148,7 @@ export function useComponentTree(
       parentNode.children.push(newComponent)
     }
 
+    normalizeGridContainer(parentNode)
     indexNode(newComponent, parentId)
     syncToProjectStore()
     return newComponent.id
@@ -115,6 +174,7 @@ export function useComponentTree(
     if (idx !== -1) {
       unindexNode(id)
       parent.children.splice(idx, 1)
+      normalizeGridContainer(parent)
       clearDeletedSelection(id)
       syncToProjectStore()
     }
@@ -140,10 +200,12 @@ export function useComponentTree(
     if (oldIndex === -1) return
 
     oldParent.children.splice(oldIndex, 1)
+    normalizeGridContainer(oldParent)
 
     const newParent = nodeIndex.get(newParentId)
     if (!newParent) {
       oldParent.children.splice(oldIndex, 0, node)
+      normalizeGridContainer(oldParent)
       return
     }
 
@@ -153,6 +215,7 @@ export function useComponentTree(
 
     newParent.children.splice(newIndex, 0, node)
     parentIndex.set(id, newParentId)
+    normalizeGridContainer(newParent)
 
     syncToProjectStore()
   }

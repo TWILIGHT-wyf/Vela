@@ -4,17 +4,22 @@ import type { NodeSchema } from '@vela/core'
 import { useCanvasContext } from './useCanvasContext'
 import { useSnapping } from './useSnapping'
 import { useComponent } from '@/stores/component'
+import { useSizeStore } from '@/stores/size'
 
 export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+
+const MIN_SIZE = 10
 
 export function useTransform() {
   const { scale, toClientCoords } = useCanvasContext()
   const store = useComponent()
+  const sizeStore = useSizeStore()
   const { snap, clearSnap, snapLines } = useSnapping()
 
   const isDragging = ref(false)
   const isResizing = ref(false)
   const isRotating = ref(false)
+  const resizeInfo = ref<{ width: number; height: number } | null>(null)
 
   const getSiblings = (id: string) => {
     const parent = store.findParentNode(id)
@@ -56,6 +61,8 @@ export function useTransform() {
 
       // Hold Alt to temporarily disable snapping for precise move
       if (!ev.altKey) {
+        // Canvas boundary as a synthetic snap target (edges + center lines)
+        const canvasBoundsRect = { x: 0, y: 0, w: sizeStore.width, h: sizeStore.height }
         const { position } = snap(
           {
             x: rawX,
@@ -64,12 +71,39 @@ export function useTransform() {
             h: height,
           },
           siblings,
+          [canvasBoundsRect],
         )
         nextX = position.x
         nextY = position.y
       } else {
         clearSnap()
       }
+
+      // Snap-to-grid (sibling/boundary snapping takes priority over grid)
+      // Use explicit flag: grid only applies if NO snap adjusted the position
+      const siblingSnappedX = nextX !== rawX
+      const siblingSnappedY = nextY !== rawY
+      const rootContainer = store.rootNode?.container
+      if (
+        rootContainer?.mode === 'free' &&
+        rootContainer.snapToGrid &&
+        rootContainer.gridSize &&
+        rootContainer.gridSize > 1
+      ) {
+        const gs = rootContainer.gridSize
+        if (!siblingSnappedX) {
+          nextX = Math.round(nextX / gs) * gs
+        }
+        if (!siblingSnappedY) {
+          nextY = Math.round(nextY / gs) * gs
+        }
+      }
+
+      // Clamp to canvas boundaries
+      const canvasW = sizeStore.width
+      const canvasH = sizeStore.height
+      nextX = Math.max(0, Math.min(nextX, canvasW - width))
+      nextY = Math.max(0, Math.min(nextY, canvasH - height))
 
       store.updateGeometry(id, {
         mode: 'free',
@@ -90,12 +124,7 @@ export function useTransform() {
   }
 
   // --- Resize ---
-  const startResize = (
-    id: string,
-    handle: ResizeHandle,
-    node: NodeSchema,
-    e: MouseEvent,
-  ) => {
+  const startResize = (id: string, handle: ResizeHandle, node: NodeSchema, e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -109,6 +138,9 @@ export function useTransform() {
     const initialW = Number(geometry?.width ?? node.style?.width ?? 100) || 100
     const initialH = Number(geometry?.height ?? node.style?.height ?? 100) || 100
 
+    const canvasW = sizeStore.width
+    const canvasH = sizeStore.height
+
     const onMove = throttle((ev: MouseEvent) => {
       const dx = (ev.clientX - startX) / scale.value
       const dy = (ev.clientY - startY) / scale.value
@@ -118,19 +150,28 @@ export function useTransform() {
       let newW = initialW
       let newH = initialH
 
-      if (handle.includes('e')) newW = initialW + dx
+      // West handles: derive position from clamped size change
       if (handle.includes('w')) {
-        newX = initialX + dx
-        newW = initialW - dx
+        newW = Math.max(MIN_SIZE, initialW - dx)
+        newW = Math.min(newW, initialX + initialW) // left edge can't go below 0
+        newX = initialX + initialW - newW
       }
-      if (handle.includes('s')) newH = initialH + dy
+      // East handles: clamp to canvas right edge
+      if (handle.includes('e')) {
+        newW = Math.max(MIN_SIZE, Math.min(initialW + dx, canvasW - initialX))
+      }
+      // North handles: derive position from clamped size change
       if (handle.includes('n')) {
-        newY = initialY + dy
-        newH = initialH - dy
+        newH = Math.max(MIN_SIZE, initialH - dy)
+        newH = Math.min(newH, initialY + initialH) // top edge can't go below 0
+        newY = initialY + initialH - newH
+      }
+      // South handles: clamp to canvas bottom edge
+      if (handle.includes('s')) {
+        newH = Math.max(MIN_SIZE, Math.min(initialH + dy, canvasH - initialY))
       }
 
-      if (newW < 10) newW = 10
-      if (newH < 10) newH = 10
+      resizeInfo.value = { width: Math.round(newW), height: Math.round(newH) }
 
       store.updateGeometry(id, {
         mode: 'free',
@@ -143,6 +184,7 @@ export function useTransform() {
 
     const onUp = () => {
       isResizing.value = false
+      resizeInfo.value = null
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
@@ -195,6 +237,7 @@ export function useTransform() {
     isDragging,
     isResizing,
     isRotating,
+    resizeInfo,
     startDrag,
     startResize,
     startRotate,

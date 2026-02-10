@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { LayoutMode } from '@vela/core'
 import { useComponent } from './component'
 import { useProjectStore } from './project'
+import { convertLayout } from '@/utils/layoutConverter'
 
 /**
  * UI 状态管理 Store
@@ -44,6 +45,7 @@ export const useUIStore = defineStore('ui', () => {
     gridColor: '#f0f0f0',
     gridMajorColor: '#e5e5e5',
     showGrid: true,
+    showCanvasBounds: true,
     gridSize: 20,
     gridMajorSize: 100,
     backgroundImage: '',
@@ -88,12 +90,16 @@ export const useUIStore = defineStore('ui', () => {
    */
   const canvasMode = computed<LayoutMode>(() => {
     const rootMode = rootNode.value?.container?.mode
-    if (rootMode === 'free' || rootMode === 'flow') {
-      return rootMode
+    if (rootMode === 'free') {
+      return 'free'
+    }
+    if (rootMode === 'flow' || rootMode === 'grid') {
+      return 'grid'
     }
 
     const pageMode = currentPage.value?.config?.defaultLayoutMode
-    return pageMode === 'free' ? 'free' : 'flow'
+    if (pageMode === 'free') return 'free'
+    return 'grid'
   })
 
   // ========== Actions ==========
@@ -152,12 +158,15 @@ export const useUIStore = defineStore('ui', () => {
    * 设置画布模式
    */
   function setCanvasMode(mode: LayoutMode) {
+    const normalizedMode: LayoutMode = mode === 'free' ? 'free' : 'grid'
     const root = rootNode.value
-    if (root && root.container?.mode !== mode) {
-      componentStore.updateChildLayoutRaw(root.id, mode)
+    if (root && root.container?.mode !== normalizedMode) {
+      const converted = convertLayout(root, normalizedMode)
+      componentStore.setTree(converted)
+      componentStore.syncToProjectStore()
     }
-    if (currentPage.value?.config?.defaultLayoutMode !== mode) {
-      projectStore.updatePageConfig({ defaultLayoutMode: mode })
+    if (currentPage.value?.config?.defaultLayoutMode !== normalizedMode) {
+      projectStore.updatePageConfig({ defaultLayoutMode: normalizedMode })
     }
   }
 
@@ -165,7 +174,7 @@ export const useUIStore = defineStore('ui', () => {
    * 切换画布模式
    */
   function toggleCanvasMode() {
-    setCanvasMode(canvasMode.value === 'free' ? 'flow' : 'free')
+    setCanvasMode(canvasMode.value === 'free' ? 'grid' : 'free')
   }
 
   /**
@@ -180,6 +189,20 @@ export const useUIStore = defineStore('ui', () => {
    */
   function setSimulationMode(mode: boolean) {
     isSimulationMode.value = mode
+  }
+
+  /**
+   * Zoom to fit the canvas within the viewport
+   * @param viewportWidth - Viewport width in pixels
+   * @param viewportHeight - Viewport height in pixels
+   */
+  function zoomToFit(viewportWidth: number, viewportHeight: number) {
+    const cw = canvasWidth.value
+    const ch = canvasHeight.value
+    if (cw <= 0 || ch <= 0 || viewportWidth <= 0 || viewportHeight <= 0) return
+
+    const fitScale = Math.min(viewportWidth / cw, viewportHeight / ch) * 0.9
+    setCanvasScale(fitScale)
   }
 
   return {
@@ -210,5 +233,6 @@ export const useUIStore = defineStore('ui', () => {
     toggleCanvasMode,
     toggleSimulationMode,
     setSimulationMode,
+    zoomToFit,
   }
 })

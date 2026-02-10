@@ -18,7 +18,7 @@
 
       <div class="divider-line"></div>
 
-      <!-- 画布模式切换已收敛为默认流式布局 -->
+      <!-- 画布模式切换已收敛为默认网格编排 -->
     </div>
 
     <div class="right-section">
@@ -157,12 +157,13 @@ function exportJSON() {
 }
 
 // 预览
-function openPreview(mode: 'page' | 'project' = 'page') {
+function openPreview() {
   router.push('/preview')
 }
 
 function handlePreviewCommand(command: string) {
-  openPreview(command as 'page' | 'project')
+  void command
+  openPreview()
 }
 
 // 主题切换

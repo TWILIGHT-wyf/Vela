@@ -10,6 +10,17 @@ function safeClone<T>(obj: T): T {
 }
 
 /**
+ * Clone command payloads with graceful fallback for non-cloneable values.
+ */
+function clonePayload<T>(obj: T): T {
+  try {
+    return structuredClone(obj)
+  } catch {
+    return safeClone(obj)
+  }
+}
+
+/**
  * Store 获取函数类型
  * 使用函数而非直接引用，避免循环依赖和确保获取最新实例
  */
@@ -24,7 +35,8 @@ export interface ComponentStoreAccessor {
   updatePropsRaw(id: string, props: Record<string, unknown>): void
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
   updateGeometryRaw(id: string, geometry: Partial<NodeGeometry>): void
-  updateChildLayoutRaw(id: string, childLayout: 'free' | 'flow' | undefined): void
+  updateChildLayoutRaw(id: string, childLayout: 'free' | 'flow' | 'grid' | undefined): void
+  updateGridTemplateRaw(id: string, columns: string, rows: string): void
 }
 
 // Store accessor 将在初始化时设置
@@ -62,7 +74,7 @@ export class AddComponentCommand implements Command {
 
   constructor(parentId: string | null, component: NodeSchema, index?: number) {
     this.parentId = parentId
-    this.component = structuredClone(component)
+    this.component = clonePayload(component)
     this.index = index
     this.description = `Add ${component.component}`
   }
@@ -188,7 +200,7 @@ export class UpdateStyleCommand implements Command {
 
   constructor(id: string, newStyle: Partial<NodeStyle>) {
     this.id = id
-    this.newStyle = structuredClone(newStyle)
+    this.newStyle = clonePayload(newStyle)
     this.timestamp = Date.now()
     this.description = `Update style of ${id}`
   }
@@ -260,7 +272,7 @@ export class UpdatePropsCommand implements Command {
 
   constructor(id: string, newProps: Record<string, unknown>) {
     this.id = id
-    this.newProps = structuredClone(newProps)
+    this.newProps = clonePayload(newProps)
     this.timestamp = Date.now()
     this.description = `Update props of ${id}`
   }
@@ -322,7 +334,7 @@ export class UpdateDataSourceCommand implements Command {
 
   constructor(id: string, newDataSource: Record<string, unknown>) {
     this.id = id
-    this.newDataSource = structuredClone(newDataSource)
+    this.newDataSource = clonePayload(newDataSource)
     this.description = `Update data source of ${id}`
   }
 
@@ -369,7 +381,7 @@ export class UpdateGeometryCommand implements Command {
 
   constructor(id: string, newGeometry: Partial<NodeGeometry>) {
     this.id = id
-    this.newGeometry = structuredClone(newGeometry)
+    this.newGeometry = clonePayload(newGeometry)
     this.timestamp = Date.now()
     this.description = `Update geometry of ${id}`
   }
@@ -431,10 +443,10 @@ export class UpdateChildLayoutCommand implements Command {
   readonly description: string
 
   private id: string
-  private newChildLayout: 'free' | 'flow' | undefined
-  private oldChildLayout?: 'free' | 'flow'
+  private newChildLayout: 'free' | 'flow' | 'grid' | undefined
+  private oldChildLayout?: 'free' | 'flow' | 'grid'
 
-  constructor(id: string, childLayout: 'free' | 'flow' | undefined) {
+  constructor(id: string, childLayout: 'free' | 'flow' | 'grid' | undefined) {
     this.id = id
     this.newChildLayout = childLayout
     this.description = `Update container layout of ${id}`
@@ -459,6 +471,64 @@ export class UpdateChildLayoutCommand implements Command {
   redo(): void {
     const store = getStore()
     store.updateChildLayoutRaw(this.id, this.newChildLayout)
+  }
+}
+
+/**
+ * 更新自适应网格模板命令（fr 列/行）
+ */
+export class UpdateGridTemplateCommand implements Command {
+  readonly type: CommandType = 'update-grid-template'
+  readonly description: string
+
+  private id: string
+  private newColumns: string
+  private newRows: string
+  private oldColumns?: string
+  private oldRows?: string
+  private timestamp: number
+
+  constructor(id: string, columns: string, rows: string) {
+    this.id = id
+    this.newColumns = columns
+    this.newRows = rows
+    this.timestamp = Date.now()
+    this.description = `Update grid template of ${id}`
+  }
+
+  execute(): void {
+    const store = getStore()
+    const node = store.findNodeById(null, this.id)
+    if (node?.container?.mode === 'grid') {
+      const c = node.container as unknown as Record<string, unknown>
+      this.oldColumns = c.columns as string | undefined
+      this.oldRows = c.rows as string | undefined
+    }
+    store.updateGridTemplateRaw(this.id, this.newColumns, this.newRows)
+  }
+
+  undo(): void {
+    if (this.oldColumns !== undefined && this.oldRows !== undefined) {
+      getStore().updateGridTemplateRaw(this.id, this.oldColumns, this.oldRows)
+    }
+  }
+
+  redo(): void {
+    getStore().updateGridTemplateRaw(this.id, this.newColumns, this.newRows)
+  }
+
+  canMerge(other: Command): boolean {
+    if (other.type !== 'update-grid-template') return false
+    const otherCmd = other as UpdateGridTemplateCommand
+    return otherCmd.id === this.id && this.timestamp - otherCmd.timestamp < 300
+  }
+
+  merge(other: Command): Command {
+    const otherCmd = other as UpdateGridTemplateCommand
+    const merged = new UpdateGridTemplateCommand(this.id, this.newColumns, this.newRows)
+    merged.oldColumns = otherCmd.oldColumns
+    merged.oldRows = otherCmd.oldRows
+    return merged
   }
 }
 

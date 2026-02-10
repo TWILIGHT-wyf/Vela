@@ -3,6 +3,12 @@
     <!-- Snap Lines -->
     <SnapLines v-if="snapLines.length > 0" :lines="snapLines" />
 
+    <!-- Alignment Toolbar (multi-select) -->
+    <AlignmentToolbar />
+
+    <!-- Alt+Hover Distance Indicators -->
+    <DistanceIndicators />
+
     <!-- Selection Box -->
     <div
       v-if="selectedNode && selectedId && isFreeSelection && boxStyle"
@@ -36,6 +42,11 @@
       <div v-if="!isDragging && !isResizing && !isRotating" class="selection-label">
         {{ selectedNode.title || selectedNode.component }}
       </div>
+
+      <!-- Resize dimension tooltip -->
+      <div v-if="isResizing && resizeInfo" class="resize-tooltip">
+        {{ resizeInfo.width }} × {{ resizeInfo.height }}
+      </div>
     </div>
   </div>
 </template>
@@ -47,13 +58,23 @@ import { useComponent } from '@/stores/component'
 import { useTransform, type ResizeHandle } from '../composables/useTransform'
 import { useCanvasContext } from '../composables/useCanvasContext'
 import SnapLines from '../guides/SnapLines.vue'
+import AlignmentToolbar from '../guides/AlignmentToolbar.vue'
+import DistanceIndicators from '../guides/DistanceIndicators.vue'
 
 const store = useComponent()
 const { selectedNode, selectedId } = storeToRefs(store)
 const { scale } = useCanvasContext() // Get scale for handle compensation
 
-const { startDrag, startResize, startRotate, snapLines, isDragging, isResizing, isRotating } =
-  useTransform()
+const {
+  startDrag,
+  startResize,
+  startRotate,
+  snapLines,
+  isDragging,
+  isResizing,
+  isRotating,
+  resizeInfo,
+} = useTransform()
 
 const handles: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se']
 
@@ -100,7 +121,7 @@ const boxStyle = computed(() => {
   if (!node || !isFreeSelection.value) return null
 
   // Trigger reactivity explicitly via styleVersion
-  const _v = store.styleVersion[node.id]
+  void store.styleVersion[node.id]
 
   // Read free-mode positioning from node.geometry, sizing from geometry/style
   const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
@@ -253,10 +274,14 @@ const handleRotateStart = (e: MouseEvent) => {
 .rotate-handle::before {
   content: '';
   position: absolute;
-  bottom: -15px; /* Needs compensation? It's inside handle, so scaled with handle. */
+  bottom: -15px;
   left: 50%;
   transform: translateX(-50%);
   width: 1px;
+  /* The handle is already counter-scaled by scale(1/s), so the ::before
+     lives inside the scaled coordinate space. Use a fixed 15px which will
+     appear correct at any zoom level since both handle and line share the
+     same counter-scale transform. */
   height: 15px;
   background: #409eff;
   pointer-events: none;
@@ -273,5 +298,21 @@ const handleRotateStart = (e: MouseEvent) => {
   border-radius: 2px 2px 2px 0;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.resize-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: -22px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
 }
 </style>

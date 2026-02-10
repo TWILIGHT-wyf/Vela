@@ -2,11 +2,11 @@
   <Teleport to="body">
     <Transition name="indicator-fade">
       <div v-if="visible" class="drop-indicator" :style="indicatorStyle">
-        <!-- Before/After: 水平蓝线 -->
+        <!-- Before/After: line indicator (horizontal or vertical depending on direction) -->
         <template v-if="position === 'before' || position === 'after'">
-          <div class="indicator-line" :class="[`position-${position}`]">
-            <div class="indicator-dot left" />
-            <div class="indicator-dot right" />
+          <div class="indicator-line" :class="[`position-${position}`, `direction-${direction}`]">
+            <div class="indicator-dot start" />
+            <div class="indicator-dot end" />
           </div>
         </template>
 
@@ -30,12 +30,15 @@ interface Props {
   rect: DropIndicatorRect | null
   /** 插入位置 */
   position: DropPosition
+  /** 父容器排列方向 */
+  direction?: 'row' | 'column'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   visible: false,
   rect: null,
   position: 'after',
+  direction: 'column',
 })
 
 // 指示器容器样式
@@ -76,9 +79,6 @@ const indicatorStyle = computed<CSSProperties>(() => {
 /* ========== Line Indicator (before/after) ========== */
 .indicator-line {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
   background: linear-gradient(90deg, #409eff, #66b1ff, #409eff);
   background-size: 200% 100%;
   border-radius: 1px;
@@ -86,12 +86,35 @@ const indicatorStyle = computed<CSSProperties>(() => {
   animation: line-shimmer 1.5s ease-in-out infinite;
 }
 
-.indicator-line.position-before {
+/* ---- Column direction: horizontal lines (default) ---- */
+.indicator-line.direction-column {
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+
+.indicator-line.direction-column.position-before {
   top: -1px;
 }
 
-.indicator-line.position-after {
+.indicator-line.direction-column.position-after {
   bottom: -1px;
+}
+
+/* ---- Row direction: vertical lines ---- */
+.indicator-line.direction-row {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #409eff, #66b1ff, #409eff);
+}
+
+.indicator-line.direction-row.position-before {
+  left: -1px;
+}
+
+.indicator-line.direction-row.position-after {
+  right: -1px;
 }
 
 @keyframes line-shimmer {
@@ -106,23 +129,41 @@ const indicatorStyle = computed<CSSProperties>(() => {
 /* ========== Dots ========== */
 .indicator-dot {
   position: absolute;
-  top: 50%;
   width: 6px;
   height: 6px;
   background: #409eff;
   border-radius: 50%;
-  transform: translateY(-50%);
   box-shadow:
     0 0 0 2px #fff,
     0 0 6px rgba(64, 158, 255, 0.8);
 }
 
-.indicator-dot.left {
+/* Column direction dots: left/right ends of horizontal line */
+.direction-column .indicator-dot {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.direction-column .indicator-dot.start {
   left: -3px;
 }
 
-.indicator-dot.right {
+.direction-column .indicator-dot.end {
   right: -3px;
+}
+
+/* Row direction dots: top/bottom ends of vertical line */
+.direction-row .indicator-dot {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.direction-row .indicator-dot.start {
+  top: -3px;
+}
+
+.direction-row .indicator-dot.end {
+  bottom: -3px;
 }
 
 /* ========== Box Indicator (inside) ========== */

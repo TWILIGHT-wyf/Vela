@@ -15,39 +15,40 @@ export interface Rect {
   h: number
 }
 
+/** Extract Rect from a NodeSchema's geometry/style */
+const getNodeRect = (node: NodeSchema): Rect => {
+  const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
+  const style = node.style || {}
+  const parseNumber = (value: unknown): number => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0
+    }
+    if (typeof value === 'string') {
+      const num = Number.parseFloat(value)
+      return Number.isFinite(num) ? num : 0
+    }
+    return 0
+  }
+
+  return {
+    x: parseNumber(geometry?.x ?? style.left ?? 0),
+    y: parseNumber(geometry?.y ?? style.top ?? 0),
+    w: parseNumber(geometry?.width ?? style.width ?? 0),
+    h: parseNumber(geometry?.height ?? style.height ?? 0),
+  }
+}
+
 export function useSnapping(threshold = 5) {
   const snapLines = ref<SnapLine[]>([])
 
   /**
-   * Calculate snapped position against siblings
+   * Calculate snapped position against target rects
+   * Accepts either NodeSchema[] (for backward compat) or Rect[] targets
    */
-  const snap = (current: Rect, siblings: NodeSchema[]) => {
+  const snap = (current: Rect, siblings: NodeSchema[], extraTargets?: Rect[]) => {
     let newX = current.x
     let newY = current.y
     const lines: SnapLine[] = []
-
-    // Helper to extract rect from node
-    const getNodeRect = (node: NodeSchema): Rect => {
-      const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
-      const style = node.style || {}
-      const parseNumber = (value: unknown): number => {
-        if (typeof value === 'number') {
-          return Number.isFinite(value) ? value : 0
-        }
-        if (typeof value === 'string') {
-          const num = Number.parseFloat(value)
-          return Number.isFinite(num) ? num : 0
-        }
-        return 0
-      }
-
-      return {
-        x: parseNumber(geometry?.x ?? style.left ?? 0),
-        y: parseNumber(geometry?.y ?? style.top ?? 0),
-        w: parseNumber(geometry?.width ?? style.width ?? 0),
-        h: parseNumber(geometry?.height ?? style.height ?? 0),
-      }
-    }
 
     // Points of interest on current rect
     const cx = {
@@ -67,10 +68,14 @@ export function useSnapping(threshold = 5) {
     let snapX: number | null = null
     let snapY: number | null = null
 
-    // Iterate siblings
-    for (const node of siblings) {
-      const target = getNodeRect(node)
+    // Collect all target rects: sibling nodes + extra targets (canvas bounds, etc.)
+    const targetRects: Rect[] = siblings.map(getNodeRect)
+    if (extraTargets) {
+      targetRects.push(...extraTargets)
+    }
 
+    // Iterate targets
+    for (const target of targetRects) {
       const sx = {
         start: target.x,
         center: target.x + target.w / 2,
@@ -84,23 +89,19 @@ export function useSnapping(threshold = 5) {
       }
 
       // Check X axis alignment (vertical lines)
-      // Compare current [start, center, end] with target [start, center, end]
-      for (const [cKey, cVal] of Object.entries(cx)) {
-        for (const [sKey, sVal] of Object.entries(sx)) {
+      for (const [, cVal] of Object.entries(cx)) {
+        for (const [, sVal] of Object.entries(sx)) {
           const diff = sVal - cVal
           if (Math.abs(diff) < threshold && Math.abs(diff) < Math.abs(minDeltaX)) {
             minDeltaX = diff
             snapX = sVal
-
-            // For now, simplify line to infinite or fixed range
-            // Ideally should be min/max of the two components
           }
         }
       }
 
       // Check Y axis alignment (horizontal lines)
-      for (const [cKey, cVal] of Object.entries(cy)) {
-        for (const [sKey, sVal] of Object.entries(sy)) {
+      for (const [, cVal] of Object.entries(cy)) {
+        for (const [, sVal] of Object.entries(sy)) {
           const diff = sVal - cVal
           if (Math.abs(diff) < threshold && Math.abs(diff) < Math.abs(minDeltaY)) {
             minDeltaY = diff
@@ -146,5 +147,6 @@ export function useSnapping(threshold = 5) {
     snap,
     clearSnap,
     snapLines,
+    getNodeRect,
   }
 }

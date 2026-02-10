@@ -9,15 +9,15 @@
         </el-icon>
         <span>{{ isSimulationMode ? '模拟运行中' : '编辑模式' }}</span>
       </div>
-      
+
       <div class="divider-line"></div>
 
       <!-- 画布模式 -->
       <div class="status-item">
         <el-icon class="status-icon"><Grid /></el-icon>
-        <span>{{ canvasMode === 'free' ? '自由布局' : '流式布局' }}</span>
+        <span>{{ canvasMode === 'free' ? '自由布局' : '网格编排' }}</span>
       </div>
-      
+
       <div class="divider-line"></div>
 
       <!-- 选中组件信息 -->
@@ -33,7 +33,7 @@
         <el-icon class="status-icon"><Files /></el-icon>
         <span>{{ componentCount }} 个组件</span>
       </div>
-      
+
       <div class="divider-line"></div>
 
       <!-- 缩放控制 -->
@@ -46,7 +46,7 @@
           <el-icon><Plus /></el-icon>
         </el-button>
       </div>
-      
+
       <div class="divider-line"></div>
 
       <!-- 画布尺寸 -->
@@ -181,7 +181,7 @@ function resetZoom() {
   display: flex;
   align-items: center;
   gap: 4px;
-  background-color: rgba(0,0,0,0.03);
+  background-color: rgba(0, 0, 0, 0.03);
   padding: 2px;
   border-radius: 99px;
 }

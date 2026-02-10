@@ -25,7 +25,7 @@
             <div style="max-width: 240px">
               <p><strong>自由布局:</strong> 组件使用绝对定位，可自由拖拽、调整大小和层级</p>
               <p style="margin-top: 8px">
-                <strong>流式布局:</strong> 组件使用文档流排列，类似网页布局
+                <strong>网格编排:</strong> 组件以 fr 比例自动填满画布，拖拽边缘调整比例
               </p>
             </div>
           </template>
@@ -48,26 +48,26 @@
 
         <div
           class="layout-option"
-          :class="{ active: currentLayout === 'flow' }"
-          @click="handleLayoutChange('flow')"
+          :class="{ active: currentLayout === 'grid' }"
+          @click="handleLayoutChange('grid')"
         >
           <div class="layout-icon">
-            <el-icon :size="32"><List /></el-icon>
+            <el-icon :size="32"><Grid /></el-icon>
           </div>
-          <div class="layout-label">流式布局</div>
-          <div class="layout-desc">文档流</div>
+          <div class="layout-label">网格编排</div>
+          <div class="layout-desc">fr 比例</div>
         </div>
       </div>
 
       <el-alert
-        v-if="currentLayout === 'flow'"
-        title="流式布局提示"
+        v-if="currentLayout === 'grid'"
+        title="网格编排提示"
         type="info"
         :closable="false"
         show-icon
         class="layout-alert"
       >
-        组件将按添加顺序从上到下排列，不支持拖拽位置调整
+        组件以 fr 比例自动填满画布，拖拽边缘手柄调整比例，支持嵌套子网格
       </el-alert>
     </div>
 
@@ -120,7 +120,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { InfoFilled, Rank, List } from '@element-plus/icons-vue'
+import { InfoFilled, Rank, Grid } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
 import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
@@ -141,11 +141,13 @@ const pagePath = ref('')
 
 // 当前布局模式
 const currentLayout = computed<LayoutMode>(() => {
-  return (
-    (rootNode.value?.container?.mode as LayoutMode | undefined) ||
-    (currentPage.value?.config?.defaultLayoutMode as LayoutMode | undefined) ||
-    'flow'
-  )
+  const rootMode = rootNode.value?.container?.mode as LayoutMode | undefined
+  if (rootMode === 'free' || rootMode === 'grid') {
+    return rootMode
+  }
+
+  const pageMode = currentPage.value?.config?.defaultLayoutMode as LayoutMode | undefined
+  return pageMode === 'free' ? 'free' : 'grid'
 })
 
 // 同步页面信息
@@ -166,7 +168,8 @@ watch(
   ([page, root]) => {
     if (!page || !root) return
     if (!root.container?.mode && page.config?.defaultLayoutMode) {
-      componentStore.updateChildLayoutRaw(root.id, page.config.defaultLayoutMode as LayoutMode)
+      const mode = page.config.defaultLayoutMode === 'free' ? 'free' : 'grid'
+      componentStore.updateChildLayoutRaw(root.id, mode)
     }
   },
   { immediate: true },
@@ -190,13 +193,16 @@ function handlePathChange(value: string) {
 
 // 处理布局模式切换
 async function handleLayoutChange(mode: LayoutMode) {
-  if (mode === currentLayout.value) return
+  const targetMode: LayoutMode = mode === 'free' ? 'free' : 'grid'
+  if (targetMode === currentLayout.value) return
 
   try {
+    const confirmMessages: Record<string, string> = {
+      free: '切换到自由布局将为所有组件添加绝对定位，并设置初始坐标。此操作可能导致布局变化，是否继续？',
+      grid: '切换到网格编排将把组件转换为 fr 比例布局，组件将自动填满画布。此操作可能导致布局变化，是否继续？',
+    }
     await ElMessageBox.confirm(
-      mode === 'flow'
-        ? '切换到流式布局将移除所有组件的位置坐标，并按原Y坐标顺序重新排列。此操作可能导致布局变化，是否继续？'
-        : '切换到自由布局将为所有组件添加绝对定位，并设置初始坐标。此操作可能导致布局变化，是否继续？',
+      confirmMessages[targetMode] || '是否切换布局模式？',
       '切换布局模式',
       {
         confirmButtonText: '确认切换',
@@ -206,12 +212,13 @@ async function handleLayoutChange(mode: LayoutMode) {
     )
 
     if (rootNode.value) {
-      const converted = convertLayout(rootNode.value, mode)
+      const converted = convertLayout(rootNode.value, targetMode)
       componentStore.setTree(converted)
       componentStore.syncToProjectStore()
     }
-    projectStore.updatePageConfig({ defaultLayoutMode: mode })
-    ElMessage.success(`已切换到${mode === 'free' ? '自由' : '流式'}布局`)
+    projectStore.updatePageConfig({ defaultLayoutMode: targetMode })
+    const labelMap: Record<string, string> = { free: '自由', grid: '网格编排' }
+    ElMessage.success(`已切换到${labelMap[targetMode] || targetMode}布局`)
   } catch {
     console.log('[PageSettingPane] Layout change cancelled')
   }

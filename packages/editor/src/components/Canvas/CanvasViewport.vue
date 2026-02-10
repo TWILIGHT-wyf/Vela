@@ -74,22 +74,16 @@ const { scale, panX, panY, viewportRef, isPanning, isSpacePressed, setScale, pan
   })
 
 // Sync UI store -> Canvas context
-watch(
-  canvasScale,
-  (newScale) => {
-    if (Math.abs(newScale - scale.value) > 0.001) {
-      setScale(newScale)
-    }
-  },
-)
+watch(canvasScale, (newScale) => {
+  if (Math.abs(newScale - scale.value) > 0.001) {
+    setScale(newScale)
+  }
+})
 
 watch(
   canvasOffset,
   (offset) => {
-    if (
-      Math.abs(offset.x - panX.value) > 0.1 ||
-      Math.abs(offset.y - panY.value) > 0.1
-    ) {
+    if (Math.abs(offset.x - panX.value) > 0.1 || Math.abs(offset.y - panY.value) > 0.1) {
       setPan(offset.x, offset.y)
     }
   },
@@ -101,10 +95,7 @@ watch([scale, panX, panY], ([s, x, y]) => {
   if (Math.abs(s - canvasScale.value) > 0.001) {
     uiStore.setCanvasScale(s)
   }
-  if (
-    Math.abs(x - canvasOffset.value.x) > 0.1 ||
-    Math.abs(y - canvasOffset.value.y) > 0.1
-  ) {
+  if (Math.abs(x - canvasOffset.value.x) > 0.1 || Math.abs(y - canvasOffset.value.y) > 0.1) {
     uiStore.setCanvasOffset(x, y)
   }
 })
@@ -147,8 +138,13 @@ const gridStyle = computed(() => {
  */
 const handleWheel = (e: WheelEvent) => {
   if (e.ctrlKey || e.metaKey) {
-    // Zoom towards cursor
-    const delta = -e.deltaY * 0.001
+    // Normalize deltaY across browsers:
+    // deltaMode 0 = pixels (Chrome ~100), 1 = lines (Firefox ~3), 2 = pages
+    let rawDelta = e.deltaY
+    if (e.deltaMode === 1) rawDelta *= 20 // lines → approximate pixels
+    if (e.deltaMode === 2) rawDelta *= 400 // pages → approximate pixels
+
+    const delta = -rawDelta * 0.001
     const newScale = scale.value * (1 + delta)
     setScale(newScale, { x: e.clientX, y: e.clientY })
   } else if (e.shiftKey) {
@@ -204,9 +200,10 @@ const startPan = (e: MouseEvent) => {
  * Handle Space key for pan mode
  */
 const handleKeyDown = (e: KeyboardEvent) => {
-  // Ignore if focus is on input/textarea
+  // Ignore if focus is on input/textarea/contenteditable
   const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    return
 
   if (e.code === 'Space' && !e.repeat) {
     e.preventDefault()

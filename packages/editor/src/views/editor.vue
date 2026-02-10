@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
 import { useHistoryStore } from '@/stores/history'
+import { convertLayout } from '@/utils/layoutConverter'
+import type { LayoutMode } from '@vela/core'
 
 // Components
 import Header from '@/components/Layout/Header/Header.vue'
@@ -41,7 +43,7 @@ const historyStore = useHistoryStore()
 const router = useRouter()
 
 const { rootNode } = storeToRefs(compStore)
-const { isSimulationMode } = storeToRefs(uiStore)
+const { isSimulationMode, canvasMode } = storeToRefs(uiStore)
 const { toggleSimulationMode } = uiStore
 const { canUndo, canRedo } = storeToRefs(historyStore)
 const { undo, redo, clear: resetHistory } = historyStore
@@ -51,6 +53,7 @@ const showMaterials = ref(true)
 const showSettings = ref(true)
 const showLayers = ref(false)
 const aiVisible = ref(false)
+const switchingLayout = ref(false)
 
 // --- Initial Positions ---
 const initialSetterX = ref(window.innerWidth - 340)
@@ -113,6 +116,45 @@ async function handleReset() {
     ElMessage.success('画布已清空')
   } catch {
     // Cancelled
+  }
+}
+
+async function switchCanvasMode(mode: LayoutMode) {
+  const targetMode: LayoutMode = mode === 'free' ? 'free' : 'grid'
+  if (switchingLayout.value || targetMode === canvasMode.value || !rootNode.value) return
+
+  const titleMap: Record<string, string> = {
+    free: '切换为自由布局',
+    grid: '切换为网格编排',
+  }
+  const messageMap: Record<string, string> = {
+    free: '将按当前顺序为组件生成绝对定位坐标，网格跨度信息会被转换。是否继续？',
+    grid: '将把组件转换为网格编排布局（fr 比例），组件将自动填满画布。是否继续？',
+  }
+  const title = titleMap[targetMode] || '切换布局'
+  const message = messageMap[targetMode] || '是否切换布局模式？'
+
+  try {
+    await ElMessageBox.confirm(message, title, {
+      type: 'warning',
+      confirmButtonText: '确认切换',
+      cancelButtonText: '取消',
+    })
+
+    switchingLayout.value = true
+    const converted = convertLayout(rootNode.value, targetMode)
+    compStore.setTree(converted)
+    compStore.syncToProjectStore()
+    projectStore.updatePageConfig({ defaultLayoutMode: targetMode })
+    const successMap: Record<string, string> = {
+      free: '已切换到自由布局',
+      grid: '已切换到网格编排',
+    }
+    ElMessage.success(successMap[targetMode] || '已切换布局')
+  } catch {
+    // cancelled
+  } finally {
+    switchingLayout.value = false
   }
 }
 </script>
@@ -193,7 +235,29 @@ async function handleReset() {
 
           <div class="dock-divider"></div>
 
-          <!-- Group 2: Tools -->
+          <!-- Group 2: Layout Mode -->
+          <div class="layout-switch" :class="{ disabled: switchingLayout }">
+            <button
+              class="layout-option"
+              :class="{ active: canvasMode === 'free' }"
+              :disabled="switchingLayout"
+              @click="switchCanvasMode('free')"
+            >
+              自由布局
+            </button>
+            <button
+              class="layout-option"
+              :class="{ active: canvasMode === 'grid' }"
+              :disabled="switchingLayout"
+              @click="switchCanvasMode('grid')"
+            >
+              网格编排
+            </button>
+          </div>
+
+          <div class="dock-divider"></div>
+
+          <!-- Group 3: Tools -->
           <el-tooltip content="撤销 (Ctrl+Z)" placement="top" :offset="12">
             <button
               class="dock-item"
@@ -224,7 +288,7 @@ async function handleReset() {
 
           <div class="dock-divider"></div>
 
-          <!-- Group 3: Smart Actions -->
+          <!-- Group 4: Smart Actions -->
           <el-tooltip content="AI 助手" placement="top" :offset="12">
             <button class="dock-item ai-dock-btn" @click="handleOpenAIAssist">
               <el-icon><MagicStick /></el-icon>
@@ -367,6 +431,41 @@ async function handleReset() {
   width: 1px;
   height: 32px;
   background: rgba(0, 0, 0, 0.1);
+}
+
+.layout-switch {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.layout-switch.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.layout-option {
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.layout-option:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.layout-option.active {
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
 }
 
 .ai-dock-btn {
