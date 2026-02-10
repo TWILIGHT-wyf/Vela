@@ -1,8 +1,10 @@
 import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, GridNodeGeometry } from '@vela/core'
+import { countTracks } from '@vela/core'
 import { useComponent } from '@/stores/component'
-import type { DropIndicatorState, DropPosition } from './types'
+import { useCanvasContext } from '../../composables/useCanvasContext'
+import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
 
 /**
  * 容器类型组件列表
@@ -10,10 +12,18 @@ import type { DropIndicatorState, DropPosition } from './types'
  */
 const CONTAINER_COMPONENTS = [
   'Container',
+  'Group',
   'Row',
   'Col',
   'Flex',
   'Grid',
+  'row',
+  'col',
+  'flex',
+  'grid',
+  'panel',
+  'tabs',
+  'modal',
   'Panel',
   'Card',
   'Tabs',
@@ -33,7 +43,14 @@ const MAX_NESTING_DEPTH = 10
  */
 function isContainerNode(node: NodeSchema): boolean {
   const name = node.component || node.componentName || ''
-  return CONTAINER_COMPONENTS.includes(name)
+  return CONTAINER_COMPONENTS.includes(name) || CONTAINER_COMPONENTS.includes(name.toLowerCase())
+}
+
+type FlowDirection = 'row' | 'column'
+type EditorLayoutMode = 'free' | 'grid'
+
+function normalizeLayoutMode(mode: 'free' | 'flow' | 'grid' | undefined): EditorLayoutMode {
+  return mode === 'free' ? 'free' : 'grid'
 }
 
 /**
@@ -47,7 +64,9 @@ function isContainerNode(node: NodeSchema): boolean {
  */
 export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   const componentStore = useComponent()
-  const { rootNode } = componentStore
+  const { scale: canvasScale } = useCanvasContext()
+
+  const getRootNode = () => componentStore.rootNode
 
   // ========== State ==========
 
@@ -59,6 +78,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     visible: false,
     rect: null,
     position: 'after',
+    direction: 'column',
     targetId: null,
     targetParentId: null,
   })
@@ -128,20 +148,59 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   }
 
   /**
+   * 检查 targetId 是否为 ancestorId 的后代
+   */
+  function isDescendantOf(targetId: string, ancestorId: string): boolean {
+    let currentParentId = componentStore.getParentId(targetId)
+    while (currentParentId) {
+      if (currentParentId === ancestorId) {
+        return true
+      }
+      currentParentId = componentStore.getParentId(currentParentId)
+    }
+    return false
+  }
+
+  function resolveLayoutMode(
+    rootNode: NodeSchema,
+    nodeId: string | null | undefined,
+  ): EditorLayoutMode {
+    let cursorId: string | null = nodeId ?? rootNode.id
+    while (cursorId) {
+      const node = componentStore.findNodeById(rootNode, cursorId)
+      if (node?.container?.mode) {
+        return normalizeLayoutMode(node.container.mode)
+      }
+      cursorId = componentStore.getParentId(cursorId)
+    }
+    return normalizeLayoutMode(rootNode.container?.mode)
+  }
+
+  /**
    * 计算插入位置
+   * @param mouseX 鼠标 X 坐标
    * @param mouseY 鼠标 Y 坐标
    * @param rect 目标元素的边界
    * @param node 目标节点
+   * @param direction 目标节点在父容器中的排列方向
    * @param isAltPressed 是否按住 Alt 键（强制放入内部）
    */
   function calculateDropPosition(
+    mouseX: number,
     mouseY: number,
     rect: DOMRect,
     node: NodeSchema,
+    direction: FlowDirection,
     isAltPressed: boolean = false,
   ): DropPosition {
-    const relativeY = mouseY - rect.top
-    const heightRatio = relativeY / rect.height
+    const isHorizontal = direction === 'row'
+    const edgeSize = isHorizontal ? rect.width : rect.height
+    if (edgeSize <= 0) {
+      return 'after'
+    }
+
+    const relative = isHorizontal ? mouseX - rect.left : mouseY - rect.top
+    const ratio = relative / edgeSize
 
     // 容器特殊处理
     if (isContainerNode(node)) {
@@ -159,9 +218,9 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       // 鼠标在中间区域时为 inside
       const edgeThreshold = 0.2
 
-      if (heightRatio < edgeThreshold) {
+      if (ratio < edgeThreshold) {
         return 'before'
-      } else if (heightRatio > 1 - edgeThreshold) {
+      } else if (ratio > 1 - edgeThreshold) {
         return 'after'
       } else {
         return 'inside'
@@ -169,7 +228,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     // 非容器组件：只有 before/after
-    return heightRatio < 0.5 ? 'before' : 'after'
+    return ratio < 0.5 ? 'before' : 'after'
   }
 
   // ========== Public Methods ==========
@@ -186,20 +245,28 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * 计算并更新指示器状态 (Throttled)
    */
   const updateIndicatorState = useThrottleFn(
-    (mouseY: number, node: NodeSchema, element: HTMLElement, isAltPressed: boolean) => {
+    (
+      mouseX: number,
+      mouseY: number,
+      node: NodeSchema,
+      element: HTMLElement,
+      isAltPressed: boolean,
+    ) => {
       const rect = element.getBoundingClientRect()
 
       // Auto scroll
       handleAutoScroll(mouseY)
 
-      const position = calculateDropPosition(mouseY, rect, node, isAltPressed)
-
       // 计算父节点 ID
       let targetParentId: string | null = null
+      const direction: FlowDirection = 'column'
+      const rootNode = getRootNode()
       if (rootNode) {
         const parent = componentStore.findParentNode(rootNode, node.id)
         targetParentId = parent?.id || null
       }
+
+      const position = calculateDropPosition(mouseX, mouseY, rect, node, direction, isAltPressed)
 
       // 更新指示器状态
       indicatorState.value = {
@@ -211,11 +278,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
           height: rect.height,
         },
         position,
+        direction,
         targetId: node.id,
         targetParentId,
       }
     },
-    50, // 50ms throttle (~20fps)
+    16, // 16ms throttle (~60fps)
   )
 
   /**
@@ -229,22 +297,16 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     // 检查是否拖拽到自己的子节点（防止循环嵌套）
-    if (draggingId.value && rootNode) {
-      const draggingNode = componentStore.findNodeById(rootNode, draggingId.value)
-      if (draggingNode) {
-        const isDescendant = componentStore.findNodeById(draggingNode, node.id)
-        if (isDescendant) {
-          // 拖拽到自己的子节点，忽略
-          return
-        }
-      }
+    if (draggingId.value && isDescendantOf(node.id, draggingId.value)) {
+      // 拖拽到自己的子节点，忽略
+      return
     }
 
     // 允许拖放
     e.preventDefault()
     e.stopPropagation()
 
-    updateIndicatorState(e.clientY, node, element, e.altKey)
+    updateIndicatorState(e.clientX, e.clientY, node, element, e.altKey)
   }
 
   /**
@@ -270,7 +332,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * 处理 drop 事件
    * 根据指示器状态执行组件移动或添加
    */
-  function handleDrop(e: DragEvent, node: NodeSchema): boolean {
+  function handleDrop(e: DragEvent): boolean {
     e.preventDefault()
     e.stopPropagation()
 
@@ -283,11 +345,13 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       visible: false,
       rect: null,
       position: 'after',
+      direction: 'column',
       targetId: null,
       targetParentId: null,
     }
 
     // 验证状态
+    const rootNode = getRootNode()
     if (!state.targetId || !rootNode) {
       console.warn('[useFlowDrop] Invalid drop state')
       return false
@@ -295,10 +359,10 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     // 获取拖拽数据
     const dataStr = e.dataTransfer?.getData('application/x-vela') || '{}'
-    let dropData: any
+    let dropData: FlowDropData
 
     try {
-      dropData = JSON.parse(dataStr)
+      dropData = JSON.parse(dataStr) as FlowDropData
     } catch {
       console.warn('[useFlowDrop] Invalid drop data')
       return false
@@ -321,7 +385,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     if (isMove) {
       // 移动现有组件
-      return handleMoveComponent(dropData.nodeId, state)
+      return handleMoveComponent(dropData.nodeId!, state)
     } else {
       // 添加新组件
       return handleAddComponent(dropData, state, clientX, clientY)
@@ -332,6 +396,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * 处理组件移动
    */
   function handleMoveComponent(nodeId: string, state: DropIndicatorState): boolean {
+    const rootNode = getRootNode()
     if (!rootNode || !state.targetId) return false
 
     const { position, targetId, targetParentId } = state
@@ -370,6 +435,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     console.log(`[useFlowDrop] Moving ${nodeId} to ${newParentId} at index ${newIndex}`)
     componentStore.moveComponent(nodeId, newParentId, newIndex)
+
     return true
   }
 
@@ -377,57 +443,115 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * 处理新组件添加
    */
   function handleAddComponent(
-    dropData: any,
+    dropData: FlowDropData,
     state: DropIndicatorState,
     clientX: number,
     clientY: number,
   ): boolean {
+    const rootNode = getRootNode()
     if (!rootNode || !state.targetId) return false
 
     const { position, targetId, targetParentId } = state
-    const targetNode = componentStore.findNodeById(rootNode, targetId)
-    const isFreeContainer = position === 'inside' && targetNode?.container?.mode === 'free'
+    const effectiveParentId = position === 'inside' ? targetId : targetParentId || rootNode.id
+    const effectiveParent = componentStore.findNodeById(rootNode, effectiveParentId)
+    const effectiveParentMode = resolveLayoutMode(rootNode, effectiveParentId)
+    const isFreeContainer = position === 'inside' && effectiveParentMode === 'free'
 
+    const componentName = dropData.component || dropData.componentName
+    if (!componentName) {
+      console.warn('[useFlowDrop] Missing component name in drop payload')
+      return false
+    }
+    const isContainerComponent = isContainerNode({ component: componentName } as NodeSchema)
+
+    // Check if the effective parent is a grid container
+    const gridParentId = effectiveParentId === rootNode.id ? null : effectiveParentId
+    const gridParentNode = effectiveParent || rootNode
+    const isGridParent = effectiveParentMode === 'grid'
+
+    if (isGridParent && gridParentNode) {
+      if (gridParentNode.container?.mode !== 'grid') {
+        componentStore.updateContainerLayout(gridParentNode.id, 'grid')
+      }
+      const gridContainer = gridParentNode.container as { columns?: string }
+      const colCount = countTracks(gridContainer.columns || '1fr')
+
+      const newComponent: NodeSchema = {
+        id: `comp_${crypto.randomUUID()}`,
+        component: componentName,
+        props: dropData.props ?? {},
+        style: { ...(dropData.style || {}), width: '100%', height: '100%' },
+        geometry: {
+          mode: 'grid',
+          gridColumnStart: 1,
+          gridColumnEnd: colCount + 1,
+          gridRowStart: 1,
+          gridRowEnd: 2,
+        } as GridNodeGeometry,
+        children: isContainerComponent ? [] : undefined,
+      }
+
+      const parentForAdd: string | null = gridParentId
+      let insertIdx: number | undefined
+      if (position !== 'inside' && gridParentNode.children) {
+        const tIdx = gridParentNode.children.findIndex((c: NodeSchema) => c.id === targetId)
+        insertIdx = position === 'before' ? tIdx : tIdx + 1
+      }
+
+      const newId = componentStore.addComponent(parentForAdd, newComponent, insertIdx)
+      if (newId) {
+        nextTick(() => {
+          componentStore.selectComponent(newId)
+        })
+        return true
+      }
+      return false
+    }
+
+    // Apply scale compensation for free containers
+    const s = canvasScale.value || 1
     let x = 0
     let y = 0
     if (isFreeContainer && state.rect) {
-      x = Math.max(0, Math.round(clientX - state.rect.left))
-      y = Math.max(0, Math.round(clientY - state.rect.top))
+      x = Math.max(0, Math.round((clientX - state.rect.left) / s))
+      y = Math.max(0, Math.round((clientY - state.rect.top) / s))
     }
 
-    const componentName = dropData.component || dropData.componentName
+    // Resolve numeric dimensions for free-mode geometry
+    const defaultW =
+      dropData.width ?? (typeof dropData.style?.width === 'number' ? dropData.style.width : 120)
+    const defaultH =
+      dropData.height ?? (typeof dropData.style?.height === 'number' ? dropData.style.height : 80)
 
     // 创建新组件
     const newComponent: NodeSchema = {
-      id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `comp_${crypto.randomUUID()}`,
       component: componentName,
-      props: dropData.props || {},
+      props: dropData.props ?? {},
       style: {
-        width: isFreeContainer
-          ? dropData.width ?? dropData.style?.width ?? 120
-          : dropData.width
-            ? `${dropData.width}px`
-            : '100%',
-        minHeight: isFreeContainer
-          ? undefined
-          : dropData.height
-            ? `${dropData.height}px`
-            : 'auto',
-        height: isFreeContainer ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
+        width: isFreeContainer ? defaultW : '100%',
+        minHeight: isFreeContainer ? undefined : '100%',
+        height: isFreeContainer ? defaultH : undefined,
+        gridColumn:
+          !isFreeContainer && (dropData.style?.gridColumn as string | undefined) === undefined
+            ? 'span 3'
+            : (dropData.style?.gridColumn as string | undefined),
+        gridRow:
+          !isFreeContainer && (dropData.style?.gridRow as string | undefined) === undefined
+            ? 'span 4'
+            : (dropData.style?.gridRow as string | undefined),
         ...(dropData.style || {}),
       },
       geometry: isFreeContainer
         ? {
-            mode: 'free',
+            mode: 'free' as const,
             x,
             y,
-            width: dropData.width ?? dropData.style?.width ?? 120,
-            height: dropData.height ?? dropData.style?.height ?? 80,
+            width: defaultW,
+            height: defaultH,
           }
         : undefined,
-      children: isContainerNode({ component: componentName } as NodeSchema)
-        ? []
-        : undefined,
+      children: isContainerComponent ? [] : undefined,
     }
 
     // 计算父节点和索引
@@ -442,14 +566,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       const parent = parentId ? componentStore.findNodeById(rootNode, parentId) : rootNode
 
       if (parent?.children) {
-        const targetIndex = parent.children.findIndex((c) => c.id === targetId)
+        const targetIndex = parent.children.findIndex((c: NodeSchema) => c.id === targetId)
         index = position === 'before' ? targetIndex : targetIndex + 1
       }
     }
 
-    console.log(
-      `[useFlowDrop] Adding ${newComponent.component} to ${parentId} at index ${index}`,
-    )
+    console.log(`[useFlowDrop] Adding ${newComponent.component} to ${parentId} at index ${index}`)
     const newId = componentStore.addComponent(parentId, newComponent, index)
 
     if (newId) {
@@ -471,6 +593,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       visible: false,
       rect: null,
       position: 'after',
+      direction: 'column',
       targetId: null,
       targetParentId: null,
     }
@@ -486,30 +609,68 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     hideIndicator()
 
     const dataStr = e.dataTransfer?.getData('application/x-vela') || '{}'
-    let dropData: any
+    let dropData: FlowDropData
 
     try {
-      dropData = JSON.parse(dataStr)
+      dropData = JSON.parse(dataStr) as FlowDropData
     } catch {
       return false
     }
 
     const componentName = dropData.component || dropData.componentName
-
     if (!componentName) {
       return false
     }
+    const isContainerComponent = isContainerNode({ component: componentName } as NodeSchema)
 
-    const rootLayoutMode = rootNode?.container?.mode === 'free' ? 'free' : 'flow'
+    const rootNode = getRootNode()
+    const rootLayoutMode = normalizeLayoutMode(rootNode?.container?.mode)
+    // Apply scale compensation for free layout drop coordinates
+    const s = canvasScale.value || 1
     let x = 0
     let y = 0
     if (rootLayoutMode === 'free') {
       const target = e.currentTarget as HTMLElement | null
       const rect = target?.getBoundingClientRect()
       if (rect) {
-        x = Math.max(0, Math.round(e.clientX - rect.left))
-        y = Math.max(0, Math.round(e.clientY - rect.top))
+        x = Math.max(0, Math.round((e.clientX - rect.left) / s))
+        y = Math.max(0, Math.round((e.clientY - rect.top) / s))
       }
+    }
+
+    // Grid composition mode: rely on tree-level normalization for row assignment
+    if (rootLayoutMode === 'grid' && rootNode) {
+      const gridContainer = rootNode.container as { columns?: string } | undefined
+      const colCount = countTracks(gridContainer?.columns || '1fr')
+
+      if (dropData.nodeId && draggingId.value === dropData.nodeId) {
+        componentStore.moveComponent(dropData.nodeId, rootNode.id, rootNode.children?.length || 0)
+        return true
+      }
+
+      const newComponent: NodeSchema = {
+        id: `comp_${crypto.randomUUID()}`,
+        component: componentName,
+        props: dropData.props ?? {},
+        style: { ...(dropData.style || {}), width: '100%', height: '100%' },
+        geometry: {
+          mode: 'grid',
+          gridColumnStart: 1,
+          gridColumnEnd: colCount + 1,
+          gridRowStart: 1,
+          gridRowEnd: 2,
+        } as GridNodeGeometry,
+        children: isContainerComponent ? [] : undefined,
+      }
+
+      const newId = componentStore.addComponent(null, newComponent)
+      if (newId) {
+        nextTick(() => {
+          componentStore.selectComponent(newId)
+        })
+        return true
+      }
+      return false
     }
 
     // 如果是移动操作
@@ -519,39 +680,35 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     // 添加新组件到根节点
+    // Resolve numeric dimensions for free-mode geometry
+    const defaultW =
+      dropData.width ?? (typeof dropData.style?.width === 'number' ? dropData.style.width : 120)
+    const defaultH =
+      dropData.height ?? (typeof dropData.style?.height === 'number' ? dropData.style.height : 80)
+
     const newComponent: NodeSchema = {
-      id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `comp_${crypto.randomUUID()}`,
       component: componentName,
-      props: dropData.props || {},
+      props: dropData.props ?? {},
       style: {
-        width:
-          rootLayoutMode === 'free'
-            ? dropData.width ?? dropData.style?.width ?? 120
-            : dropData.width
-              ? `${dropData.width}px`
-              : '100%',
-        minHeight:
-          rootLayoutMode === 'free'
-            ? undefined
-            : dropData.height
-              ? `${dropData.height}px`
-              : 'auto',
-        height: rootLayoutMode === 'free' ? dropData.height ?? dropData.style?.height ?? 80 : undefined,
+        width: rootLayoutMode === 'free' ? defaultW : '100%',
+        minHeight: rootLayoutMode === 'free' ? undefined : '100%',
+        height: rootLayoutMode === 'free' ? defaultH : undefined,
+        gridColumn: dropData.style?.gridColumn as string | undefined,
+        gridRow: dropData.style?.gridRow as string | undefined,
         ...(dropData.style || {}),
       },
       geometry:
         rootLayoutMode === 'free'
           ? {
-              mode: 'free',
+              mode: 'free' as const,
               x,
               y,
-              width: dropData.width ?? dropData.style?.width ?? 120,
-              height: dropData.height ?? dropData.style?.height ?? 80,
+              width: defaultW,
+              height: defaultH,
             }
           : undefined,
-      children: isContainerNode({ component: componentName } as NodeSchema)
-        ? []
-        : undefined,
+      children: isContainerComponent ? [] : undefined,
     }
 
     const newId = componentStore.addComponent(null, newComponent)
@@ -583,6 +740,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     isContainerNode,
     getNodeDepth,
     canDropIntoTarget,
+    isDescendantOf,
 
     // Constants
     MAX_NESTING_DEPTH,

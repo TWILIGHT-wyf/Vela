@@ -56,6 +56,8 @@ describe('layoutConverter', () => {
     expect(second?.style?.position).toBeUndefined()
     expect(second?.style?.left).toBeUndefined()
     expect(second?.style?.top).toBeUndefined()
+    expect(first?.style?.gridColumn).toMatch(/^span\s+\d+$/)
+    expect(first?.style?.gridRow).toMatch(/^span\s+\d+$/)
   })
 
   it('flow 模式下块级容器应规范化为 width=100% 且 height -> minHeight', () => {
@@ -74,9 +76,34 @@ describe('layoutConverter', () => {
     expect(container?.style?.width).toBe('100%')
     expect(container?.style?.minHeight).toBe('300px')
     expect(container?.style?.height).toBeUndefined()
+    expect(container?.style?.gridColumn).toBe('span 12')
   })
 
-  it('detectLayoutMode 应优先使用根容器模式', () => {
+  it('flow -> free 时应将 grid span 转换为可编辑几何尺寸', () => {
+    const root = createRoot('flow', [
+      {
+        id: 'grid_item',
+        component: 'Text',
+        style: {
+          width: '100%',
+          height: '100%',
+          gridColumn: 'span 2',
+          gridRow: 'span 3',
+        },
+      },
+    ])
+
+    const converted = convertLayout(root, 'free')
+    const item = converted.children?.[0]
+
+    expect(item?.geometry?.mode).toBe('free')
+    expect((item?.geometry as { width?: number }).width).toBe(320)
+    expect((item?.geometry as { height?: number }).height).toBe(108)
+    expect(item?.style?.gridColumn).toBeUndefined()
+    expect(item?.style?.gridRow).toBeUndefined()
+  })
+
+  it('detectLayoutMode 应优先使用根容器模式并将 flow 归一为 grid', () => {
     const root = createRoot('flow', [
       {
         id: 'child',
@@ -85,6 +112,6 @@ describe('layoutConverter', () => {
       },
     ])
 
-    expect(detectLayoutMode(root)).toBe('flow')
+    expect(detectLayoutMode(root)).toBe('grid')
   })
 })

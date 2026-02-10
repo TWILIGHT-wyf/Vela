@@ -22,13 +22,45 @@
 
     <!-- Flow resize handles -->
     <template v-if="showFlowResizeHandles">
-      <div class="flow-resize-handle handle-e" @mousedown.stop.prevent="handleFlowResizeStart('e', $event)" />
-      <div class="flow-resize-handle handle-s" @mousedown.stop.prevent="handleFlowResizeStart('s', $event)" />
-      <div class="flow-resize-handle handle-se" @mousedown.stop.prevent="handleFlowResizeStart('se', $event)" />
+      <div
+        class="flow-resize-handle handle-n"
+        @mousedown.stop.prevent="handleFlowResizeStart('n', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-e"
+        @mousedown.stop.prevent="handleFlowResizeStart('e', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-s"
+        @mousedown.stop.prevent="handleFlowResizeStart('s', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-w"
+        @mousedown.stop.prevent="handleFlowResizeStart('w', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-nw"
+        @mousedown.stop.prevent="handleFlowResizeStart('nw', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-ne"
+        @mousedown.stop.prevent="handleFlowResizeStart('ne', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-se"
+        @mousedown.stop.prevent="handleFlowResizeStart('se', $event)"
+      />
+      <div
+        class="flow-resize-handle handle-sw"
+        @mousedown.stop.prevent="handleFlowResizeStart('sw', $event)"
+      />
     </template>
 
     <template v-if="showFlowSpacingHandles">
-      <div class="flow-spacing-handle spacing-top" @mousedown.stop.prevent="handleFlowSpacingDragStart('top', $event)" />
+      <div
+        class="flow-spacing-handle spacing-top"
+        @mousedown.stop.prevent="handleFlowSpacingDragStart('top', $event)"
+      />
       <div
         class="flow-spacing-handle spacing-right"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('right', $event)"
@@ -37,11 +69,16 @@
         class="flow-spacing-handle spacing-bottom"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('bottom', $event)"
       />
-      <div class="flow-spacing-handle spacing-left" @mousedown.stop.prevent="handleFlowSpacingDragStart('left', $event)" />
+      <div
+        class="flow-spacing-handle spacing-left"
+        @mousedown.stop.prevent="handleFlowSpacingDragStart('left', $event)"
+      />
     </template>
 
     <template v-if="showFlowSpacingHints">
-      <div v-if="flowSpacingHints.top" class="flow-spacing-hint hint-top">mt {{ flowSpacingHints.top }}</div>
+      <div v-if="flowSpacingHints.top" class="flow-spacing-hint hint-top">
+        mt {{ flowSpacingHints.top }}
+      </div>
       <div v-if="flowSpacingHints.right" class="flow-spacing-hint hint-right">
         mr {{ flowSpacingHints.right }}
       </div>
@@ -52,6 +89,11 @@
         ml {{ flowSpacingHints.left }}
       </div>
     </template>
+
+    <!-- Flow resize dimension tooltip -->
+    <div v-if="flowResizeInfo" class="flow-resize-tooltip">
+      C{{ flowResizeInfo.width }} × R{{ flowResizeInfo.height }}
+    </div>
   </div>
 </template>
 
@@ -59,20 +101,23 @@
 import { computed, ref, inject, type CSSProperties } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
-import type { NodeSchema, NodeStyle } from '@vela/core'
+import { useSizeStore } from '@/stores/size'
+import { useCanvasContext } from '../../composables/useCanvasContext'
+import type { NodeSchema, NodeStyle, GridContainerLayout, GridNodeGeometry } from '@vela/core'
+import { parseFrTemplate, buildFrTemplate } from '@vela/core'
 import type { UseFlowDropReturn } from './useFlowDrop'
 
 interface Props {
   nodeId: string
   componentName?: string
   node?: NodeSchema
-  parentLayoutMode?: 'flow' | 'free'
+  parentLayoutMode?: 'free' | 'grid'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   componentName: '',
   node: undefined,
-  parentLayoutMode: 'flow',
+  parentLayoutMode: 'grid',
 })
 
 const emit = defineEmits<{
@@ -82,8 +127,12 @@ const emit = defineEmits<{
 // ========== Inject Flow Drop Logic ==========
 const flowDrop = inject<UseFlowDropReturn>('flowDrop')
 
+// ========== Canvas Context (for scale compensation) ==========
+const { scale: canvasScale } = useCanvasContext()
+
 // ========== Store ==========
 const componentStore = useComponent()
+const sizeStore = useSizeStore()
 const { selectedId, selectedIds, hoveredId, rootNode } = storeToRefs(componentStore)
 const { selectComponent, toggleSelection, findNodeById, setHovered, updateStyle } = componentStore
 
@@ -93,13 +142,14 @@ const isDragging = ref(false)
 const isDragOver = ref(false)
 const isResizing = ref(false)
 const isSpacingAdjusting = ref(false)
+const flowResizeInfo = ref<{ width: number; height: number } | null>(null)
 const isFreeParent = computed(() => props.parentLayoutMode === 'free')
 
 // ========== Computed ==========
 const isSelected = computed(() => selectedIds.value.includes(props.nodeId))
 const isHovered = computed(() => hoveredId.value === props.nodeId)
 const showFlowResizeHandles = computed(
-  () => selectedId.value === props.nodeId && props.parentLayoutMode === 'flow',
+  () => selectedId.value === props.nodeId && props.parentLayoutMode === 'grid',
 )
 const showFlowSpacingHandles = computed(() => showFlowResizeHandles.value && !isResizing.value)
 
@@ -126,7 +176,10 @@ const formatSpacingValue = (value: unknown): string | null => {
   return null
 }
 
-const resolveSpacing = (style: NodeStyle, side: 'Top' | 'Right' | 'Bottom' | 'Left'): string | null => {
+const resolveSpacing = (
+  style: NodeStyle,
+  side: 'Top' | 'Right' | 'Bottom' | 'Left',
+): string | null => {
   const specific = style[`margin${side}`]
   if (specific !== undefined && specific !== null && specific !== '') {
     return formatSpacingValue(specific)
@@ -145,7 +198,7 @@ const flowSpacingHints = computed(() => {
 })
 
 const showFlowSpacingHints = computed(() => {
-  if (props.parentLayoutMode !== 'flow') return false
+  if (props.parentLayoutMode !== 'grid') return false
   if (!isHovered.value && !isSelected.value) return false
   const hints = flowSpacingHints.value
   return Boolean(hints.top || hints.right || hints.bottom || hints.left)
@@ -174,6 +227,7 @@ const wrapperClasses = computed(() => [
     'is-container': isContainer.value,
     'is-empty': isEmpty.value,
     'is-free-parent': isFreeParent.value,
+    'is-grid-item': props.parentLayoutMode === 'grid',
   },
 ])
 
@@ -204,6 +258,7 @@ const wrapperStyle = computed<CSSProperties>(() => {
 
   // Subscribe to styleVersion to trigger reactivity on geometry/style updates
   const _v = componentStore.styleVersion[node.id]
+  void _v
 
   // Free mode: read positioning from node.geometry, sizing from geometry/style
   if (props.parentLayoutMode === 'free') {
@@ -217,28 +272,47 @@ const wrapperStyle = computed<CSSProperties>(() => {
       left: formatValue(geometry?.x as number | undefined, 0),
       top: formatValue(geometry?.y as number | undefined, 0),
       width: formatValue((geometry?.width ?? style.width) as string | number | undefined, 'auto'),
-      height: formatValue((geometry?.height ?? style.height) as string | number | undefined, 'auto'),
-      zIndex: (geometry?.zIndex ?? (style.zIndex as number | undefined)) ?? 0,
+      height: formatValue(
+        (geometry?.height ?? style.height) as string | number | undefined,
+        'auto',
+      ),
+      zIndex: geometry?.zIndex ?? (style.zIndex as number | undefined) ?? 0,
       transform: rotateTransform || undefined,
       transformOrigin: rotateTransform ? 'center center' : undefined,
     }
   }
 
-  // Flow mode: sizing and spacing are handled by wrapper
-  const style = node.style || {}
-  const flowHeight = (style.height ?? style.minHeight) as string | number | undefined
-  const flowMinHeight = (style.minHeight ?? style.height) as string | number | undefined
-  return {
-    width: style.width || (isContainer.value ? '100%' : 'auto'),
-    // For ECharts-like components using 100% height, explicit height avoids 0-size init.
-    height: formatValue(flowHeight, 'auto'),
-    minHeight: formatValue(flowMinHeight, 'auto'),
-    margin: formatOptionalValue(style.margin as string | number | undefined),
-    marginTop: formatOptionalValue(style.marginTop as string | number | undefined),
-    marginRight: formatOptionalValue(style.marginRight as string | number | undefined),
-    marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined),
-    marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined),
+  // Adaptive grid mode: components placed via gridColumnStart/End, gridRowStart/End
+  if (props.parentLayoutMode === 'grid') {
+    const geometry =
+      node.geometry?.mode === 'grid' ? (node.geometry as GridNodeGeometry) : undefined
+    const style = node.style || {}
+
+    const nestedGrid =
+      node.container?.mode === 'grid' ? (node.container as GridContainerLayout) : null
+
+    return {
+      gridColumn: geometry ? `${geometry.gridColumnStart} / ${geometry.gridColumnEnd}` : '1 / 2',
+      gridRow: geometry ? `${geometry.gridRowStart} / ${geometry.gridRowEnd}` : '1 / 2',
+      width: '100%',
+      height: '100%',
+      margin: formatOptionalValue(style.margin as string | number | undefined),
+      marginTop: formatOptionalValue(style.marginTop as string | number | undefined),
+      marginRight: formatOptionalValue(style.marginRight as string | number | undefined),
+      marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined),
+      marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined),
+      ...(nestedGrid
+        ? {
+            display: 'grid',
+            gridTemplateColumns: nestedGrid.columns || '1fr',
+            gridTemplateRows: nestedGrid.rows || '1fr',
+            gap: `${nestedGrid.gap ?? 8}px`,
+          }
+        : {}),
+    }
   }
+
+  return {}
 })
 
 // ========== Hover Handlers (Exclusive) ==========
@@ -268,11 +342,14 @@ const handleMouseLeave = (e: MouseEvent) => {
 }
 
 // ========== Drag & Drop Handlers ==========
+let dragCancelled = false
+
 const handleDragStart = (e: DragEvent) => {
   if (isFreeParent.value) return
   if (!e.dataTransfer || !currentNode.value) return
 
   isDragging.value = true
+  dragCancelled = false
   setHovered(null) // 拖拽时清除 hover 状态
 
   // 设置拖拽数据
@@ -290,12 +367,30 @@ const handleDragStart = (e: DragEvent) => {
   if (wrapperRef.value) {
     e.dataTransfer.setDragImage(wrapperRef.value, 10, 10)
   }
+
+  // Escape 键取消拖拽
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') {
+      dragCancelled = true
+      flowDrop?.hideIndicator()
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }
+  window.addEventListener('keydown', onKeyDown)
+
+  // 拖拽结束时清理监听器
+  const cleanup = () => {
+    window.removeEventListener('keydown', onKeyDown)
+    window.removeEventListener('dragend', cleanup)
+  }
+  window.addEventListener('dragend', cleanup)
 }
 
 const handleDragEnd = () => {
   if (isFreeParent.value) return
   isDragging.value = false
   isDragOver.value = false
+  dragCancelled = false
   flowDrop?.setDraggingId(null)
   flowDrop?.hideIndicator()
 }
@@ -323,10 +418,15 @@ const handleDrop = (e: DragEvent) => {
   if (isFreeParent.value) return
   isDragOver.value = false
   if (!flowDrop || !currentNode.value) return
-  flowDrop.handleDrop(e, currentNode.value)
+  // 如果拖拽被取消，不执行放置
+  if (dragCancelled) {
+    dragCancelled = false
+    return
+  }
+  flowDrop.handleDrop(e)
 }
 
-type FlowResizeHandle = 'e' | 's' | 'se'
+type FlowResizeHandle = 'n' | 'e' | 's' | 'w' | 'nw' | 'ne' | 'se' | 'sw'
 type FlowSpacingSide = 'top' | 'right' | 'bottom' | 'left'
 const marginStyleKeyMap: Record<FlowSpacingSide, keyof NodeStyle> = {
   top: 'marginTop',
@@ -335,7 +435,11 @@ const marginStyleKeyMap: Record<FlowSpacingSide, keyof NodeStyle> = {
   left: 'marginLeft',
 }
 
-const toAbsoluteLengthNumber = (val: unknown): number | null => {
+/**
+ * Parse a CSS length value (px or unitless number) into a number.
+ * Returns null for non-absolute values (%, em, rem, etc.).
+ */
+const parseAbsoluteLength = (val: unknown): number | null => {
   if (typeof val === 'number' && Number.isFinite(val)) return val
   if (typeof val === 'string') {
     const trimmed = val.trim()
@@ -346,21 +450,32 @@ const toAbsoluteLengthNumber = (val: unknown): number | null => {
   return null
 }
 
-const parseSpacingNumber = (val: unknown): number | null => {
-  if (typeof val === 'number' && Number.isFinite(val)) return val
-  if (typeof val !== 'string') return null
-  const trimmed = val.trim()
-  if (!trimmed) return null
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number.parseFloat(trimmed)
-  if (/^-?\d+(\.\d+)?px$/.test(trimmed)) return Number.parseFloat(trimmed)
-  return null
+const clampNumber = (value: number, min: number, max: number): number => {
+  return Math.min(max, Math.max(min, value))
 }
 
+const parseGridSpan = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(1, Math.round(value))
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    const spanMatch = trimmed.match(/^span\s+(\d+)$/i)
+    if (spanMatch) {
+      return Math.max(1, Number.parseInt(spanMatch[1], 10))
+    }
+    const parsed = Number.parseFloat(trimmed)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.max(1, Math.round(parsed))
+    }
+  }
+  return fallback
+}
+
+const parseSpacingNumber = parseAbsoluteLength
+
 const parseMarginShorthand = (val: string): [string, string, string, string] | null => {
-  const parts = val
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
+  const parts = val.trim().split(/\s+/).filter(Boolean)
 
   if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]]
   if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]]
@@ -390,7 +505,14 @@ const resolveSpacingNumber = (style: NodeStyle, side: FlowSpacingSide): number =
 }
 
 const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
-  if (props.parentLayoutMode !== 'flow' || !currentNode.value || !wrapperRef.value) return
+  if (props.parentLayoutMode !== 'grid') return
+  if (!currentNode.value || !wrapperRef.value) return
+
+  // Adaptive grid mode: resize by adjusting fr ratios
+  if (props.parentLayoutMode === 'grid') {
+    handleGridFrResize(handle, e)
+    return
+  }
 
   // Ensure current node is the active selection when resize starts
   selectComponent(props.nodeId)
@@ -399,51 +521,98 @@ const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
 
   const startX = e.clientX
   const startY = e.clientY
-  const rect = wrapperRef.value.getBoundingClientRect()
   const style = currentNode.value.style || {}
-
-  const baseWidth = toAbsoluteLengthNumber(style.width) ?? rect.width
-  const baseMinHeight = toAbsoluteLengthNumber(style.minHeight ?? style.height) ?? rect.height
-  const minWidth = 24
-  const minHeight = 24
+  const parentEl = wrapperRef.value.parentElement
+  const parentRect = parentEl?.getBoundingClientRect()
+  const parentStyle = parentEl ? window.getComputedStyle(parentEl) : null
+  const columnsRaw = Number.parseInt(parentStyle?.getPropertyValue('--vela-grid-columns') || '', 10)
+  const gapRaw = Number.parseFloat(parentStyle?.getPropertyValue('--vela-grid-gap') || '')
+  const rowHeightRaw = Number.parseFloat(
+    parentStyle?.getPropertyValue('--vela-grid-row-height') || '',
+  )
+  const columns = Number.isFinite(columnsRaw) ? clampNumber(columnsRaw, 1, 24) : 12
+  const gap = Number.isFinite(gapRaw) ? clampNumber(Math.round(gapRaw), 0, 48) : 12
+  const rowHeight = Number.isFinite(rowHeightRaw)
+    ? clampNumber(Math.round(rowHeightRaw), 8, 120)
+    : 24
+  const parentWidth = parentRect?.width ?? parentEl?.clientWidth ?? sizeStore.width
+  const cellWidth = Math.max(1, (parentWidth - (columns - 1) * gap) / columns)
+  const colUnit = Math.max(1, cellWidth + gap)
+  const rowUnit = Math.max(1, rowHeight + gap)
+  const baseColSpan = parseGridSpan(style.gridColumn, isContainer.value ? 12 : 3)
+  const baseRowSpan = parseGridSpan(style.gridRow, 4)
 
   let rafId = 0
-  let pendingWidth: number | undefined
-  let pendingMinHeight: number | undefined
+  let pendingColSpan: number | undefined
+  let pendingRowSpan: number | undefined
+  let cancelled = false
 
   const flushStyleUpdate = () => {
     rafId = 0
+    if (cancelled) return
+
     const patch: Partial<NodeStyle> = {}
 
-    if (pendingWidth !== undefined) {
-      patch.width = Math.round(pendingWidth)
+    if (pendingColSpan !== undefined) {
+      patch.gridColumn = `span ${pendingColSpan}`
     }
-    if (pendingMinHeight !== undefined) {
-      const nextHeight = Math.round(pendingMinHeight)
-      patch.minHeight = nextHeight
-      patch.height = nextHeight
+    if (pendingRowSpan !== undefined) {
+      patch.gridRow = `span ${pendingRowSpan}`
     }
+    patch.width = '100%'
+    patch.height = '100%'
+    patch.minHeight = '100%'
 
     if (Object.keys(patch).length > 0) {
       updateStyle(props.nodeId, patch)
     }
   }
 
+  const cursorMap: Record<FlowResizeHandle, string> = {
+    n: 'ns-resize',
+    s: 'ns-resize',
+    e: 'ew-resize',
+    w: 'ew-resize',
+    nw: 'nwse-resize',
+    se: 'nwse-resize',
+    ne: 'nesw-resize',
+    sw: 'nesw-resize',
+  }
+
   const prevCursor = document.body.style.cursor
   const prevUserSelect = document.body.style.userSelect
   document.body.style.userSelect = 'none'
-  document.body.style.cursor =
-    handle === 'e' ? 'ew-resize' : handle === 's' ? 'ns-resize' : 'nwse-resize'
+  document.body.style.cursor = cursorMap[handle]
 
   const onMouseMove = (ev: MouseEvent) => {
-    const dx = ev.clientX - startX
-    const dy = ev.clientY - startY
+    if (cancelled) return
 
-    if (handle === 'e' || handle === 'se') {
-      pendingWidth = Math.max(minWidth, baseWidth + dx)
+    // Compensate for canvas zoom: mouse pixels → stage pixels
+    const s = canvasScale.value || 1
+    const dx = (ev.clientX - startX) / s
+    const dy = (ev.clientY - startY) / s
+    const colDelta = Math.round(dx / colUnit)
+    const rowDelta = Math.round(dy / rowUnit)
+
+    // East/West resize: adjust column span
+    if (handle === 'e' || handle === 'ne' || handle === 'se') {
+      pendingColSpan = clampNumber(baseColSpan + colDelta, 1, columns)
     }
-    if (handle === 's' || handle === 'se') {
-      pendingMinHeight = Math.max(minHeight, baseMinHeight + dy)
+    if (handle === 'w' || handle === 'nw' || handle === 'sw') {
+      pendingColSpan = clampNumber(baseColSpan - colDelta, 1, columns)
+    }
+
+    // North/South resize: adjust row span
+    if (handle === 's' || handle === 'se' || handle === 'sw') {
+      pendingRowSpan = clampNumber(baseRowSpan + rowDelta, 1, 48)
+    }
+    if (handle === 'n' || handle === 'nw' || handle === 'ne') {
+      pendingRowSpan = clampNumber(baseRowSpan - rowDelta, 1, 48)
+    }
+
+    flowResizeInfo.value = {
+      width: Math.round(pendingColSpan ?? baseColSpan),
+      height: Math.round(pendingRowSpan ?? baseRowSpan),
     }
 
     if (rafId === 0) {
@@ -451,25 +620,215 @@ const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
     }
   }
 
-  const onMouseUp = () => {
+  const cleanup = () => {
     if (rafId !== 0) {
       cancelAnimationFrame(rafId)
-      flushStyleUpdate()
+      if (!cancelled) {
+        flushStyleUpdate()
+      }
+    }
+
+    // Restore original values when Escape was pressed
+    if (cancelled) {
+      const restorePatch: Partial<NodeStyle> = {
+        gridColumn: `span ${baseColSpan}`,
+        gridRow: `span ${baseRowSpan}`,
+        width: '100%',
+        height: '100%',
+        minHeight: '100%',
+      }
+      updateStyle(props.nodeId, restorePatch)
     }
 
     document.body.style.cursor = prevCursor
     document.body.style.userSelect = prevUserSelect
     isResizing.value = false
+    flowResizeInfo.value = null
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
+    window.removeEventListener('keydown', onKeyDown)
+  }
+
+  const onMouseUp = () => {
+    cleanup()
+  }
+
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') {
+      cancelled = true
+      cleanup()
+    }
   }
 
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('keydown', onKeyDown)
 }
 
+/**
+ * Grid fr-ratio resize handler.
+ * Adjusts the parent container's grid-template-columns/rows fr values.
+ */
+const handleGridFrResize = (handle: FlowResizeHandle, e: MouseEvent) => {
+  if (!currentNode.value || !wrapperRef.value) return
+
+  selectComponent(props.nodeId)
+  isResizing.value = true
+  setHovered(null)
+
+  const startX = e.clientX
+  const startY = e.clientY
+  const geo =
+    currentNode.value.geometry?.mode === 'grid'
+      ? (currentNode.value.geometry as GridNodeGeometry)
+      : null
+  if (!geo) {
+    isResizing.value = false
+    return
+  }
+
+  const parentId = componentStore.getParentId(props.nodeId)
+  if (!parentId) {
+    isResizing.value = false
+    return
+  }
+  const parentNode = componentStore.findNodeById(parentId)
+  const parentContainer =
+    parentNode?.container?.mode === 'grid' ? (parentNode.container as GridContainerLayout) : null
+  if (!parentContainer) {
+    isResizing.value = false
+    return
+  }
+
+  const parentEl = wrapperRef.value.parentElement
+  const parentRect = parentEl?.getBoundingClientRect()
+  if (!parentRect) {
+    isResizing.value = false
+    return
+  }
+
+  const colFrValues = parseFrTemplate(parentContainer.columns)
+  const rowFrValues = parseFrTemplate(parentContainer.rows)
+  const baseColFr = [...colFrValues]
+  const baseRowFr = [...rowFrValues]
+  const totalColPx = parentRect.width
+  const totalRowPx = parentRect.height
+
+  // Determine which boundary line this handle drags
+  // For east handle: the boundary is between column (colEnd-2) and (colEnd-1) (0-indexed)
+  const colBoundary =
+    handle === 'e' || handle === 'ne' || handle === 'se'
+      ? geo.gridColumnEnd - 2 // 0-indexed right boundary
+      : handle === 'w' || handle === 'nw' || handle === 'sw'
+        ? geo.gridColumnStart - 2 // 0-indexed left boundary
+        : -1
+  const rowBoundary =
+    handle === 's' || handle === 'se' || handle === 'sw'
+      ? geo.gridRowEnd - 2
+      : handle === 'n' || handle === 'nw' || handle === 'ne'
+        ? geo.gridRowStart - 2
+        : -1
+
+  let rafId = 0
+  let cancelled = false
+
+  const cursorMap: Record<FlowResizeHandle, string> = {
+    n: 'ns-resize',
+    s: 'ns-resize',
+    e: 'ew-resize',
+    w: 'ew-resize',
+    nw: 'nwse-resize',
+    se: 'nwse-resize',
+    ne: 'nesw-resize',
+    sw: 'nesw-resize',
+  }
+  const prevCursor = document.body.style.cursor
+  const prevUserSelect = document.body.style.userSelect
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = cursorMap[handle]
+
+  const onMouseMove = (ev: MouseEvent) => {
+    if (cancelled) return
+    const s = canvasScale.value || 1
+    const dx = (ev.clientX - startX) / s
+    const dy = (ev.clientY - startY) / s
+
+    const newColFr = [...baseColFr]
+    const newRowFr = [...baseRowFr]
+
+    // Adjust column fr values
+    if (colBoundary >= 0 && colBoundary < colFrValues.length - 1) {
+      const totalColFr = baseColFr.reduce((a, b) => a + b, 0)
+      const frPerPx = totalColFr / totalColPx
+      const sign = handle === 'w' || handle === 'nw' || handle === 'sw' ? -1 : 1
+      const frDelta = dx * frPerPx * sign
+      newColFr[colBoundary] = Math.max(0.1, baseColFr[colBoundary] + frDelta)
+      newColFr[colBoundary + 1] = Math.max(0.1, baseColFr[colBoundary + 1] - frDelta)
+    }
+
+    // Adjust row fr values
+    if (rowBoundary >= 0 && rowBoundary < rowFrValues.length - 1) {
+      const totalRowFr = baseRowFr.reduce((a, b) => a + b, 0)
+      const frPerPx = totalRowFr / totalRowPx
+      const sign = handle === 'n' || handle === 'nw' || handle === 'ne' ? -1 : 1
+      const frDelta = dy * frPerPx * sign
+      newRowFr[rowBoundary] = Math.max(0.1, baseRowFr[rowBoundary] + frDelta)
+      newRowFr[rowBoundary + 1] = Math.max(0.1, baseRowFr[rowBoundary + 1] - frDelta)
+    }
+
+    flowResizeInfo.value = {
+      width: Math.round(newColFr[colBoundary >= 0 ? colBoundary : 0] * 10) / 10,
+      height: Math.round(newRowFr[rowBoundary >= 0 ? rowBoundary : 0] * 10) / 10,
+    }
+
+    if (rafId === 0) {
+      const cols = buildFrTemplate(newColFr)
+      const rows = buildFrTemplate(newRowFr)
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        if (cancelled) return
+        componentStore.updateGridTemplate(parentId, cols, rows)
+      })
+    }
+  }
+
+  const cleanup = () => {
+    if (rafId !== 0) cancelAnimationFrame(rafId)
+    if (cancelled) {
+      componentStore.updateGridTemplate(
+        parentId,
+        buildFrTemplate(baseColFr),
+        buildFrTemplate(baseRowFr),
+      )
+    }
+    document.body.style.cursor = prevCursor
+    document.body.style.userSelect = prevUserSelect
+    isResizing.value = false
+    flowResizeInfo.value = null
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+    window.removeEventListener('keydown', onKeyDown)
+  }
+
+  const onMouseUp = () => cleanup()
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') {
+      cancelled = true
+      cleanup()
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('keydown', onKeyDown)
+}
+
+/** Margin 调整范围配置 */
+const MARGIN_RANGE = { min: -500, max: 1000 }
+
 const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
-  if (props.parentLayoutMode !== 'flow' || !currentNode.value) return
+  if (props.parentLayoutMode !== 'grid') return
+  if (!currentNode.value) return
 
   selectComponent(props.nodeId)
   isSpacingAdjusting.value = true
@@ -480,15 +839,14 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
   const style = currentNode.value.style || {}
   const baseMargin = resolveSpacingNumber(style, side)
   const styleKey = marginStyleKeyMap[side]
-  const minMargin = -200
-  const maxMargin = 400
 
   let rafId = 0
   let pendingMargin: number | undefined
+  let cancelled = false
 
   const flushMarginUpdate = () => {
     rafId = 0
-    if (pendingMargin === undefined) return
+    if (cancelled || pendingMargin === undefined) return
 
     const patch = { [styleKey]: Math.round(pendingMargin) } as Partial<NodeStyle>
     updateStyle(props.nodeId, patch)
@@ -500,8 +858,12 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
   document.body.style.cursor = side === 'top' || side === 'bottom' ? 'ns-resize' : 'ew-resize'
 
   const onMouseMove = (ev: MouseEvent) => {
-    const dx = ev.clientX - startX
-    const dy = ev.clientY - startY
+    if (cancelled) return
+
+    // Compensate for canvas zoom: mouse pixels → stage pixels
+    const s = canvasScale.value || 1
+    const dx = (ev.clientX - startX) / s
+    const dy = (ev.clientY - startY) / s
 
     let next = baseMargin
     if (side === 'top') next = baseMargin - dy
@@ -509,17 +871,25 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
     if (side === 'left') next = baseMargin - dx
     if (side === 'right') next = baseMargin + dx
 
-    pendingMargin = Math.min(maxMargin, Math.max(minMargin, next))
+    pendingMargin = Math.min(MARGIN_RANGE.max, Math.max(MARGIN_RANGE.min, next))
 
     if (rafId === 0) {
       rafId = requestAnimationFrame(flushMarginUpdate)
     }
   }
 
-  const onMouseUp = () => {
+  const cleanup = () => {
     if (rafId !== 0) {
       cancelAnimationFrame(rafId)
-      flushMarginUpdate()
+      if (!cancelled) {
+        flushMarginUpdate()
+      }
+    }
+
+    // Restore original margin when Escape was pressed
+    if (cancelled) {
+      const restorePatch = { [styleKey]: Math.round(baseMargin) } as Partial<NodeStyle>
+      updateStyle(props.nodeId, restorePatch)
     }
 
     document.body.style.cursor = prevCursor
@@ -527,10 +897,23 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
     isSpacingAdjusting.value = false
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
+    window.removeEventListener('keydown', onKeyDown)
+  }
+
+  const onMouseUp = () => {
+    cleanup()
+  }
+
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') {
+      cancelled = true
+      cleanup()
+    }
   }
 
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('keydown', onKeyDown)
 }
 
 // ========== Event Handlers ==========
@@ -545,7 +928,6 @@ const handleClick = (e: MouseEvent) => {
   selectComponent(props.nodeId)
   emit('select', props.nodeId)
 }
-
 </script>
 
 <style scoped>
@@ -561,6 +943,11 @@ const handleClick = (e: MouseEvent) => {
   transition:
     box-shadow 0.15s ease,
     background-color 0.15s ease;
+}
+
+.editor-node-wrapper.is-grid-item {
+  border: 1px dashed rgba(14, 116, 144, 0.45);
+  background: rgba(240, 249, 255, 0.55);
 }
 
 /* ========== Hover State (Exclusive - only innermost) ========== */
@@ -654,13 +1041,14 @@ const handleClick = (e: MouseEvent) => {
   z-index: 12;
 }
 
-.flow-resize-handle.handle-e {
-  top: 50%;
-  right: -5px;
-  width: 10px;
-  height: 20px;
-  transform: translateY(-50%);
-  cursor: ew-resize;
+/* Edge handles - horizontal bars */
+.flow-resize-handle.handle-n {
+  top: -5px;
+  left: 50%;
+  width: 20px;
+  height: 10px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
 }
 
 .flow-resize-handle.handle-s {
@@ -672,12 +1060,56 @@ const handleClick = (e: MouseEvent) => {
   cursor: ns-resize;
 }
 
+/* Edge handles - vertical bars */
+.flow-resize-handle.handle-e {
+  top: 50%;
+  right: -5px;
+  width: 10px;
+  height: 20px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.flow-resize-handle.handle-w {
+  top: 50%;
+  left: -5px;
+  width: 10px;
+  height: 20px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+/* Corner handles */
+.flow-resize-handle.handle-nw {
+  top: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.flow-resize-handle.handle-ne {
+  top: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}
+
 .flow-resize-handle.handle-se {
   right: -6px;
   bottom: -6px;
   width: 12px;
   height: 12px;
   cursor: nwse-resize;
+}
+
+.flow-resize-handle.handle-sw {
+  bottom: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
 }
 
 .flow-spacing-handle {
@@ -726,36 +1158,57 @@ const handleClick = (e: MouseEvent) => {
   padding: 2px 6px;
   border-radius: 10px;
   border: 1px solid rgba(245, 158, 11, 0.55);
-  background: rgba(254, 243, 199, 0.9);
+  background: rgba(254, 243, 199, 0.95);
   color: #92400e;
   font-size: 10px;
   font-weight: 500;
   line-height: 1.2;
   pointer-events: none;
   white-space: nowrap;
+  /* 防止溢出视口 */
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* 改为在组件内侧显示，避免溢出 */
 .flow-spacing-hint.hint-top {
   left: 50%;
-  top: -18px;
+  top: 2px;
   transform: translateX(-50%);
 }
 
 .flow-spacing-hint.hint-right {
   top: 50%;
-  right: -42px;
+  right: 2px;
   transform: translateY(-50%);
 }
 
 .flow-spacing-hint.hint-bottom {
   left: 50%;
-  bottom: -18px;
+  bottom: 2px;
   transform: translateX(-50%);
 }
 
 .flow-spacing-hint.hint-left {
   top: 50%;
-  left: -42px;
+  left: 2px;
   transform: translateY(-50%);
+}
+
+.flow-resize-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: -22px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
 }
 </style>

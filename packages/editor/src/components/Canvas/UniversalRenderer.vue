@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, type Component } from 'vue'
+import { computed, toRef, type Component, type CSSProperties } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
@@ -69,7 +69,7 @@ defineOptions({
 const props = defineProps<{
   node: NodeSchema
   wrapper: Component
-  parentLayoutMode?: 'flow' | 'free'
+  parentLayoutMode?: 'free' | 'grid'
 }>()
 
 // Component Resolution
@@ -84,16 +84,21 @@ const componentRef = computed(() => {
 const nodeRef = toRef(props, 'node')
 const { resolvedProps } = useDataSourceAdapter(nodeRef)
 
-const effectiveParentLayoutMode = computed(() => props.parentLayoutMode || 'flow')
-const selfChildrenLayoutMode = computed(
-  () => props.node.container?.mode || effectiveParentLayoutMode.value,
-)
+const normalizeLayoutMode = (mode: 'free' | 'flow' | 'grid' | undefined): 'free' | 'grid' =>
+  mode === 'free' ? 'free' : 'grid'
+
+const effectiveParentLayoutMode = computed(() => normalizeLayoutMode(props.parentLayoutMode))
+const selfChildrenLayoutMode = computed(() => {
+  const childMode = props.node.container?.mode
+  if (childMode === undefined) return effectiveParentLayoutMode.value
+  return normalizeLayoutMode(childMode)
+})
 
 // Style Logic: Only strip sizing properties managed by wrapper
 // With layout/style separation, free-mode geometry lives in node.geometry
-const innerStyle = computed(() => {
+const innerStyle = computed<CSSProperties>(() => {
   if (!props.node.style) return {}
-  const style = { ...props.node.style }
+  const style = { ...(props.node.style as CSSProperties) }
 
   // Size properties are managed by the wrapper (NodeWrapper/FreeWrapper)
   delete style.width

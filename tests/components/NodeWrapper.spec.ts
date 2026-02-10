@@ -22,28 +22,41 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('e.ctrlKey || e.metaKey || e.shiftKey')
   })
 
-  it('流式模式选中后应提供宽高拖拽控制点', () => {
+  it('网格编排模式选中后应提供8方向跨度调节控制点', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     expect(source).toContain('showFlowResizeHandles')
     expect(source).toContain('selectedId.value === props.nodeId')
+    expect(source).toContain("props.parentLayoutMode === 'grid'")
     expect(source).toContain('flow-resize-handle')
+    // 8方向 resize handles
+    expect(source).toContain("handleFlowResizeStart('n', $event)")
     expect(source).toContain("handleFlowResizeStart('e', $event)")
     expect(source).toContain("handleFlowResizeStart('s', $event)")
+    expect(source).toContain("handleFlowResizeStart('w', $event)")
+    expect(source).toContain("handleFlowResizeStart('nw', $event)")
+    expect(source).toContain("handleFlowResizeStart('ne', $event)")
     expect(source).toContain("handleFlowResizeStart('se', $event)")
-    expect(source).toContain('updateStyle(props.nodeId, patch)')
-    expect(source).toContain('patch.width = Math.round(pendingWidth)')
-    expect(source).toContain('patch.minHeight = nextHeight')
-    expect(source).toContain('patch.height = nextHeight')
-    expect(source).toContain('const baseWidth = toAbsoluteLengthNumber(style.width) ?? rect.width')
-    expect(source).toContain("if (/^-?\\d+(\\.\\d+)?px$/.test(trimmed)) return Number.parseFloat(trimmed)")
+    expect(source).toContain("handleFlowResizeStart('sw', $event)")
+    expect(source).toContain('handleGridFrResize(handle, e)')
+    expect(source).toContain('componentStore.updateGridTemplate(parentId, cols, rows)')
+    expect(source).toContain('const colFrValues = parseFrTemplate(parentContainer.columns)')
+    expect(source).toContain('const rowFrValues = parseFrTemplate(parentContainer.rows)')
   })
 
-  it('流式模式应在悬停/选中时显示 margin 标注', () => {
+  it('应支持 Escape 键取消 resize 和 spacing 拖拽操作', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    // Escape 取消 resize
+    expect(source).toContain("if (ev.key === 'Escape')")
+    expect(source).toContain('cancelled = true')
+    expect(source).toContain("window.addEventListener('keydown', onKeyDown)")
+  })
+
+  it('网格编排模式应在悬停/选中时显示 margin 标注', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     expect(source).toContain('showFlowSpacingHints')
     expect(source).toContain('flowSpacingHints')
     expect(source).toContain('resolveSpacing(style,')
-    expect(source).toContain("style[`margin${side}`]")
+    expect(source).toContain('style[`margin${side}`]')
     expect(source).toContain('flow-spacing-hint')
     expect(source).toContain('mt {{ flowSpacingHints.top }}')
     expect(source).toContain('mr {{ flowSpacingHints.right }}')
@@ -51,7 +64,7 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('ml {{ flowSpacingHints.left }}')
   })
 
-  it('流式模式应支持拖拽外侧线调整 margin', () => {
+  it('网格编排模式应支持拖拽外侧线调整 margin', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     expect(source).toContain('showFlowSpacingHandles')
     expect(source).toContain("handleFlowSpacingDragStart('top', $event)")
@@ -60,7 +73,7 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("handleFlowSpacingDragStart('left', $event)")
     expect(source).toContain('parseMarginShorthand')
     expect(source).toContain('resolveSpacingNumber(style, side)')
-    expect(source).toContain("const patch = { [styleKey]: Math.round(pendingMargin) }")
+    expect(source).toContain('const patch = { [styleKey]: Math.round(pendingMargin) }')
     expect(source).toContain('.flow-spacing-handle.spacing-top')
     expect(source).toContain('.flow-spacing-handle.spacing-right')
     expect(source).toContain('.flow-spacing-handle.spacing-bottom')
@@ -77,14 +90,29 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('geometry?.y')
   })
 
-  it('flow 模式应提供显式高度以避免图表初始化 0 高度', () => {
+  it('网格编排模式应输出显式 grid 坐标并兼容容器嵌套网格', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
-    expect(source).toContain("const flowHeight = (style.height ?? style.minHeight)")
-    expect(source).toContain('height: formatValue(flowHeight, \'auto\')')
-    expect(source).toContain('minHeight: formatValue(flowMinHeight, \'auto\')')
-    expect(source).toContain('marginTop: formatOptionalValue(style.marginTop as string | number | undefined)')
-    expect(source).toContain('marginRight: formatOptionalValue(style.marginRight as string | number | undefined)')
-    expect(source).toContain('marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined)')
-    expect(source).toContain('marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined)')
+    expect(source).toContain("if (props.parentLayoutMode === 'grid')")
+    expect(source).toContain('gridColumnStart')
+    expect(source).toContain('gridColumnEnd')
+    expect(source).toContain('gridRowStart')
+    expect(source).toContain('gridRowEnd')
+    expect(source).toContain("width: '100%'")
+    expect(source).toContain("height: '100%'")
+    expect(source).toContain("display: 'grid'")
+    expect(source).toContain('gridTemplateColumns: nestedGrid.columns ||')
+    expect(source).toContain('gridTemplateRows: nestedGrid.rows ||')
+    expect(source).toContain(
+      'marginTop: formatOptionalValue(style.marginTop as string | number | undefined)',
+    )
+    expect(source).toContain(
+      'marginRight: formatOptionalValue(style.marginRight as string | number | undefined)',
+    )
+    expect(source).toContain(
+      'marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined)',
+    )
+    expect(source).toContain(
+      'marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined)',
+    )
   })
 })
