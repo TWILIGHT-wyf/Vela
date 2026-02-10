@@ -93,6 +93,16 @@ export const vDateRange = componentRegistry.vDateRange
 export const vMultiSelect = componentRegistry.vMultiSelect
 export const vSearchBox = componentRegistry.vSearchBox
 export const vSelect = componentRegistry.vSelect
+export const vTextInput = componentRegistry.vTextInput
+export const vTextareaInput = componentRegistry.vTextareaInput
+export const vNumberInput = componentRegistry.vNumberInput
+export const vRadioGroup = componentRegistry.vRadioGroup
+export const vCheckbox = componentRegistry.vCheckbox
+export const vDatePicker = componentRegistry.vDatePicker
+export const vTimePicker = componentRegistry.vTimePicker
+export const vUpload = componentRegistry.vUpload
+export const vTreeSelect = componentRegistry.vTreeSelect
+export const vCascader = componentRegistry.vCascader
 export const vSlider = componentRegistry.vSlider
 export const vSwitch = componentRegistry.vSwitch
 export const vNavButton = componentRegistry.vNavButton
@@ -117,11 +127,10 @@ export const vTrigger = componentRegistry.vTrigger
 export const vGroup = componentRegistry.vGroup
 
 // Standard Components (New Architecture) - Static Imports for reliability
-import vBaseButton from './src/components/v2/basic/BaseButton.vue'
 import vKpiCard from './src/components/v2/kpi/KpiCard.vue'
 import vGridBox from './src/components/v2/layout/GridBox.vue'
 
-export { vBaseButton, vKpiCard, vGridBox }
+export { vKpiCard, vGridBox }
 
 // 导出组件注册表，供外部使用
 export { componentRegistry }
