@@ -5,6 +5,26 @@ import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/co
 
 const STORAGE_KEY = 'vela_project'
 
+function createGridContainer(container?: NodeSchema['container']): NodeSchema['container'] {
+  if (container?.mode === 'grid') {
+    return {
+      ...container,
+      mode: 'grid',
+      columns: container.columns || '1fr',
+      rows: container.rows || '1fr',
+    }
+  }
+  return {
+    mode: 'grid',
+    columns: '1fr',
+    rows: '1fr',
+  }
+}
+
+function normalizeLayoutMode(mode: PageConfig['defaultLayoutMode']): 'free' | 'grid' {
+  return mode === 'free' ? 'free' : 'grid'
+}
+
 export const useProjectStore = defineStore('project', () => {
   // State
   const project = ref<ProjectSchema>({
@@ -64,14 +84,13 @@ export const useProjectStore = defineStore('project', () => {
   function normalizePageLayouts() {
     if (!Array.isArray(project.value.pages)) return
     for (const page of project.value.pages) {
-      if (!page.config) page.config = { defaultLayoutMode: 'flow' }
-      if (page.config.defaultLayoutMode !== 'flow' && page.config.defaultLayoutMode !== 'free') {
-        page.config.defaultLayoutMode = 'flow'
-      }
+      if (!page.config) page.config = { defaultLayoutMode: 'grid' }
+      page.config.defaultLayoutMode = normalizeLayoutMode(page.config.defaultLayoutMode)
       if (page.children) {
-        page.children.container = {
-          mode: page.config.defaultLayoutMode,
-        }
+        page.children.container =
+          page.config.defaultLayoutMode === 'free'
+            ? { mode: 'free' }
+            : createGridContainer(page.children.container)
       }
     }
   }
@@ -84,14 +103,14 @@ export const useProjectStore = defineStore('project', () => {
       name: 'Home',
       path: '/',
       config: {
-        defaultLayoutMode: 'flow',
+        defaultLayoutMode: 'grid',
       },
       state: [],
       apis: [],
       children: {
         id: 'root',
         component: 'Page',
-        container: { mode: 'flow' },
+        container: createGridContainer(),
         props: {},
         style: {
           width: '100%',
@@ -123,14 +142,14 @@ export const useProjectStore = defineStore('project', () => {
       name,
       path: `/${name.toLowerCase()}`,
       config: {
-        defaultLayoutMode: 'flow',
+        defaultLayoutMode: 'grid',
       },
       state: [],
       apis: [],
       children: {
         id: `root_${pageId}`,
         component: 'Page',
-        container: { mode: 'flow' },
+        container: createGridContainer(),
         props: {},
         style: {
           width: '100%',
@@ -167,19 +186,20 @@ export const useProjectStore = defineStore('project', () => {
     saveStatus.value = 'unsaved'
   }
 
-  function changePageLayout(pageId: string, layout: 'free' | 'flow'): boolean {
+  function changePageLayout(pageId: string, layout: 'free' | 'grid'): boolean {
     const page = project.value.pages.find((p) => p.id === pageId)
     if (!page) return false
 
     if (!page.config) {
       page.config = {}
     }
-    page.config.defaultLayoutMode = layout
+    const normalizedLayout = normalizeLayoutMode(layout)
+    page.config.defaultLayoutMode = normalizedLayout
     if (page.children) {
-      page.children.container = {
-        ...(page.children.container || {}),
-        mode: layout,
-      }
+      page.children.container =
+        normalizedLayout === 'free'
+          ? { mode: 'free' }
+          : createGridContainer(page.children.container)
     }
     saveStatus.value = 'unsaved'
     return true

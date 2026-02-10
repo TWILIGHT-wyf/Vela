@@ -145,7 +145,14 @@ export interface PageLifecycleConfig {
 /**
  * 过渡动画类型
  */
-export type TransitionType = 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom' | 'none'
+export type TransitionType =
+  | 'fade'
+  | 'slide-left'
+  | 'slide-right'
+  | 'slide-up'
+  | 'slide-down'
+  | 'zoom'
+  | 'none'
 
 /**
  * 页面过渡动画配置
@@ -250,12 +257,7 @@ export function isPageEventActionLinkRef(action: PageEventAction): action is Act
   if (typeof action === 'string') {
     return true
   }
-  return (
-    typeof action === 'object' &&
-    action !== null &&
-    'type' in action &&
-    action.type === 'ref'
-  )
+  return typeof action === 'object' && action !== null && 'type' in action && action.type === 'ref'
 }
 
 /**
@@ -288,7 +290,7 @@ export interface PageConfig {
   /**
    * 页面默认布局模式
    * - free: Dashboard 型自由定位
-   * - flow: 网页型文档流
+   * - grid: 网格编排（fr 比例）
    */
   defaultLayoutMode?: LayoutMode
   /** 预留扩展字段 */
@@ -460,12 +462,12 @@ export type PageType = PageSchema['type']
  * 布局类型
  */
 export type LayoutType =
-  | 'blank'           // 空白布局 (无任何包装)
-  | 'header'          // 顶部导航
-  | 'sidebar'         // 侧边栏导航
-  | 'header-sidebar'  // 顶部 + 侧边栏
-  | 'header-footer'   // 顶部 + 底部
-  | 'custom'          // 自定义布局
+  | 'blank' // 空白布局 (无任何包装)
+  | 'header' // 顶部导航
+  | 'sidebar' // 侧边栏导航
+  | 'header-sidebar' // 顶部 + 侧边栏
+  | 'header-footer' // 顶部 + 底部
+  | 'custom' // 自定义布局
 
 /**
  * 布局插槽定义
@@ -542,7 +544,7 @@ export function createRoutePage(id: string, path: string, name: string = '新页
     children: {
       id: `${id}_root`,
       component: 'Page',
-      container: { mode: 'flow' },
+      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
       children: [],
     },
   }
@@ -559,7 +561,7 @@ export function createFragmentPage(id: string, name: string = '片段'): Fragmen
     children: {
       id: `${id}_root`,
       component: 'Fragment',
-      container: { mode: 'flow' },
+      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
       children: [],
     },
   }
@@ -582,7 +584,7 @@ export function createDialogPage(id: string, name: string = '弹窗'): DialogPag
     children: {
       id: `${id}_root`,
       component: 'Dialog',
-      container: { mode: 'flow' },
+      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
       children: [],
     },
   }
@@ -601,7 +603,7 @@ export function createComponentPage(id: string, name: string = '组件'): Compon
     children: {
       id: `${id}_root`,
       component: 'Container',
-      container: { mode: 'flow' },
+      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
       children: [],
     },
   }
@@ -615,13 +617,11 @@ export function createDefaultLayout(id: string, name: string = '默认布局'): 
     id,
     name,
     type: 'blank',
-    slots: [
-      { name: 'default', label: '内容区域', required: true },
-    ],
+    slots: [{ name: 'default', label: '内容区域', required: true }],
     children: {
       id: `${id}_root`,
       component: 'Layout',
-      container: { mode: 'flow' },
+      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
       children: [],
     },
   }
@@ -676,7 +676,7 @@ export function createPageActionRef(actionId: string, pageId: string): ActionLin
  */
 export function validatePageEventActionRefs(
   page: PageSchema,
-  globalActionIds?: Iterable<string>
+  globalActionIds?: Iterable<string>,
 ): PageActionRefValidationIssue[] {
   const issues: PageActionRefValidationIssue[] = []
   const pageActionIds = extractActionIds(page.actions)
@@ -714,7 +714,7 @@ export function validatePageEventActionRefs(
  */
 export function validatePageActionRefs(
   page: PageSchema,
-  globalActionIds?: Iterable<string>
+  globalActionIds?: Iterable<string>,
 ): PageActionValidationResult {
   const pageActionIds = extractActionIds(page.actions)
 
