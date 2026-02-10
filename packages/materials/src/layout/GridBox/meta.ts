@@ -2,7 +2,7 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'GridBox',
-  title: '网格布局',
+  title: '网格编排',
   version: '1.0.0',
   category: '布局',
   isContainer: true, // 核心：允许拖入子组件

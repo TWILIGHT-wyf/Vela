@@ -2,44 +2,40 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 // 导入 Material 组件
-import BaseButton from '../src/basic/BaseButton/BaseButton.vue'
+import Text from '../src/basic/text/Text.vue'
 import KpiCard from '../src/data/KpiCard/KpiCard.vue'
 import GridBox from '../src/layout/GridBox/GridBox.vue'
 
 describe('Materials V2 Integration Tests', () => {
-  describe('BaseButton (Atomic Component)', () => {
-    it('应该正确渲染文本和基础类型', () => {
-      const wrapper = mount(BaseButton, {
+  describe('Text (Basic Component)', () => {
+    it('应该正确渲染文本内容', () => {
+      const wrapper = mount(Text, {
         props: {
-          text: '提交',
-          type: 'danger',
+          content: '提交',
         },
       })
 
-      // Material HOC 可能会包裹一层 div (如果 fillContainer=true，但 BaseButton 是 false)
-      // 检查 UI 组件是否接收到了 Props
-      const button = wrapper.find('.v-button')
-      expect(button.exists()).toBe(true)
-      expect(button.text()).toBe('提交')
-      expect(button.classes()).toContain('v-button--danger')
+      const text = wrapper.find('.v-text')
+      expect(text.exists()).toBe(true)
+      expect(text.text()).toBe('提交')
     })
 
-    it('应该正确应用 ObjectSetter 样式配置', () => {
-      const wrapper = mount(BaseButton, {
+    it('应该正确透传样式类属性', () => {
+      const wrapper = mount(Text, {
         props: {
-          styleConfig: {
-            backgroundColor: 'red',
-            fontSize: 20,
-            borderRadius: 10,
-          },
+          fontSize: 20,
+          textAlign: 'center',
+          paddingX: 10,
+          paddingY: 5,
         },
       })
 
-      const button = wrapper.find('.v-button')
-      const style = button.attributes('style')
+      const text = wrapper.find('.v-text')
+      const style = text.attributes('style')
 
-      expect(style).toContain('background-color: red')
-      // expect(wrapper.text()).toContain('Click Me') // 暂时跳过 slot 测试
+      expect(style).toContain('font-size: 20px')
+      expect(style).toContain('text-align: center')
+      expect(style).toContain('padding: 5px 10px')
     })
   })
 

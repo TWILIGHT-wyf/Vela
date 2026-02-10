@@ -2,6 +2,12 @@
 import { defineAsyncComponent, type Component } from 'vue'
 import type { MaterialMeta, PropSchema } from '@vela/core/types'
 import { componentRegistry as uiComponentRegistry } from '@vela/ui'
+import {
+  COMPONENT_ALIASES,
+  getComponentDefinition,
+  type ComponentCategory,
+} from '@vela/core/contracts'
+import { normalizeCategoryName } from './materialsMeta'
 
 /**
  * 使用 Vite 的 import.meta.glob 自动导入所有组件实现 (.vue)
@@ -25,18 +31,6 @@ const metaModules = import.meta.glob<{ default: MaterialMeta }>(['./**/index.ts'
  */
 function extractComponentName(path: string): string {
   const match = path.match(/\/([^/]+)\.vue$/)
-  if (!match) return ''
-  const name = match[1]
-  // 首字母大写
-  return name.charAt(0).toUpperCase() + name.slice(1)
-}
-
-/**
- * 从元数据路径提取组件名称
- * 例如：'./chart/lineChart/index.ts' -> 'LineChart'
- */
-function extractMetaComponentName(path: string): string {
-  const match = path.match(/\/([^/]+)\/index\.ts$/)
   if (!match) return ''
   const name = match[1]
   // 首字母大写
@@ -76,24 +70,46 @@ for (const path in metaModules) {
   }
 }
 
-// 别名映射 (兼容旧名称)
-const ALIAS_MAP: Record<string, string> = {
-  KpiText: 'Text',
-  KpiProgress: 'Progress',
-  KpiStat: 'Stat',
-  KpiBox: 'Box',
-  KpiCountUp: 'CountUp',
-  // 图表旧名称兼容
-  stackedBarChart: 'StackedBarChart',
-  scatterChart: 'ScatterChart',
-  sankeyChart: 'SankeyChart',
-  radarChart: 'RadarChart',
-  funnelChart: 'FunnelChart',
-  doughnutChart: 'DoughnutChart',
-  barChart: 'BarChart',
-  lineChart: 'LineChart',
-  pieChart: 'PieChart',
-  gaugeChart: 'GaugeChart',
+// Alias map is now imported from @vela/core/contracts (COMPONENT_ALIASES)
+// Re-export as ALIAS_MAP for local backward compatibility
+const ALIAS_MAP = COMPONENT_ALIASES
+
+const CATEGORY_LABEL_MAP: Partial<Record<ComponentCategory, string>> = {
+  basic: '基础',
+  form: '表单',
+  layout: '布局',
+  data: '数据',
+  chart: '图表',
+  navigation: '导航',
+  kpi: 'KPI',
+  content: '内容',
+  media: '媒体',
+  advanced: '高级',
+}
+
+function lowerFirst(name: string): string {
+  return name ? name.charAt(0).toLowerCase() + name.slice(1) : name
+}
+
+function upperFirst(name: string): string {
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : name
+}
+
+function resolveMaterialCategory(meta: MaterialMeta): string {
+  const name = meta.name || meta.componentName || ''
+  const candidates = [name, lowerFirst(name), upperFirst(name)]
+
+  for (const candidate of candidates) {
+    const definition = getComponentDefinition(candidate)
+    if (definition) {
+      const mapped = CATEGORY_LABEL_MAP[definition.category]
+      if (mapped) {
+        return mapped
+      }
+    }
+  }
+
+  return normalizeCategoryName(meta.category || '其他')
 }
 
 /**
@@ -112,6 +128,8 @@ function resolveComponentName(name: string): string | null {
   return null
 }
 
+const uiRegistry = uiComponentRegistry as Record<string, Component>
+
 /**
  * 获取组件实现，优先使用 materials 的包装，其次从 @vela/ui 获取
  */
@@ -127,8 +145,8 @@ export function getComponent(name: string): Component | string {
   const pascalName = name.charAt(0).toUpperCase() + name.slice(1)
   const uiComponentName = `v${pascalName}`
 
-  if ((uiComponentRegistry as any)[uiComponentName]) {
-    return (uiComponentRegistry as any)[uiComponentName]
+  if (uiRegistry[uiComponentName]) {
+    return uiRegistry[uiComponentName]
   }
 
   // 3. 兜底返回 div
@@ -159,7 +177,7 @@ export function getRegisteredComponents(): string[] {
 export function getMaterialsByCategory(): Record<string, MaterialMeta[]> {
   const grouped: Record<string, MaterialMeta[]> = {}
   materialList.forEach((meta) => {
-    const category = meta.category || '其他'
+    const category = resolveMaterialCategory(meta)
     if (!grouped[category]) {
       grouped[category] = []
     }

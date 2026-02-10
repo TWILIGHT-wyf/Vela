@@ -23,10 +23,7 @@ import {
   DataLine,
   Histogram,
   Box,
-  Search,
-  Upload,
   Files,
-  DocumentCopy,
 } from '@element-plus/icons-vue'
 
 // ========== Category Configuration ==========
@@ -41,20 +38,56 @@ export interface CategoryConfig {
 }
 
 /**
- * All category configurations
+ * Canonical category labels shown in editor.
+ * Keep this set small and stable; old labels should go through CATEGORY_ALIASES.
  */
-export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
-  图表: { order: 1, defaultWidth: 320, defaultHeight: 200 },
-  KPI: { order: 2, defaultWidth: 160, defaultHeight: 100 }, // 兼容旧分类
-  数据: { order: 3, defaultWidth: 360, defaultHeight: 240 },
-  数据展示: { order: 3, defaultWidth: 360, defaultHeight: 240 }, // 兼容旧分类
-  基础组件: { order: 4, defaultWidth: 180, defaultHeight: 50 },
-  基础控件: { order: 4, defaultWidth: 180, defaultHeight: 50 }, // 兼容旧分类
-  布局容器: { order: 5, defaultWidth: 400, defaultHeight: 240 },
-  表单组件: { order: 5, defaultWidth: 200, defaultHeight: 40 },
-  内容: { order: 6, defaultWidth: 300, defaultHeight: 200 },
-  媒体: { order: 7, defaultWidth: 300, defaultHeight: 200 },
-  高级: { order: 8, defaultWidth: 300, defaultHeight: 150 },
+export type CanonicalCategory =
+  | '基础'
+  | '表单'
+  | '布局'
+  | '数据'
+  | '图表'
+  | '导航'
+  | 'KPI'
+  | '内容'
+  | '媒体'
+  | '高级'
+
+/**
+ * Canonical category configuration used by MaterialPanel ordering.
+ */
+export const CATEGORY_CONFIG: Record<CanonicalCategory, CategoryConfig> = {
+  基础: { order: 1, defaultWidth: 180, defaultHeight: 50 },
+  表单: { order: 2, defaultWidth: 200, defaultHeight: 40 },
+  布局: { order: 3, defaultWidth: 400, defaultHeight: 240 },
+  数据: { order: 4, defaultWidth: 360, defaultHeight: 240 },
+  图表: { order: 5, defaultWidth: 320, defaultHeight: 200 },
+  导航: { order: 6, defaultWidth: 260, defaultHeight: 40 },
+  KPI: { order: 7, defaultWidth: 160, defaultHeight: 100 },
+  内容: { order: 8, defaultWidth: 300, defaultHeight: 200 },
+  媒体: { order: 9, defaultWidth: 300, defaultHeight: 200 },
+  高级: { order: 10, defaultWidth: 300, defaultHeight: 150 },
+}
+
+/**
+ * Legacy/alias labels -> canonical category labels.
+ */
+export const CATEGORY_ALIASES: Record<string, CanonicalCategory> = {
+  基础组件: '基础',
+  基础控件: '基础',
+  布局容器: '布局',
+  表单组件: '表单',
+  数据展示: '数据',
+  图表: '图表',
+  KPI: 'KPI',
+  数据: '数据',
+  内容: '内容',
+  媒体: '媒体',
+  高级: '高级',
+  导航: '导航',
+  基础: '基础',
+  布局: '布局',
+  表单: '表单',
 }
 
 /**
@@ -70,7 +103,15 @@ const DEFAULT_CONFIG: CategoryConfig = {
  * Get category configuration by category name
  */
 export function getCategoryConfig(category: string): CategoryConfig {
-  return CATEGORY_CONFIG[category] || DEFAULT_CONFIG
+  const normalized = normalizeCategoryName(category)
+  return CATEGORY_CONFIG[normalized as CanonicalCategory] || DEFAULT_CONFIG
+}
+
+/**
+ * Normalize incoming category names to canonical labels.
+ */
+export function normalizeCategoryName(category: string): string {
+  return CATEGORY_ALIASES[category] || category
 }
 
 // ========== Icon Mapping ==========
@@ -113,7 +154,7 @@ export interface MaterialItem {
 /**
  * Create material item with UI metadata
  */
-export function createMaterialItem(meta: MaterialMeta, materials: MaterialMeta[]): MaterialItem {
+export function createMaterialItem(meta: MaterialMeta): MaterialItem {
   const categoryConfig = getCategoryConfig(meta.category || '其他')
 
   return {
@@ -129,7 +170,7 @@ export function createMaterialItem(meta: MaterialMeta, materials: MaterialMeta[]
  * Group materials by category with UI metadata
  */
 export function getMaterialsWithUI(meta: MaterialMeta[]): MaterialItem[] {
-  return meta.map((item) => createMaterialItem(item, meta))
+  return meta.map((item) => createMaterialItem(item))
 }
 
 /**

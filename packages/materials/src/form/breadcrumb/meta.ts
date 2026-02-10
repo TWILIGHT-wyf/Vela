@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Breadcrumb',
   title: '面包屑',
   version: '1.0.0',
-  category: '基础控件',
+  category: '导航',
   props: {
     separator: {
       name: 'separator',

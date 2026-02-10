@@ -2,7 +2,7 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Markdown',
-  title: 'Markdown',
+  title: 'Markdown文本',
   version: '1.0.0',
   category: '内容',
   props: {

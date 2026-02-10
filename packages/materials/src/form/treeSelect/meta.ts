@@ -1,0 +1,105 @@
+import type { MaterialMeta } from '@vela/core/types'
+
+const meta: MaterialMeta = {
+  name: 'TreeSelect',
+  title: '树形选择',
+  version: '1.0.0',
+  category: '表单',
+  props: {
+    options: {
+      name: 'options',
+      label: '选项数据',
+      title: '选项数据',
+      setter: 'JsonSetter',
+      defaultValue: [],
+      group: '数据',
+    },
+    modelValue: {
+      name: 'modelValue',
+      label: '默认值',
+      title: '默认值',
+      setter: 'StringSetter',
+      defaultValue: '',
+      group: '基础',
+    },
+    placeholder: {
+      name: 'placeholder',
+      label: '占位文本',
+      title: '占位文本',
+      setter: 'StringSetter',
+      defaultValue: '请选择',
+      group: '基础',
+    },
+    clearable: {
+      name: 'clearable',
+      label: '可清空',
+      title: '可清空',
+      setter: 'BooleanSetter',
+      defaultValue: true,
+      group: '交互',
+    },
+    disabled: {
+      name: 'disabled',
+      label: '禁用',
+      title: '禁用',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '交互',
+    },
+    multiple: {
+      name: 'multiple',
+      label: '多选',
+      title: '多选',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '交互',
+    },
+    checkStrictly: {
+      name: 'checkStrictly',
+      label: '父子节点不关联',
+      title: '父子节点不关联',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '交互',
+    },
+    size: {
+      name: 'size',
+      label: '尺寸',
+      title: '尺寸',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '大', value: 'large' },
+          { label: '默认', value: 'default' },
+          { label: '小', value: 'small' },
+        ],
+      },
+      defaultValue: 'default',
+      group: '样式',
+    },
+    selectWidth: {
+      name: 'selectWidth',
+      label: '选择器宽度',
+      title: '选择器宽度',
+      setter: 'NumberSetter',
+      defaultValue: 100,
+      description: '宽度百分比 (0-100)',
+      group: '尺寸',
+    },
+    padding: {
+      name: 'padding',
+      label: '内边距',
+      title: '内边距',
+      setter: 'NumberSetter',
+      defaultValue: 8,
+      group: '尺寸',
+    },
+  },
+  events: ['onChange'],
+  defaultSize: {
+    width: 260,
+    height: 40,
+  },
+}
+
+export default meta

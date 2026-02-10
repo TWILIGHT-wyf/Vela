@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'NavButton',
   title: '导航按钮',
   version: '1.0.0',
-  category: '基础控件',
+  category: '导航',
   props: {
     label: {
       name: 'label',

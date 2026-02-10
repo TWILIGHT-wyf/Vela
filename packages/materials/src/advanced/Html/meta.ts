@@ -2,7 +2,7 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Html',
-  title: 'HTML',
+  title: 'HTML片段',
   version: '1.0.0',
   category: '内容',
   props: {

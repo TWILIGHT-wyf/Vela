@@ -2,7 +2,7 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Iframe',
-  title: 'IFrame',
+  title: '内嵌网页',
   version: '1.0.0',
   category: '内容',
   props: {

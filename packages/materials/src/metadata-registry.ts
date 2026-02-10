@@ -1,4 +1,5 @@
 import type { MaterialMeta, PropSchema } from '@vela/core/types'
+import { COMPONENT_ALIASES } from '@vela/core/contracts'
 
 /**
  * Category configuration with order, label, and default sizes
@@ -87,35 +88,9 @@ export class MaterialRegistry {
 
   /**
    * Alias mapping for backward compatibility
+   * Now derived from the unified COMPONENT_ALIASES in @vela/core/contracts
    */
-  readonly aliases: Record<string, string> = {
-    // KPI legacy names
-    KpiText: 'Text',
-    KpiProgress: 'Progress',
-    KpiStat: 'Stat',
-    KpiBox: 'Box',
-    KpiCountUp: 'CountUp',
-
-    // Chart legacy names (camelCase)
-    stackedBarChart: 'StackedBarChart',
-    scatterChart: 'ScatterChart',
-    sankeyChart: 'SankeyChart',
-    radarChart: 'RadarChart',
-    funnelChart: 'FunnelChart',
-    doughnutChart: 'DoughnutChart',
-    barChart: 'BarChart',
-    lineChart: 'LineChart',
-    pieChart: 'PieChart',
-    gaugeChart: 'GaugeChart',
-
-    // Layout legacy names
-    flexbox: 'Flex',
-    gridLayout: 'Grid',
-
-    // Form legacy names
-    dropdown: 'Select',
-    datePicker: 'DateRange',
-  }
+  readonly aliases: Record<string, string> = { ...COMPONENT_ALIASES }
 
   /**
    * Internal material storage
