@@ -12,6 +12,7 @@
         :class="{
           'show-bounds': uiStore.canvasSettings.showCanvasBounds,
           'is-grid-mode': rootLayoutMode === 'grid',
+          'is-root-drag-over': showRootDropHint,
         }"
         :style="pageStyle"
         @dragover.prevent="handleRootDragOver"
@@ -33,7 +34,7 @@
         <div
           v-if="!rootNode?.children || rootNode.children.length === 0"
           class="empty-page-placeholder"
-          :class="{ 'drag-over': isRootDragOver }"
+          :class="{ 'drag-over': showEmptyDropHint }"
         >
           <div class="empty-icon">
             <svg
@@ -53,7 +54,6 @@
           <p class="empty-hint">请从左侧拖入组件到网格编排画布</p>
         </div>
 
-        <MarginOverlay v-if="rootLayoutMode === 'grid'" />
         <SelectionLayer />
       </div>
     </div>
@@ -100,7 +100,6 @@ import NodeWrapper from './NodeWrapper.vue'
 import DropIndicator from './DropIndicator.vue'
 import ContextMenu from './ContextMenu.vue'
 import SelectionLayer from '../../selection/SelectionLayer.vue'
-import MarginOverlay from '../../guides/MarginOverlay.vue'
 import { useFlowDrop } from './useFlowDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -146,6 +145,18 @@ const rootLayoutMode = computed(() => {
   const mode = rootNode.value?.container?.mode
   if (mode === 'free') return 'free'
   return 'grid'
+})
+
+const hasRootChildren = computed(() => {
+  return Boolean(rootNode.value?.children && rootNode.value.children.length > 0)
+})
+
+const showRootDropHint = computed(() => {
+  return isRootDragOver.value && hasRootChildren.value && !flowDrop.indicator.value.visible
+})
+
+const showEmptyDropHint = computed(() => {
+  return isRootDragOver.value && !flowDrop.indicator.value.visible
 })
 
 // Adaptive grid (fr-based) properties
@@ -329,6 +340,12 @@ const handleBackgroundClick = (e: MouseEvent) => {
 const handleRootDragOver = (e: DragEvent) => {
   e.preventDefault()
   isRootDragOver.value = true
+
+  const target = e.target as HTMLElement | null
+  const overNode = target?.closest('[data-id]')
+  if (!overNode && flowDrop.indicator.value.visible) {
+    flowDrop.hideIndicator()
+  }
 }
 
 /**
@@ -388,6 +405,10 @@ const handleRootDrop = (e: DragEvent) => {
 
 /* 模拟页面 - 白色纸张效果 */
 .simulation-page {
+  --vela-hint-drop-color: #0d99ff;
+  --vela-hint-drop-color-soft: rgba(13, 153, 255, 0.2);
+  --vela-hint-drop-bg: rgba(13, 153, 255, 0.04);
+  --vela-hint-boundary-color: rgba(15, 23, 42, 0.12);
   background: #ffffff;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.12),
@@ -415,7 +436,7 @@ const handleRootDrop = (e: DragEvent) => {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px dashed rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--vela-hint-boundary-color);
   pointer-events: none;
   z-index: 0;
   border-radius: 2px;
@@ -430,10 +451,11 @@ const handleRootDrop = (e: DragEvent) => {
   min-height: 400px;
   color: #9ca3af;
   user-select: none;
-  border: 2px dashed transparent;
+  border: 1px solid transparent;
   border-radius: 8px;
   transition:
-    border-color 0.2s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
     background 0.2s ease;
 }
 
@@ -443,8 +465,11 @@ const handleRootDrop = (e: DragEvent) => {
 }
 
 .empty-page-placeholder.drag-over {
-  border-color: #409eff;
-  background: rgba(64, 158, 255, 0.05);
+  border-color: var(--vela-hint-drop-color);
+  border-style: dashed;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px var(--vela-hint-drop-color-soft);
+  background: var(--vela-hint-drop-bg);
 }
 
 .empty-icon {
@@ -482,12 +507,7 @@ const handleRootDrop = (e: DragEvent) => {
   border-radius: 2px;
 }
 
-/* 悬停状态 - 蓝色虚线边框 */
-.simulation-page :deep([data-id]:hover) {
-  outline: 1px dashed #0d99ff;
-  outline-offset: 1px;
-  background: rgba(13, 153, 255, 0.02);
-}
+/* Hover feedback is rendered by NodeWrapper only to avoid duplicate overlays. */
 
 /* 选中状态 - Figma 风格蓝色实线 + 控制点效果 */
 .simulation-page :deep(.editor-node-wrapper.is-selected) {
@@ -505,34 +525,11 @@ const handleRootDrop = (e: DragEvent) => {
     inset 0 0 0 1px rgba(13, 153, 255, 0.1);
 }
 
-/* 拖放指示器 */
-.simulation-page.drag-over {
-  outline: 2px dashed #0d99ff;
+/* 根容器拖放反馈（有组件时） */
+.simulation-page.is-root-drag-over {
+  outline: 2px dashed var(--vela-hint-drop-color);
   outline-offset: -2px;
-  background: rgba(13, 153, 255, 0.03);
-}
-
-/* 容器组件特殊样式 */
-.simulation-page :deep([data-component='Container']) {
-  min-height: 60px;
-}
-
-/* 容器组件悬停 - 显示可放置区域 */
-.simulation-page :deep([data-component='Container']:hover) {
-  background: rgba(13, 153, 255, 0.03);
-}
-
-.simulation-page :deep([data-component='Container']:empty)::before {
-  content: '拖入组件到此容器';
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60px;
-  color: #9ca3af;
-  font-size: 12px;
-  border: 1px dashed #d1d5db;
-  border-radius: 4px;
-  background: #f9fafb;
+  background: var(--vela-hint-drop-bg);
 }
 
 .interaction-hint {

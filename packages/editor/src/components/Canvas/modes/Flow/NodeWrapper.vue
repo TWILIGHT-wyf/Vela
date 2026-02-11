@@ -17,11 +17,11 @@
     @dragleave="handleDragLeave"
     @drop="handleDrop"
   >
-    <div
-      v-if="showDropEdgeIndicator"
-      class="drop-edge-indicator"
-      :class="dropEdgeIndicatorClasses"
-    />
+    <!-- Interaction blocker: prevents component-internal events (click, change, etc.)
+         from firing in edit mode. Removed in simulation/preview mode so components
+         become fully interactive. Positioned above component content (z-index: 1)
+         but below resize handles and box-model overlays (z-index: 11+). -->
+    <div v-if="!isSimulationMode" class="interaction-blocker" />
 
     <!-- Component content slot -->
     <slot></slot>
@@ -67,6 +67,7 @@
          users can drag from zero to add margin. -->
     <template v-if="showMarginOverlays">
       <div
+        v-if="isMarginSideVisible('top')"
         class="box-overlay margin-overlay margin-overlay-top"
         :style="{
           height: Math.max(marginPx.top, 4) + 'px',
@@ -77,6 +78,7 @@
         <span v-if="marginPx.top > 0" class="overlay-label">{{ marginPx.top }}</span>
       </div>
       <div
+        v-if="isMarginSideVisible('right')"
         class="box-overlay margin-overlay margin-overlay-right"
         :style="{
           width: Math.max(marginPx.right, 4) + 'px',
@@ -87,6 +89,7 @@
         <span v-if="marginPx.right > 0" class="overlay-label">{{ marginPx.right }}</span>
       </div>
       <div
+        v-if="isMarginSideVisible('bottom')"
         class="box-overlay margin-overlay margin-overlay-bottom"
         :style="{
           height: Math.max(marginPx.bottom, 4) + 'px',
@@ -97,6 +100,7 @@
         <span v-if="marginPx.bottom > 0" class="overlay-label">{{ marginPx.bottom }}</span>
       </div>
       <div
+        v-if="isMarginSideVisible('left')"
         class="box-overlay margin-overlay margin-overlay-left"
         :style="{
           width: Math.max(marginPx.left, 4) + 'px',
@@ -109,55 +113,56 @@
     </template>
 
     <!-- Padding overlays: semi-transparent green zones inside the wrapper.
-         Shown when selected and padding > 0. Side overlays avoid corners for clarity. -->
+         Shown when selected. Always render with at least 4px so users can drag from zero.
+         Side overlays avoid corners by offsetting left/right by the adjacent side's padding. -->
     <template v-if="showPaddingOverlays">
       <div
-        v-if="paddingPx.top > 0"
+        v-if="isPaddingSideVisible('top')"
         class="box-overlay padding-overlay padding-overlay-top"
         :style="{
-          height: paddingPx.top + 'px',
+          height: Math.max(paddingPx.top, 4) + 'px',
           left: paddingPx.left + 'px',
           right: paddingPx.right + 'px',
         }"
         @mousedown.stop.prevent="handlePaddingDragStart('top', $event)"
       >
-        <span class="overlay-label">{{ paddingPx.top }}</span>
+        <span v-if="paddingPx.top > 0" class="overlay-label">{{ paddingPx.top }}</span>
       </div>
       <div
-        v-if="paddingPx.bottom > 0"
+        v-if="isPaddingSideVisible('bottom')"
         class="box-overlay padding-overlay padding-overlay-bottom"
         :style="{
-          height: paddingPx.bottom + 'px',
+          height: Math.max(paddingPx.bottom, 4) + 'px',
           left: paddingPx.left + 'px',
           right: paddingPx.right + 'px',
         }"
         @mousedown.stop.prevent="handlePaddingDragStart('bottom', $event)"
       >
-        <span class="overlay-label">{{ paddingPx.bottom }}</span>
+        <span v-if="paddingPx.bottom > 0" class="overlay-label">{{ paddingPx.bottom }}</span>
       </div>
       <div
-        v-if="paddingPx.left > 0"
+        v-if="isPaddingSideVisible('left')"
         class="box-overlay padding-overlay padding-overlay-left"
         :style="{
-          width: paddingPx.left + 'px',
-          top: paddingPx.top + 'px',
-          bottom: paddingPx.bottom + 'px',
+          width: Math.max(paddingPx.left, 4) + 'px',
+          top: Math.max(paddingPx.top, 4) + 'px',
+          bottom: Math.max(paddingPx.bottom, 4) + 'px',
         }"
         @mousedown.stop.prevent="handlePaddingDragStart('left', $event)"
       >
-        <span class="overlay-label">{{ paddingPx.left }}</span>
+        <span v-if="paddingPx.left > 0" class="overlay-label">{{ paddingPx.left }}</span>
       </div>
       <div
-        v-if="paddingPx.right > 0"
+        v-if="isPaddingSideVisible('right')"
         class="box-overlay padding-overlay padding-overlay-right"
         :style="{
-          width: paddingPx.right + 'px',
-          top: paddingPx.top + 'px',
-          bottom: paddingPx.bottom + 'px',
+          width: Math.max(paddingPx.right, 4) + 'px',
+          top: Math.max(paddingPx.top, 4) + 'px',
+          bottom: Math.max(paddingPx.bottom, 4) + 'px',
         }"
         @mousedown.stop.prevent="handlePaddingDragStart('right', $event)"
       >
-        <span class="overlay-label">{{ paddingPx.right }}</span>
+        <span v-if="paddingPx.right > 0" class="overlay-label">{{ paddingPx.right }}</span>
       </div>
     </template>
 
@@ -172,6 +177,7 @@
 import { computed, ref, inject, type CSSProperties } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
+import { useUIStore } from '@/stores/ui'
 import { useSizeStore } from '@/stores/size'
 import { useCanvasContext } from '../../composables/useCanvasContext'
 import type { NodeSchema, NodeStyle, GridContainerLayout, GridNodeGeometry } from '@vela/core'
@@ -203,8 +209,10 @@ const { scale: canvasScale } = useCanvasContext()
 
 // ========== Store ==========
 const componentStore = useComponent()
+const uiStore = useUIStore()
 const sizeStore = useSizeStore()
 const { selectedId, selectedIds, hoveredId, rootNode } = storeToRefs(componentStore)
+const { isSimulationMode } = storeToRefs(uiStore)
 const { selectComponent, toggleSelection, findNodeById, setHovered, updateStyle } = componentStore
 
 // ========== Refs ==========
@@ -213,6 +221,8 @@ const isDragging = ref(false)
 const isDragOver = ref(false)
 const isResizing = ref(false)
 const isSpacingAdjusting = ref(false)
+const activeSpacingKind = ref<'margin' | 'padding' | null>(null)
+const activeSpacingSide = ref<'top' | 'right' | 'bottom' | 'left' | null>(null)
 const flowResizeInfo = ref<{ width: number; height: number } | null>(null)
 const isFreeParent = computed(() => props.parentLayoutMode === 'free')
 
@@ -233,6 +243,12 @@ const componentLabel = computed(() => {
   return props.componentName || currentNode.value?.component || ''
 })
 
+const isDragFeedbackActive = computed(() => {
+  const dragging = Boolean(flowDrop?.draggingId.value)
+  const indicatorVisible = Boolean(flowDrop?.indicator.value?.visible)
+  return dragging || indicatorVisible || isDragOver.value
+})
+
 // ========== Box Model Overlays (Margin + Padding) ==========
 
 /** Resolved pixel values for each margin side */
@@ -246,9 +262,9 @@ const marginPx = computed(() => {
   }
 })
 
-/** Show margin overlays: grid mode, selected or hovered */
+/** Show margin overlays: any layout mode, selected or hovered */
 const showMarginOverlays = computed(() => {
-  if (props.parentLayoutMode !== 'grid') return false
+  if (isDragFeedbackActive.value) return false
   return isSelected.value || isHovered.value
 })
 
@@ -298,12 +314,23 @@ const paddingPx = computed(() => {
   }
 })
 
-/** Show padding overlays: any mode, selected only */
+/** Show padding overlays: any mode, selected only (always show to allow dragging from zero) */
 const showPaddingOverlays = computed(() => {
-  if (!isSelected.value) return false
-  const p = paddingPx.value
-  return p.top > 0 || p.right > 0 || p.bottom > 0 || p.left > 0
+  if (isDragFeedbackActive.value) return false
+  return isSelected.value
 })
+
+const isMarginSideVisible = (side: FlowSpacingSide): boolean => {
+  if (!showMarginOverlays.value) return false
+  if (!isSpacingAdjusting.value || activeSpacingKind.value !== 'margin') return true
+  return activeSpacingSide.value === side
+}
+
+const isPaddingSideVisible = (side: FlowSpacingSide): boolean => {
+  if (!showPaddingOverlays.value) return false
+  if (!isSpacingAdjusting.value || activeSpacingKind.value !== 'padding') return true
+  return activeSpacingSide.value === side
+}
 
 /** 判断是否为容器组件 */
 const isContainer = computed(() => {
@@ -316,42 +343,6 @@ const isEmpty = computed(() => {
   return !currentNode.value.children || currentNode.value.children.length === 0
 })
 
-/** 当前节点是否命中“放入容器内部”拖拽目标 */
-const isDropInsideActive = computed(() => {
-  if (!flowDrop || !isContainer.value) return false
-  const state = flowDrop.indicator.value
-  if (!state?.visible) return false
-  return state.targetId === props.nodeId && state.position === 'inside'
-})
-
-const isDropBeforeActive = computed(() => {
-  if (!flowDrop) return false
-  const state = flowDrop.indicator.value
-  if (!state?.visible) return false
-  return state.targetId === props.nodeId && state.position === 'before'
-})
-
-const isDropAfterActive = computed(() => {
-  if (!flowDrop) return false
-  const state = flowDrop.indicator.value
-  if (!state?.visible) return false
-  return state.targetId === props.nodeId && state.position === 'after'
-})
-
-const dropIndicatorDirection = computed<'row' | 'column'>(() => {
-  if (!flowDrop) return 'column'
-  return flowDrop.indicator.value.direction || 'column'
-})
-
-const showDropEdgeIndicator = computed(() => isDropBeforeActive.value || isDropAfterActive.value)
-
-const dropEdgeIndicatorClasses = computed(() => ({
-  'is-before': isDropBeforeActive.value,
-  'is-after': isDropAfterActive.value,
-  'is-row': dropIndicatorDirection.value === 'row',
-  'is-column': dropIndicatorDirection.value === 'column',
-}))
-
 /** Wrapper classes */
 const wrapperClasses = computed(() => [
   'editor-node-wrapper',
@@ -363,7 +354,6 @@ const wrapperClasses = computed(() => [
     'is-resizing': isResizing.value,
     'is-container': isContainer.value,
     'is-empty': isEmpty.value,
-    'is-drop-inside': isDropInsideActive.value,
     'is-free-parent': isFreeParent.value,
     'is-grid-item': props.parentLayoutMode === 'grid',
   },
@@ -954,11 +944,12 @@ const handleGridFrResize = (handle: FlowResizeHandle, e: MouseEvent) => {
 const MARGIN_RANGE = { min: -500, max: 1000 }
 
 const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
-  if (props.parentLayoutMode !== 'grid') return
   if (!currentNode.value) return
 
   selectComponent(props.nodeId)
   isSpacingAdjusting.value = true
+  activeSpacingKind.value = 'margin'
+  activeSpacingSide.value = side
   setHovered(null)
 
   const startX = e.clientX
@@ -1022,6 +1013,8 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
     document.body.style.cursor = prevCursor
     document.body.style.userSelect = prevUserSelect
     isSpacingAdjusting.value = false
+    activeSpacingKind.value = null
+    activeSpacingSide.value = null
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
     window.removeEventListener('keydown', onKeyDown)
@@ -1051,6 +1044,8 @@ const handlePaddingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
 
   selectComponent(props.nodeId)
   isSpacingAdjusting.value = true
+  activeSpacingKind.value = 'padding'
+  activeSpacingSide.value = side
   setHovered(null)
 
   const startX = e.clientX
@@ -1109,6 +1104,8 @@ const handlePaddingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
     document.body.style.cursor = prevCursor
     document.body.style.userSelect = prevUserSelect
     isSpacingAdjusting.value = false
+    activeSpacingKind.value = null
+    activeSpacingSide.value = null
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
     window.removeEventListener('keydown', onKeyDown)
@@ -1167,8 +1164,22 @@ const handleClick = (e: MouseEvent) => {
 }
 
 .editor-node-wrapper.is-grid-item {
-  border: 1px dashed rgba(14, 116, 144, 0.25);
-  background: rgba(240, 249, 255, 0.3);
+  border: 1px solid rgba(14, 116, 144, 0.14);
+  background: rgba(240, 249, 255, 0.16);
+}
+
+/* ========== Interaction Blocker ========== */
+/* Transparent overlay that captures all pointer events in edit mode.
+   This prevents component-internal handlers (switch toggle, button click, etc.)
+   from firing while editing. z-index 1 sits above the component content
+   but below resize handles (z-index 12) and box-model overlays (z-index 11). */
+.interaction-blocker {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+  background: transparent;
+  pointer-events: auto;
 }
 
 /* ========== Hover State (Exclusive - only innermost) ========== */
@@ -1250,71 +1261,6 @@ const handleClick = (e: MouseEvent) => {
      children (free-mode sub-layout) to drift. */
   box-shadow: inset 0 0 0 1px rgba(14, 116, 144, 0.35);
   background: rgba(240, 249, 255, 0.45);
-}
-
-/* Container drop-inside active state: provide explicit affordance for nested drop */
-.editor-node-wrapper.is-container.is-drop-inside:not(.is-empty) {
-  box-shadow:
-    inset 0 0 0 2px rgba(64, 158, 255, 0.9),
-    inset 0 0 0 9999px rgba(64, 158, 255, 0.08);
-}
-
-.editor-node-wrapper.is-container.is-drop-inside:not(.is-empty)::before {
-  content: '释放到容器内部';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 13;
-  pointer-events: none;
-  font-size: 11px;
-  line-height: 1;
-  color: #1d4ed8;
-  background: rgba(239, 246, 255, 0.95);
-  border: 1px solid rgba(147, 197, 253, 0.9);
-  border-radius: 999px;
-  padding: 4px 8px;
-}
-
-.drop-edge-indicator {
-  position: absolute;
-  pointer-events: none;
-  z-index: 13;
-  border-radius: 2px;
-  box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.35),
-    0 0 10px rgba(59, 130, 246, 0.35);
-}
-
-.drop-edge-indicator.is-column {
-  left: 0;
-  right: 0;
-  height: 3px;
-}
-
-.drop-edge-indicator.is-column.is-before {
-  top: -2px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
-
-.drop-edge-indicator.is-column.is-after {
-  bottom: -2px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
-
-.drop-edge-indicator.is-row {
-  top: 0;
-  bottom: 0;
-  width: 3px;
-}
-
-.drop-edge-indicator.is-row.is-before {
-  left: -2px;
-  background: linear-gradient(180deg, #3b82f6, #60a5fa);
-}
-
-.drop-edge-indicator.is-row.is-after {
-  right: -2px;
-  background: linear-gradient(180deg, #3b82f6, #60a5fa);
 }
 
 .editor-node-wrapper.is-free-parent {
@@ -1426,7 +1372,7 @@ const handleClick = (e: MouseEvent) => {
 /* Margin overlays - orange, extend OUTSIDE the wrapper using negative coordinates */
 .margin-overlay {
   background: rgba(251, 146, 60, 0.18);
-  border: 1px dashed rgba(234, 88, 12, 0.5);
+  border: 1px solid rgba(234, 88, 12, 0.45);
   transition: background 0.1s;
 }
 
@@ -1471,7 +1417,7 @@ const handleClick = (e: MouseEvent) => {
 /* Padding overlays - green, stay inside the wrapper */
 .padding-overlay {
   background: rgba(52, 211, 153, 0.15);
-  border: 1px dashed rgba(16, 185, 129, 0.45);
+  border: 1px solid rgba(16, 185, 129, 0.4);
   transition: background 0.1s;
 }
 

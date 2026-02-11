@@ -58,7 +58,7 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("window.addEventListener('keydown', onKeyDown)")
   })
 
-  it('网格编排模式应在悬停/选中时显示全面积 margin 覆盖层', () => {
+  it('任意布局模式在悬停/选中时应显示全面积 margin 覆盖层', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     // 新 API: showMarginOverlays + marginPx（替换旧 showFlowSpacingHints + flowSpacingHints）
     expect(source).toContain('showMarginOverlays')
@@ -70,8 +70,10 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('margin-overlay-left')
     // 使用 overlay-label 替换旧 flow-spacing-hint
     expect(source).toContain('overlay-label')
-    // 仅网格模式触发
-    expect(source).toContain("parentLayoutMode !== 'grid'")
+    // 任意布局模式均触发（不限制 grid 模式）
+    expect(source).toContain('return isSelected.value || isHovered.value')
+    // 拖拽反馈进行中时关闭，避免视觉冲突
+    expect(source).toContain('if (isDragFeedbackActive.value) return false')
   })
 
   it('网格编排模式应支持拖拽 margin 覆盖层调整外边距', () => {
@@ -88,6 +90,9 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('.margin-overlay-right')
     expect(source).toContain('.margin-overlay-bottom')
     expect(source).toContain('.margin-overlay-left')
+    // 调整中仅显示当前侧
+    expect(source).toContain("activeSpacingKind.value !== 'margin'")
+    expect(source).toContain('return activeSpacingSide.value === side')
   })
 
   it('选中时应显示全面积 padding 覆盖层并支持拖拽调整内边距', () => {
@@ -110,6 +115,12 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("if (side === 'top') next = baseVal + dy")
     // Escape 同样可取消 padding 调整
     expect(source).toContain('PADDING_RANGE')
+    // 选中即显示（最小 4px strip），不要求 padding > 0
+    expect(source).toContain('return isSelected.value')
+    expect(source).toContain('Math.max(paddingPx.top, 4)')
+    // 调整中仅显示当前侧
+    expect(source).toContain("activeSpacingKind.value !== 'padding'")
+    expect(source).toContain('return activeSpacingSide.value === side')
   })
 
   it('容器有子元素时不应使用 padding 扩大命中区（避免子组件漂移）', () => {
@@ -119,23 +130,27 @@ describe('NodeWrapper 组件', () => {
     expect(source).not.toContain('  padding: 6px;')
   })
 
-  it('容器作为拖拽目标时应提供明确的放入内部高亮态', () => {
+  it('拖拽提示应由 DropIndicator 统一渲染，NodeWrapper 不再渲染本地 drop 提示线', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
-    expect(source).toContain('isDropInsideActive')
-    expect(source).toContain("state.targetId === props.nodeId && state.position === 'inside'")
-    expect(source).toContain("'is-drop-inside': isDropInsideActive.value")
-    expect(source).toContain('.editor-node-wrapper.is-container.is-drop-inside:not(.is-empty)')
-    expect(source).toContain("content: '释放到容器内部'")
+    expect(source).not.toContain('drop-edge-indicator')
+    expect(source).not.toContain('is-drop-inside')
+    expect(source).not.toContain('isDropInsideActive')
   })
 
-  it('应在目标节点内显示 before/after 拖拽边缘指示', () => {
-    const source = readFileSync(nodeWrapperPath, 'utf-8')
-    expect(source).toContain('showDropEdgeIndicator')
-    expect(source).toContain('drop-edge-indicator')
-    expect(source).toContain('isDropBeforeActive')
-    expect(source).toContain('isDropAfterActive')
-    expect(source).toContain("'is-row': dropIndicatorDirection.value === 'row'")
-    expect(source).toContain("'is-column': dropIndicatorDirection.value === 'column'")
+  it('FlowCanvas 应挂载 DropIndicator 作为唯一拖拽反馈组件', () => {
+    const flowCanvasPath = path.resolve(
+      __dirname,
+      '../../packages/editor/src/components/Canvas/modes/Flow/FlowCanvas.vue',
+    )
+    const source = readFileSync(flowCanvasPath, 'utf-8')
+    expect(source).toContain('<DropIndicator')
+    expect(source).toContain("import DropIndicator from './DropIndicator.vue'")
+    // 根容器空白区 dragover 时清理节点提示，避免提示线残留
+    expect(source).toContain("const overNode = target?.closest('[data-id]')")
+    expect(source).toContain('flowDrop.hideIndicator()')
+    // 根容器提示仅在没有节点级指示器时显示，避免叠加
+    expect(source).toContain('showRootDropHint')
+    expect(source).toContain('!flowDrop.indicator.value.visible')
   })
 
   it('free 父布局逻辑应使用 geometry 计算绝对定位', () => {
@@ -186,6 +201,20 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("style.display = 'grid'")
     expect(source).toContain('style.gridTemplateColumns = gridContainer.columns')
     expect(source).toContain('style.gridTemplateRows = gridContainer.rows')
+  })
+
+  it('编辑模式应阻止组件内部交互，模拟运行时恢复交互', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    // 编辑模式透明遮罩拦截所有 pointer events
+    expect(source).toContain('interaction-blocker')
+    expect(source).toContain('v-if="!isSimulationMode"')
+    expect(source).toContain('isSimulationMode')
+    // 从 UI store 读取模拟模式状态
+    expect(source).toContain('useUIStore')
+    expect(source).toContain('storeToRefs(uiStore)')
+    // 遮罩必须在 slot（组件内容）之上，但在 resize 手柄和 box-model overlays 之下
+    expect(source).toContain('.interaction-blocker')
+    expect(source).toContain('pointer-events: auto')
   })
 
   it('useFlowDrop 应支持 Shift 强制同级插入并优化容器 edgeZone 判定', () => {

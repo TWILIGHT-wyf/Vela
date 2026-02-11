@@ -59,6 +59,10 @@ const indicatorStyle = computed<CSSProperties>(() => {
 
 <style scoped>
 .drop-indicator {
+  --vela-drop-color: #0d99ff;
+  --vela-drop-color-soft: #60a5fa;
+  --vela-drop-surface: rgba(13, 153, 255, 0.06);
+  --vela-drop-surface-strong: rgba(13, 153, 255, 0.1);
   pointer-events: none;
 }
 
@@ -79,10 +83,15 @@ const indicatorStyle = computed<CSSProperties>(() => {
 /* ========== Line Indicator (before/after) ========== */
 .indicator-line {
   position: absolute;
-  background: linear-gradient(90deg, #409eff, #66b1ff, #409eff);
+  background: linear-gradient(
+    90deg,
+    var(--vela-drop-color),
+    var(--vela-drop-color-soft),
+    var(--vela-drop-color)
+  );
   background-size: 200% 100%;
   border-radius: 1px;
-  box-shadow: 0 0 6px rgba(64, 158, 255, 0.6);
+  box-shadow: 0 0 6px rgba(13, 153, 255, 0.55);
   animation: line-shimmer 1.5s ease-in-out infinite;
 }
 
@@ -106,7 +115,12 @@ const indicatorStyle = computed<CSSProperties>(() => {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: linear-gradient(180deg, #409eff, #66b1ff, #409eff);
+  background: linear-gradient(
+    180deg,
+    var(--vela-drop-color),
+    var(--vela-drop-color-soft),
+    var(--vela-drop-color)
+  );
 }
 
 .indicator-line.direction-row.position-before {
@@ -131,11 +145,11 @@ const indicatorStyle = computed<CSSProperties>(() => {
   position: absolute;
   width: 6px;
   height: 6px;
-  background: #409eff;
+  background: var(--vela-drop-color);
   border-radius: 50%;
   box-shadow:
     0 0 0 2px #fff,
-    0 0 6px rgba(64, 158, 255, 0.8);
+    0 0 6px rgba(13, 153, 255, 0.7);
 }
 
 /* Column direction dots: left/right ends of horizontal line */
@@ -170,23 +184,23 @@ const indicatorStyle = computed<CSSProperties>(() => {
 .indicator-box {
   position: absolute;
   inset: 0;
-  border: 2px dashed #409eff;
+  border: 2px dashed var(--vela-drop-color);
   border-radius: 4px;
-  background: rgba(64, 158, 255, 0.06);
+  background: var(--vela-drop-surface);
   animation: box-pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes box-pulse {
   0%,
   100% {
-    border-color: #409eff;
-    background: rgba(64, 158, 255, 0.06);
-    box-shadow: inset 0 0 0 0 rgba(64, 158, 255, 0);
+    border-color: var(--vela-drop-color);
+    background: var(--vela-drop-surface);
+    box-shadow: inset 0 0 0 0 rgba(13, 153, 255, 0);
   }
   50% {
-    border-color: #66b1ff;
-    background: rgba(64, 158, 255, 0.1);
-    box-shadow: inset 0 0 20px 0 rgba(64, 158, 255, 0.1);
+    border-color: var(--vela-drop-color-soft);
+    background: var(--vela-drop-surface-strong);
+    box-shadow: inset 0 0 20px 0 rgba(13, 153, 255, 0.1);
   }
 }
 </style>
