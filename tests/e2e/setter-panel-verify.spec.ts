@@ -34,27 +34,26 @@ test('SetterPanel UI Verification', async ({ page }) => {
   const materialPanel = page.locator('.draggable-panel', { hasText: '组件库' })
   await expect(materialPanel).toBeVisible()
 
-  // 3. Search for KpiCard
+  // 3. Search for Stat
   const searchInput = materialPanel.locator('input[placeholder="搜索组件..."]')
-  await searchInput.fill('KpiCard')
+  await searchInput.fill('统计')
 
   // Wait for filter to apply
   await page.waitForTimeout(500)
 
-  // 4. Find KpiCard in the material panel
-  // The label might be "统计卡片" (Statistics Card)
-  const kpiCardSource = materialPanel.locator('.grid-item').first()
-  await expect(kpiCardSource).toBeVisible()
+  // 4. Find Stat in the material panel
+  const statSource = materialPanel.locator('.grid-item').first()
+  await expect(statSource).toBeVisible()
 
   // Log the text to be sure
-  console.log('Found material item:', await kpiCardSource.textContent())
+  console.log('Found material item:', await statSource.textContent())
 
-  // 5. Drag KpiCard to the canvas
+  // 5. Drag Stat to the canvas
   const canvasStage = page.locator('.canvas-stage')
   await expect(canvasStage).toBeVisible()
 
   // Use dragTo which is more reliable for drag and drop
-  await kpiCardSource.dragTo(canvasStage)
+  await statSource.dragTo(canvasStage)
 
   // 6. Verify component is added
   const componentNode = page.locator('.component-node').first()
@@ -68,21 +67,7 @@ test('SetterPanel UI Verification', async ({ page }) => {
   const setterPanel = page.locator('.draggable-panel', { hasText: '属性配置' })
   await expect(setterPanel).toBeVisible()
 
-  // 9. Expand the "配置" (Configuration) group if needed
-  // KpiCard has '配置' group which is not in default active groups
-  const configGroup = setterPanel.locator('.el-collapse-item__header', { hasText: '配置' })
-  if (await configGroup.isVisible()) {
-    // Check if already expanded?
-    // Element Plus collapse header usually has 'is-active' class if expanded
-    const isActive = await configGroup.evaluate((el) => el.classList.contains('is-active'))
-    if (!isActive) {
-      console.log('Expanding "配置" group...')
-      await configGroup.click()
-      await page.waitForTimeout(500) // Wait for animation
-    }
-  }
-
-  // 10. Find a visible StringSetter input
+  // 9. Find a visible StringSetter input
   // We look for a visible input inside the setter panel
   const input = setterPanel.locator('.el-input__inner:visible').first()
   await expect(input).toBeVisible({ timeout: 5000 })

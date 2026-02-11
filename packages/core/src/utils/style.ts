@@ -210,8 +210,18 @@ export function generateLayoutCSS(
       css.gridRow = `${geometry.gridRowStart} / ${geometry.gridRowEnd}`
     }
 
-    css.width = '100%'
-    css.height = '100%'
+    // No explicit width/height: CSS grid's default justify-self/align-self:stretch fills the cell.
+    // Setting width:100% + margin causes overflow (100% + margins > cell width).
+    const hasMargin =
+      style?.margin !== undefined ||
+      style?.marginTop !== undefined ||
+      style?.marginRight !== undefined ||
+      style?.marginBottom !== undefined ||
+      style?.marginLeft !== undefined
+    if (!hasMargin) {
+      css.width = '100%'
+      css.height = '100%'
+    }
 
     const margin = toCssLength(style?.margin)
     if (margin !== undefined) css.margin = margin

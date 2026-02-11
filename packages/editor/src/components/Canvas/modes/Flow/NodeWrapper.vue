@@ -17,6 +17,12 @@
     @dragleave="handleDragLeave"
     @drop="handleDrop"
   >
+    <div
+      v-if="showDropEdgeIndicator"
+      class="drop-edge-indicator"
+      :class="dropEdgeIndicatorClasses"
+    />
+
     <!-- Component content slot -->
     <slot></slot>
 
@@ -56,37 +62,102 @@
       />
     </template>
 
-    <template v-if="showFlowSpacingHandles">
+    <!-- Margin overlays: semi-transparent orange zones that extend OUTSIDE the wrapper.
+         Shown when selected (grid mode) or hovered. Always visible as a thin 4px strip so
+         users can drag from zero to add margin. -->
+    <template v-if="showMarginOverlays">
       <div
-        class="flow-spacing-handle spacing-top"
+        class="box-overlay margin-overlay margin-overlay-top"
+        :style="{
+          height: Math.max(marginPx.top, 4) + 'px',
+          top: -Math.max(marginPx.top, 4) + 'px',
+        }"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('top', $event)"
-      />
+      >
+        <span v-if="marginPx.top > 0" class="overlay-label">{{ marginPx.top }}</span>
+      </div>
       <div
-        class="flow-spacing-handle spacing-right"
+        class="box-overlay margin-overlay margin-overlay-right"
+        :style="{
+          width: Math.max(marginPx.right, 4) + 'px',
+          right: -Math.max(marginPx.right, 4) + 'px',
+        }"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('right', $event)"
-      />
+      >
+        <span v-if="marginPx.right > 0" class="overlay-label">{{ marginPx.right }}</span>
+      </div>
       <div
-        class="flow-spacing-handle spacing-bottom"
+        class="box-overlay margin-overlay margin-overlay-bottom"
+        :style="{
+          height: Math.max(marginPx.bottom, 4) + 'px',
+          bottom: -Math.max(marginPx.bottom, 4) + 'px',
+        }"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('bottom', $event)"
-      />
+      >
+        <span v-if="marginPx.bottom > 0" class="overlay-label">{{ marginPx.bottom }}</span>
+      </div>
       <div
-        class="flow-spacing-handle spacing-left"
+        class="box-overlay margin-overlay margin-overlay-left"
+        :style="{
+          width: Math.max(marginPx.left, 4) + 'px',
+          left: -Math.max(marginPx.left, 4) + 'px',
+        }"
         @mousedown.stop.prevent="handleFlowSpacingDragStart('left', $event)"
-      />
+      >
+        <span v-if="marginPx.left > 0" class="overlay-label">{{ marginPx.left }}</span>
+      </div>
     </template>
 
-    <template v-if="showFlowSpacingHints">
-      <div v-if="flowSpacingHints.top" class="flow-spacing-hint hint-top">
-        mt {{ flowSpacingHints.top }}
+    <!-- Padding overlays: semi-transparent green zones inside the wrapper.
+         Shown when selected and padding > 0. Side overlays avoid corners for clarity. -->
+    <template v-if="showPaddingOverlays">
+      <div
+        v-if="paddingPx.top > 0"
+        class="box-overlay padding-overlay padding-overlay-top"
+        :style="{
+          height: paddingPx.top + 'px',
+          left: paddingPx.left + 'px',
+          right: paddingPx.right + 'px',
+        }"
+        @mousedown.stop.prevent="handlePaddingDragStart('top', $event)"
+      >
+        <span class="overlay-label">{{ paddingPx.top }}</span>
       </div>
-      <div v-if="flowSpacingHints.right" class="flow-spacing-hint hint-right">
-        mr {{ flowSpacingHints.right }}
+      <div
+        v-if="paddingPx.bottom > 0"
+        class="box-overlay padding-overlay padding-overlay-bottom"
+        :style="{
+          height: paddingPx.bottom + 'px',
+          left: paddingPx.left + 'px',
+          right: paddingPx.right + 'px',
+        }"
+        @mousedown.stop.prevent="handlePaddingDragStart('bottom', $event)"
+      >
+        <span class="overlay-label">{{ paddingPx.bottom }}</span>
       </div>
-      <div v-if="flowSpacingHints.bottom" class="flow-spacing-hint hint-bottom">
-        mb {{ flowSpacingHints.bottom }}
+      <div
+        v-if="paddingPx.left > 0"
+        class="box-overlay padding-overlay padding-overlay-left"
+        :style="{
+          width: paddingPx.left + 'px',
+          top: paddingPx.top + 'px',
+          bottom: paddingPx.bottom + 'px',
+        }"
+        @mousedown.stop.prevent="handlePaddingDragStart('left', $event)"
+      >
+        <span class="overlay-label">{{ paddingPx.left }}</span>
       </div>
-      <div v-if="flowSpacingHints.left" class="flow-spacing-hint hint-left">
-        ml {{ flowSpacingHints.left }}
+      <div
+        v-if="paddingPx.right > 0"
+        class="box-overlay padding-overlay padding-overlay-right"
+        :style="{
+          width: paddingPx.right + 'px',
+          top: paddingPx.top + 'px',
+          bottom: paddingPx.bottom + 'px',
+        }"
+        @mousedown.stop.prevent="handlePaddingDragStart('right', $event)"
+      >
+        <span class="overlay-label">{{ paddingPx.right }}</span>
       </div>
     </template>
 
@@ -151,7 +222,6 @@ const isHovered = computed(() => hoveredId.value === props.nodeId)
 const showFlowResizeHandles = computed(
   () => selectedId.value === props.nodeId && props.parentLayoutMode === 'grid',
 )
-const showFlowSpacingHandles = computed(() => showFlowResizeHandles.value && !isResizing.value)
 
 const currentNode = computed(() => {
   if (props.node) return props.node
@@ -163,45 +233,76 @@ const componentLabel = computed(() => {
   return props.componentName || currentNode.value?.component || ''
 })
 
-const formatSpacingValue = (value: unknown): string | null => {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-  if (typeof value === 'number') {
-    return `${Math.round(value)}px`
-  }
-  if (typeof value === 'string') {
-    return value.trim()
-  }
-  return null
-}
+// ========== Box Model Overlays (Margin + Padding) ==========
 
-const resolveSpacing = (
-  style: NodeStyle,
-  side: 'Top' | 'Right' | 'Bottom' | 'Left',
-): string | null => {
-  const specific = style[`margin${side}`]
-  if (specific !== undefined && specific !== null && specific !== '') {
-    return formatSpacingValue(specific)
-  }
-  return formatSpacingValue(style.margin)
-}
-
-const flowSpacingHints = computed(() => {
+/** Resolved pixel values for each margin side */
+const marginPx = computed(() => {
   const style = currentNode.value?.style || {}
   return {
-    top: resolveSpacing(style, 'Top'),
-    right: resolveSpacing(style, 'Right'),
-    bottom: resolveSpacing(style, 'Bottom'),
-    left: resolveSpacing(style, 'Left'),
+    top: resolveSpacingNumber(style, 'top'),
+    right: resolveSpacingNumber(style, 'right'),
+    bottom: resolveSpacingNumber(style, 'bottom'),
+    left: resolveSpacingNumber(style, 'left'),
   }
 })
 
-const showFlowSpacingHints = computed(() => {
+/** Show margin overlays: grid mode, selected or hovered */
+const showMarginOverlays = computed(() => {
   if (props.parentLayoutMode !== 'grid') return false
-  if (!isHovered.value && !isSelected.value) return false
-  const hints = flowSpacingHints.value
-  return Boolean(hints.top || hints.right || hints.bottom || hints.left)
+  return isSelected.value || isHovered.value
+})
+
+const paddingStyleKeyMap: Record<FlowSpacingSide, keyof NodeStyle> = {
+  top: 'paddingTop',
+  right: 'paddingRight',
+  bottom: 'paddingBottom',
+  left: 'paddingLeft',
+}
+
+const parsePaddingShorthand = (val: string): [string, string, string, string] | null => {
+  const parts = val.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]]
+  if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]]
+  if (parts.length === 3) return [parts[0], parts[1], parts[2], parts[1]]
+  if (parts.length === 4) return [parts[0], parts[1], parts[2], parts[3]]
+  return null
+}
+
+const resolvePaddingNumber = (style: NodeStyle, side: FlowSpacingSide): number => {
+  const sideKey = paddingStyleKeyMap[side]
+  const specific = parseSpacingNumber(style[sideKey])
+  if (specific !== null) return specific
+
+  if (typeof style.padding === 'string') {
+    const shorthand = parsePaddingShorthand(style.padding)
+    if (shorthand) {
+      const sideIndex = side === 'top' ? 0 : side === 'right' ? 1 : side === 'bottom' ? 2 : 3
+      const parsed = parseSpacingNumber(shorthand[sideIndex])
+      if (parsed !== null) return parsed
+    }
+  }
+
+  const common = parseSpacingNumber(style.padding)
+  if (common !== null) return common
+  return 0
+}
+
+/** Resolved pixel values for each padding side */
+const paddingPx = computed(() => {
+  const style = currentNode.value?.style || {}
+  return {
+    top: resolvePaddingNumber(style, 'top'),
+    right: resolvePaddingNumber(style, 'right'),
+    bottom: resolvePaddingNumber(style, 'bottom'),
+    left: resolvePaddingNumber(style, 'left'),
+  }
+})
+
+/** Show padding overlays: any mode, selected only */
+const showPaddingOverlays = computed(() => {
+  if (!isSelected.value) return false
+  const p = paddingPx.value
+  return p.top > 0 || p.right > 0 || p.bottom > 0 || p.left > 0
 })
 
 /** 判断是否为容器组件 */
@@ -215,6 +316,42 @@ const isEmpty = computed(() => {
   return !currentNode.value.children || currentNode.value.children.length === 0
 })
 
+/** 当前节点是否命中“放入容器内部”拖拽目标 */
+const isDropInsideActive = computed(() => {
+  if (!flowDrop || !isContainer.value) return false
+  const state = flowDrop.indicator.value
+  if (!state?.visible) return false
+  return state.targetId === props.nodeId && state.position === 'inside'
+})
+
+const isDropBeforeActive = computed(() => {
+  if (!flowDrop) return false
+  const state = flowDrop.indicator.value
+  if (!state?.visible) return false
+  return state.targetId === props.nodeId && state.position === 'before'
+})
+
+const isDropAfterActive = computed(() => {
+  if (!flowDrop) return false
+  const state = flowDrop.indicator.value
+  if (!state?.visible) return false
+  return state.targetId === props.nodeId && state.position === 'after'
+})
+
+const dropIndicatorDirection = computed<'row' | 'column'>(() => {
+  if (!flowDrop) return 'column'
+  return flowDrop.indicator.value.direction || 'column'
+})
+
+const showDropEdgeIndicator = computed(() => isDropBeforeActive.value || isDropAfterActive.value)
+
+const dropEdgeIndicatorClasses = computed(() => ({
+  'is-before': isDropBeforeActive.value,
+  'is-after': isDropAfterActive.value,
+  'is-row': dropIndicatorDirection.value === 'row',
+  'is-column': dropIndicatorDirection.value === 'column',
+}))
+
 /** Wrapper classes */
 const wrapperClasses = computed(() => [
   'editor-node-wrapper',
@@ -226,6 +363,7 @@ const wrapperClasses = computed(() => [
     'is-resizing': isResizing.value,
     'is-container': isContainer.value,
     'is-empty': isEmpty.value,
+    'is-drop-inside': isDropInsideActive.value,
     'is-free-parent': isFreeParent.value,
     'is-grid-item': props.parentLayoutMode === 'grid',
   },
@@ -288,27 +426,16 @@ const wrapperStyle = computed<CSSProperties>(() => {
       node.geometry?.mode === 'grid' ? (node.geometry as GridNodeGeometry) : undefined
     const style = node.style || {}
 
-    const nestedGrid =
-      node.container?.mode === 'grid' ? (node.container as GridContainerLayout) : null
-
     return {
       gridColumn: geometry ? `${geometry.gridColumnStart} / ${geometry.gridColumnEnd}` : '1 / 2',
       gridRow: geometry ? `${geometry.gridRowStart} / ${geometry.gridRowEnd}` : '1 / 2',
-      width: '100%',
-      height: '100%',
+      // No explicit width/height: CSS grid's default justify-self/align-self:stretch fills the cell.
+      // Setting width:100% here would cause margin overflow (100% + margins > cell width).
       margin: formatOptionalValue(style.margin as string | number | undefined),
       marginTop: formatOptionalValue(style.marginTop as string | number | undefined),
       marginRight: formatOptionalValue(style.marginRight as string | number | undefined),
       marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined),
       marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined),
-      ...(nestedGrid
-        ? {
-            display: 'grid',
-            gridTemplateColumns: nestedGrid.columns || '1fr',
-            gridTemplateRows: nestedGrid.rows || '1fr',
-            gap: `${nestedGrid.gap ?? 8}px`,
-          }
-        : {}),
     }
   }
 
@@ -916,8 +1043,102 @@ const handleFlowSpacingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
   window.addEventListener('keydown', onKeyDown)
 }
 
+/** Padding range: 0 to 500px */
+const PADDING_RANGE = { min: 0, max: 500 }
+
+const handlePaddingDragStart = (side: FlowSpacingSide, e: MouseEvent) => {
+  if (!currentNode.value) return
+
+  selectComponent(props.nodeId)
+  isSpacingAdjusting.value = true
+  setHovered(null)
+
+  const startX = e.clientX
+  const startY = e.clientY
+  const style = currentNode.value.style || {}
+  const baseVal = resolvePaddingNumber(style, side)
+  const styleKey = paddingStyleKeyMap[side]
+
+  let rafId = 0
+  let pendingVal: number | undefined
+  let cancelled = false
+
+  const flushUpdate = () => {
+    rafId = 0
+    if (cancelled || pendingVal === undefined) return
+    const patch = { [styleKey]: Math.round(pendingVal) } as Partial<NodeStyle>
+    updateStyle(props.nodeId, patch)
+  }
+
+  const prevCursor = document.body.style.cursor
+  const prevUserSelect = document.body.style.userSelect
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = side === 'top' || side === 'bottom' ? 'ns-resize' : 'ew-resize'
+
+  const onMouseMove = (ev: MouseEvent) => {
+    if (cancelled) return
+    const s = canvasScale.value || 1
+    const dx = (ev.clientX - startX) / s
+    const dy = (ev.clientY - startY) / s
+
+    // Dragging inward (toward content center) increases padding
+    let next = baseVal
+    if (side === 'top') next = baseVal + dy
+    if (side === 'bottom') next = baseVal - dy
+    if (side === 'left') next = baseVal + dx
+    if (side === 'right') next = baseVal - dx
+
+    pendingVal = Math.min(PADDING_RANGE.max, Math.max(PADDING_RANGE.min, next))
+
+    if (rafId === 0) {
+      rafId = requestAnimationFrame(flushUpdate)
+    }
+  }
+
+  const cleanup = () => {
+    if (rafId !== 0) {
+      cancelAnimationFrame(rafId)
+      if (!cancelled) flushUpdate()
+    }
+
+    if (cancelled) {
+      const restorePatch = { [styleKey]: Math.round(baseVal) } as Partial<NodeStyle>
+      updateStyle(props.nodeId, restorePatch)
+    }
+
+    document.body.style.cursor = prevCursor
+    document.body.style.userSelect = prevUserSelect
+    isSpacingAdjusting.value = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+    window.removeEventListener('keydown', onKeyDown)
+  }
+
+  const onMouseUp = () => cleanup()
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') {
+      cancelled = true
+      cleanup()
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('keydown', onKeyDown)
+}
+
 // ========== Event Handlers ==========
 const handleClick = (e: MouseEvent) => {
+  // Alt + Click: quick-select parent container to improve nested container editing
+  if (e.altKey) {
+    const parentId = componentStore.getParentId(props.nodeId)
+    if (parentId) {
+      selectComponent(parentId)
+      emit('select', parentId)
+      return
+    }
+  }
+
   // Ctrl/Cmd/Shift + Click: toggle multi-selection
   if (e.ctrlKey || e.metaKey || e.shiftKey) {
     toggleSelection(props.nodeId)
@@ -1024,10 +1245,76 @@ const handleClick = (e: MouseEvent) => {
 
 /* ========== Container with children ========== */
 .editor-node-wrapper.is-container:not(.is-empty) {
-  /* 容器有子元素时扩大命中区，降低“放不进去”的挫败感 */
-  padding: 6px;
+  /* Use inset box-shadow instead of padding to avoid shifting child positions.
+     padding would move the inner component element and cause absolute-positioned
+     children (free-mode sub-layout) to drift. */
+  box-shadow: inset 0 0 0 1px rgba(14, 116, 144, 0.35);
   background: rgba(240, 249, 255, 0.45);
-  border-color: rgba(14, 116, 144, 0.35);
+}
+
+/* Container drop-inside active state: provide explicit affordance for nested drop */
+.editor-node-wrapper.is-container.is-drop-inside:not(.is-empty) {
+  box-shadow:
+    inset 0 0 0 2px rgba(64, 158, 255, 0.9),
+    inset 0 0 0 9999px rgba(64, 158, 255, 0.08);
+}
+
+.editor-node-wrapper.is-container.is-drop-inside:not(.is-empty)::before {
+  content: '释放到容器内部';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 13;
+  pointer-events: none;
+  font-size: 11px;
+  line-height: 1;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.95);
+  border: 1px solid rgba(147, 197, 253, 0.9);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.drop-edge-indicator {
+  position: absolute;
+  pointer-events: none;
+  z-index: 13;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.35),
+    0 0 10px rgba(59, 130, 246, 0.35);
+}
+
+.drop-edge-indicator.is-column {
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.drop-edge-indicator.is-column.is-before {
+  top: -2px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.drop-edge-indicator.is-column.is-after {
+  bottom: -2px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.drop-edge-indicator.is-row {
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.drop-edge-indicator.is-row.is-before {
+  left: -2px;
+  background: linear-gradient(180deg, #3b82f6, #60a5fa);
+}
+
+.drop-edge-indicator.is-row.is-after {
+  right: -2px;
+  background: linear-gradient(180deg, #3b82f6, #60a5fa);
 }
 
 .editor-node-wrapper.is-free-parent {
@@ -1114,88 +1401,112 @@ const handleClick = (e: MouseEvent) => {
   cursor: nesw-resize;
 }
 
-.flow-spacing-handle {
+/* ========== Box Model Overlays (Margin + Padding) ========== */
+
+.box-overlay {
   position: absolute;
   z-index: 11;
-  border: 1px dashed rgba(245, 158, 11, 0.9);
-  background: rgba(254, 243, 199, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: auto;
+  user-select: none;
 }
 
-.flow-spacing-handle.spacing-top {
-  top: -11px;
-  left: 18%;
-  width: 64%;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.flow-spacing-handle.spacing-right {
-  top: 18%;
-  right: -11px;
-  width: 8px;
-  height: 64%;
-  cursor: ew-resize;
-}
-
-.flow-spacing-handle.spacing-bottom {
-  bottom: -11px;
-  left: 18%;
-  width: 64%;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.flow-spacing-handle.spacing-left {
-  top: 18%;
-  left: -11px;
-  width: 8px;
-  height: 64%;
-  cursor: ew-resize;
-}
-
-.flow-spacing-hint {
-  position: absolute;
-  z-index: 11;
-  padding: 2px 6px;
-  border-radius: 10px;
-  border: 1px solid rgba(245, 158, 11, 0.55);
-  background: rgba(254, 243, 199, 0.95);
-  color: #92400e;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.2;
-  pointer-events: none;
+.overlay-label {
+  font-size: 9px;
+  font-weight: 600;
   white-space: nowrap;
-  /* 防止溢出视口 */
-  max-width: calc(100% - 8px);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 3px;
+  opacity: 0.9;
 }
 
-/* 改为在组件内侧显示，避免溢出 */
-.flow-spacing-hint.hint-top {
-  left: 50%;
-  top: 2px;
-  transform: translateX(-50%);
+/* Margin overlays - orange, extend OUTSIDE the wrapper using negative coordinates */
+.margin-overlay {
+  background: rgba(251, 146, 60, 0.18);
+  border: 1px dashed rgba(234, 88, 12, 0.5);
+  transition: background 0.1s;
 }
 
-.flow-spacing-hint.hint-right {
-  top: 50%;
-  right: 2px;
-  transform: translateY(-50%);
+.margin-overlay:hover {
+  background: rgba(251, 146, 60, 0.32);
 }
 
-.flow-spacing-hint.hint-bottom {
-  left: 50%;
-  bottom: 2px;
-  transform: translateX(-50%);
+.margin-overlay .overlay-label {
+  background: rgba(255, 237, 213, 0.97);
+  color: #c2410c;
+  border: 1px solid rgba(234, 88, 12, 0.25);
 }
 
-.flow-spacing-hint.hint-left {
-  top: 50%;
-  left: 2px;
-  transform: translateY(-50%);
+.margin-overlay-top {
+  left: 0;
+  right: 0;
+  cursor: ns-resize;
+  /* top is set via inline style: -Math.max(marginTop, 4)px */
+}
+
+.margin-overlay-bottom {
+  left: 0;
+  right: 0;
+  cursor: ns-resize;
+  /* bottom is set via inline style: -Math.max(marginBottom, 4)px */
+}
+
+.margin-overlay-left {
+  top: 0;
+  bottom: 0;
+  cursor: ew-resize;
+  /* left is set via inline style: -Math.max(marginLeft, 4)px */
+}
+
+.margin-overlay-right {
+  top: 0;
+  bottom: 0;
+  cursor: ew-resize;
+  /* right is set via inline style: -Math.max(marginRight, 4)px */
+}
+
+/* Padding overlays - green, stay inside the wrapper */
+.padding-overlay {
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px dashed rgba(16, 185, 129, 0.45);
+  transition: background 0.1s;
+}
+
+.padding-overlay:hover {
+  background: rgba(52, 211, 153, 0.28);
+}
+
+.padding-overlay .overlay-label {
+  background: rgba(209, 250, 229, 0.97);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.padding-overlay-top {
+  top: 0;
+  cursor: ns-resize;
+  /* height, left, right set via inline style */
+}
+
+.padding-overlay-bottom {
+  bottom: 0;
+  cursor: ns-resize;
+  /* height, left, right set via inline style */
+}
+
+.padding-overlay-left {
+  left: 0;
+  cursor: ew-resize;
+  /* width, top, bottom set via inline style */
+}
+
+.padding-overlay-right {
+  right: 0;
+  cursor: ew-resize;
+  /* width, top, bottom set via inline style */
 }
 
 .flow-resize-tooltip {

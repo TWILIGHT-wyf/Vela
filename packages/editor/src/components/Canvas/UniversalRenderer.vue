@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { computed, toRef, type Component, type CSSProperties } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, GridContainerLayout } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
 
@@ -113,6 +113,19 @@ const innerStyle = computed<CSSProperties>(() => {
   // Free layout containers need a positioning context for absolute children
   if (props.node.container?.mode === 'free') {
     style.position = 'relative'
+  }
+
+  // Grid containers: apply the fr-based grid template on the inner component element.
+  // This is the element that directly wraps the slot/children, so child NodeWrappers
+  // become proper CSS grid items of this container (not of the outer NodeWrapper div).
+  if (props.node.container?.mode === 'grid') {
+    const gridContainer = props.node.container as GridContainerLayout
+    style.display = 'grid'
+    style.gridTemplateColumns = gridContainer.columns || '1fr'
+    style.gridTemplateRows = gridContainer.rows || '1fr'
+    style.gap = `${gridContainer.gap ?? 8}px`
+    style.width = '100%'
+    style.height = '100%'
   }
 
   return style
