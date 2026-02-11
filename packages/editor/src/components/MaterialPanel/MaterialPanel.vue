@@ -80,6 +80,7 @@ import {
   extractDefaultStyles,
   getCategoryConfig,
   getComponentIcon,
+  resolveCanonicalMaterialName,
   type CategoryConfig,
 } from '@vela/materials'
 
@@ -181,6 +182,7 @@ watch(filteredCategories, (list) => {
 // --- 拖拽处理 (适配 V1.5 架构) ---
 const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]) => {
   const { name, meta, categoryConfig } = item
+  const canonicalName = resolveCanonicalMaterialName(name)
 
   // 从 MaterialMeta 提取默认 props
   const defaultProps = extractDefaultProps(meta.props || {})
@@ -196,8 +198,8 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
   // 构建完整的 NodeSchema 结构
   const nodeSchema: Partial<NodeSchema> = {
-    id: generateId(name),
-    component: name,
+    id: generateId(canonicalName),
+    component: canonicalName,
     props: defaultProps as Record<string, PropValue>,
     style: styleWithDefaults as NodeSchema['style'],
     width,
@@ -206,7 +208,8 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
   }
 
   console.log('[MaterialPanel] Drag start:', {
-    component: name,
+    component: canonicalName,
+    originalComponent: name,
     defaultProps,
     categoryConfig,
     nodeSchema,
