@@ -26,6 +26,8 @@ export default defineConfig({
       // 使用正则表达式匹配 echarts 的所有子模块
       external: [
         'vue',
+        '@vela/core',
+        /^@vela\/core(\/.*)?$/,
         /^echarts(\/.*)?$/, // echarts 及其所有子模块
         'vue-echarts',
         /^leaflet(\/.*)?$/, // leaflet 及其所有子模块

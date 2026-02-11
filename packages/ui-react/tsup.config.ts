@@ -10,5 +10,6 @@ export default defineConfig({
   esbuildOptions(options) {
     options.jsx = 'automatic'
   },
-  onSuccess: 'cp src/style.css dist/style.css',
+  onSuccess:
+    "node -e \"const fs=require('fs');const p=require('path');fs.copyFileSync(p.resolve('src','style.css'),p.resolve('dist','style.css'))\"",
 })

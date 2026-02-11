@@ -57,6 +57,7 @@
     "vue": "^3.0.0"
   },
   "dependencies": {
+    "@vela/core": "workspace:*",
     "dompurify": "^3.3.1",
     "echarts": "^6.0.0",
     "highlight.js": "^11.11.1",
