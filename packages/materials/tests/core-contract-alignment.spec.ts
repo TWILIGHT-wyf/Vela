@@ -53,4 +53,10 @@ describe('materials core contract alignment', () => {
     expect(getPropNames('TreeSelect')).toContain('value')
     expect(getPropNames('Cascader')).toContain('value')
   })
+
+  it('uses canonical core prop keys for common KPI components', () => {
+    expect(getPropNames('CountUp')).toContain('endValue')
+    expect(getPropNames('Stat')).toEqual(expect.arrayContaining(['change', 'showChange', 'icon']))
+    expect(getPropNames('Badge')).toEqual(expect.arrayContaining(['color', 'showZero', 'offset']))
+  })
 })

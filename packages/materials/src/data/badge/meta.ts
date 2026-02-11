@@ -57,9 +57,23 @@ const meta: MaterialMeta = {
       defaultValue: false,
       group: '显示',
     },
-    backgroundColor: {
-      name: 'backgroundColor',
-      label: '背景颜色',
+    showZero: {
+      name: 'showZero',
+      label: '零值显示',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '显示',
+    },
+    offset: {
+      name: 'offset',
+      label: '徽章偏移',
+      setter: 'JsonSetter',
+      defaultValue: [0, 0],
+      group: '显示',
+    },
+    color: {
+      name: 'color',
+      label: '徽章颜色',
       setter: 'ColorSetter',
       defaultValue: '#409eff',
       group: '样式',

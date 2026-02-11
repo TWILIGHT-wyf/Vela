@@ -6,8 +6,8 @@ const meta: MaterialMeta = {
   version: '1.0.0',
   category: 'KPI',
   props: {
-    value: {
-      name: 'value',
+    endValue: {
+      name: 'endValue',
       label: '结束值',
       setter: 'NumberSetter',
       defaultValue: 100,

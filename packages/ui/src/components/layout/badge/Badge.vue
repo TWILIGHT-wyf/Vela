@@ -3,6 +3,7 @@
     <el-badge
       :value="value"
       :type="type"
+      :color="color"
       :is-dot="isDot"
       :max="max"
       :hidden="hidden"
@@ -27,6 +28,7 @@ const props = withDefaults(
     // Badge 值
     value?: string | number
     type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+    color?: string
     isDot?: boolean
     max?: number
     hidden?: boolean
@@ -49,6 +51,7 @@ const props = withDefaults(
   {
     value: '1',
     type: 'primary',
+    color: undefined,
     isDot: false,
     max: 99,
     hidden: false,

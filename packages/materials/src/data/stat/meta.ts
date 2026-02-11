@@ -41,23 +41,23 @@ const meta: MaterialMeta = {
       defaultValue: '',
       group: '基础',
     },
-    trend: {
-      name: 'trend',
-      label: '趋势',
-      setter: 'SelectSetter',
-      setterProps: {
-        options: [
-          { label: '无', value: 'none' },
-          { label: '上升', value: 'up' },
-          { label: '下降', value: 'down' },
-        ],
-      },
-      defaultValue: 'none',
+    change: {
+      name: 'change',
+      label: '变化百分比',
+      setter: 'NumberSetter',
+      defaultValue: 0,
       group: '数据',
     },
-    trendValue: {
-      name: 'trendValue',
-      label: '趋势值',
+    showChange: {
+      name: 'showChange',
+      label: '显示变化',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '数据',
+    },
+    icon: {
+      name: 'icon',
+      label: '图标类名',
       setter: 'StringSetter',
       defaultValue: '',
       group: '数据',

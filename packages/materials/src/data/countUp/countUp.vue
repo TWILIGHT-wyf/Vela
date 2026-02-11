@@ -6,5 +6,13 @@ export default defineMaterial(vCountUp, {
   name: 'CountUp',
   connectEvent: true,
   fillContainer: true,
+  propsAdapter: (props) => {
+    const adapted = { ...props }
+    if (adapted.endValue !== undefined) {
+      adapted.value = adapted.endValue
+      delete adapted.endValue
+    }
+    return adapted
+  },
 })
 </script>
