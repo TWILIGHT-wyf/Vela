@@ -946,8 +946,8 @@ const handleClick = (e: MouseEvent) => {
 }
 
 .editor-node-wrapper.is-grid-item {
-  border: 1px dashed rgba(14, 116, 144, 0.45);
-  background: rgba(240, 249, 255, 0.55);
+  border: 1px dashed rgba(14, 116, 144, 0.25);
+  background: rgba(240, 249, 255, 0.3);
 }
 
 /* ========== Hover State (Exclusive - only innermost) ========== */
@@ -1024,8 +1024,10 @@ const handleClick = (e: MouseEvent) => {
 
 /* ========== Container with children ========== */
 .editor-node-wrapper.is-container:not(.is-empty) {
-  /* 容器有子元素时的微小内边距，便于选中边缘 */
-  padding: 2px;
+  /* 容器有子元素时扩大命中区，降低“放不进去”的挫败感 */
+  padding: 6px;
+  background: rgba(240, 249, 255, 0.45);
+  border-color: rgba(14, 116, 144, 0.35);
 }
 
 .editor-node-wrapper.is-free-parent {

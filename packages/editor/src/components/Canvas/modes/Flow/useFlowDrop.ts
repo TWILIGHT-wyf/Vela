@@ -2,6 +2,7 @@ import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import type { NodeSchema, GridNodeGeometry } from '@vela/core'
 import { countTracks } from '@vela/core'
+import { materialList } from '@vela/materials'
 import { useComponent } from '@/stores/component'
 import { useCanvasContext } from '../../composables/useCanvasContext'
 import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
@@ -32,6 +33,26 @@ const CONTAINER_COMPONENTS = [
   'Page',
 ]
 
+const ROW_CONTAINER_COMPONENTS = new Set(['row', 'flex'])
+const COLUMN_CONTAINER_COMPONENTS = new Set(['col'])
+
+const CONTAINER_COMPONENT_SET = new Set<string>([
+  ...CONTAINER_COMPONENTS,
+  ...CONTAINER_COMPONENTS.map((name) => name.toLowerCase()),
+])
+
+for (const meta of materialList) {
+  if (!meta?.isContainer) continue
+  if (meta.name) {
+    CONTAINER_COMPONENT_SET.add(meta.name)
+    CONTAINER_COMPONENT_SET.add(meta.name.toLowerCase())
+  }
+  if (meta.componentName) {
+    CONTAINER_COMPONENT_SET.add(meta.componentName)
+    CONTAINER_COMPONENT_SET.add(meta.componentName.toLowerCase())
+  }
+}
+
 /**
  * 最大嵌套深度限制
  * 防止过深嵌套导致性能问题
@@ -41,13 +62,41 @@ const MAX_NESTING_DEPTH = 10
 /**
  * 检查节点是否为容器类型
  */
+export function isContainerComponentName(name: string): boolean {
+  if (!name) return false
+  return CONTAINER_COMPONENT_SET.has(name) || CONTAINER_COMPONENT_SET.has(name.toLowerCase())
+}
+
 function isContainerNode(node: NodeSchema): boolean {
   const name = node.component || node.componentName || ''
-  return CONTAINER_COMPONENTS.includes(name) || CONTAINER_COMPONENTS.includes(name.toLowerCase())
+  return isContainerComponentName(name)
 }
 
 type FlowDirection = 'row' | 'column'
 type EditorLayoutMode = 'free' | 'grid'
+
+export function inferDropDirectionForParent(node: NodeSchema | null | undefined): FlowDirection {
+  if (!node) return 'column'
+
+  const style = node.style || {}
+  const display = String(style.display || '').toLowerCase()
+  const flexDirection = String(style.flexDirection || '').toLowerCase()
+  const name = String(node.component || node.componentName || '').toLowerCase()
+
+  if (display === 'flex') {
+    return flexDirection.startsWith('column') ? 'column' : 'row'
+  }
+
+  if (ROW_CONTAINER_COMPONENTS.has(name)) {
+    return flexDirection.startsWith('column') ? 'column' : 'row'
+  }
+
+  if (COLUMN_CONTAINER_COMPONENTS.has(name)) {
+    return 'column'
+  }
+
+  return 'column'
+}
 
 function normalizeLayoutMode(mode: 'free' | 'flow' | 'grid' | undefined): EditorLayoutMode {
   return mode === 'free' ? 'free' : 'grid'
@@ -200,7 +249,6 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     const relative = isHorizontal ? mouseX - rect.left : mouseY - rect.top
-    const ratio = relative / edgeSize
 
     // 容器特殊处理
     if (isContainerNode(node)) {
@@ -214,13 +262,13 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
         return 'inside'
       }
 
-      // 鼠标在容器边缘 (上下 20% 区域) 时为 before/after
-      // 鼠标在中间区域时为 inside
-      const edgeThreshold = 0.2
+      // 为容器边缘保留固定像素命中区，降低放入内部失败率。
+      // 小组件至少 12px，大组件最多 24px。
+      const edgeZone = Math.min(24, Math.max(12, edgeSize * 0.2))
 
-      if (ratio < edgeThreshold) {
+      if (relative < edgeZone) {
         return 'before'
-      } else if (ratio > 1 - edgeThreshold) {
+      } else if (relative > edgeSize - edgeZone) {
         return 'after'
       } else {
         return 'inside'
@@ -228,6 +276,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     }
 
     // 非容器组件：只有 before/after
+    const ratio = relative / edgeSize
     return ratio < 0.5 ? 'before' : 'after'
   }
 
@@ -259,11 +308,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
       // 计算父节点 ID
       let targetParentId: string | null = null
-      const direction: FlowDirection = 'column'
+      let direction: FlowDirection = 'column'
       const rootNode = getRootNode()
       if (rootNode) {
         const parent = componentStore.findParentNode(rootNode, node.id)
         targetParentId = parent?.id || null
+        direction = inferDropDirectionForParent(parent || rootNode)
       }
 
       const position = calculateDropPosition(mouseX, mouseY, rect, node, direction, isAltPressed)

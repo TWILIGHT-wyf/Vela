@@ -77,6 +77,7 @@ import type { PropValue } from '@vela/core/types/expression'
 import {
   getMaterialsByCategory,
   extractDefaultProps,
+  extractDefaultStyles,
   getCategoryConfig,
   getComponentIcon,
   type CategoryConfig,
@@ -183,19 +184,22 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
   // 从 MaterialMeta 提取默认 props
   const defaultProps = extractDefaultProps(meta.props || {})
+  const defaultStyles = extractDefaultStyles(meta.styles)
 
-  const width = categoryConfig.defaultWidth || 120
-  const height = categoryConfig.defaultHeight || 80
+  const width = meta.defaultSize?.width || categoryConfig.defaultWidth || 120
+  const height = meta.defaultSize?.height || categoryConfig.defaultHeight || 80
+  const styleWithDefaults: Record<string, unknown> = {
+    ...defaultStyles,
+    width: defaultStyles.width ?? width,
+    height: defaultStyles.height ?? height,
+  }
 
   // 构建完整的 NodeSchema 结构
   const nodeSchema: Partial<NodeSchema> = {
     id: generateId(name),
     component: name,
     props: defaultProps as Record<string, PropValue>,
-    style: {
-      width,
-      height,
-    },
+    style: styleWithDefaults as NodeSchema['style'],
     width,
     height,
     children: [],
