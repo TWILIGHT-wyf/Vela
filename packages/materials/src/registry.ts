@@ -5,6 +5,7 @@ import { componentRegistry as uiComponentRegistry } from '@vela/ui'
 import {
   COMPONENT_ALIASES,
   getComponentDefinition,
+  resolveComponentAlias,
   type ComponentCategory,
 } from '@vela/core/contracts'
 import { normalizeCategoryName } from './materialsMeta'
@@ -94,12 +95,10 @@ const CATEGORY_LABEL_MAP: Partial<Record<ComponentCategory, string>> = {
 const PANEL_EXCLUDED_MATERIALS = new Set([
   'Row',
   'Col',
-  'Grid',
   'Group',
   'Page',
   'row',
   'col',
-  'grid',
   'group',
   'page',
 ])
@@ -107,7 +106,7 @@ const PANEL_EXCLUDED_MATERIALS = new Set([
 /**
  * 布局类物料优先级（越靠前越优先展示）
  */
-const LAYOUT_MATERIAL_PRIORITY = ['Container', 'GridBox', 'Flex', 'Panel', 'Tabs', 'Modal']
+const LAYOUT_MATERIAL_PRIORITY = ['Container', 'Grid', 'Flex', 'Panel', 'Tabs', 'Modal']
 
 function lowerFirst(name: string): string {
   return name ? name.charAt(0).toLowerCase() + name.slice(1) : name
@@ -117,17 +116,38 @@ function upperFirst(name: string): string {
   return name ? name.charAt(0).toUpperCase() + name.slice(1) : name
 }
 
-function resolveMaterialCategory(meta: MaterialMeta): string {
-  const name = meta.name || meta.componentName || ''
-  const candidates = [name, lowerFirst(name), upperFirst(name)]
+export function resolveCanonicalMaterialName(name: string): string {
+  const source = name?.trim()
+  if (!source) return name
+
+  const aliased = resolveComponentAlias(source)
+  const candidates = new Set([
+    source,
+    aliased,
+    lowerFirst(source),
+    upperFirst(source),
+    lowerFirst(aliased),
+    upperFirst(aliased),
+  ])
 
   for (const candidate of candidates) {
     const definition = getComponentDefinition(candidate)
     if (definition) {
-      const mapped = CATEGORY_LABEL_MAP[definition.category]
-      if (mapped) {
-        return mapped
-      }
+      return definition.name
+    }
+  }
+
+  return ALIAS_MAP[source] || source
+}
+
+function resolveMaterialCategory(meta: MaterialMeta): string {
+  const name = meta.name || meta.componentName || ''
+  const canonicalName = resolveCanonicalMaterialName(name)
+  const definition = getComponentDefinition(canonicalName)
+  if (definition) {
+    const mapped = CATEGORY_LABEL_MAP[definition.category]
+    if (mapped) {
+      return mapped
     }
   }
 
@@ -141,7 +161,12 @@ function materialDisplayName(meta: MaterialMeta): string {
 
 function isMaterialVisibleInPanel(meta: MaterialMeta): boolean {
   const name = meta.name || meta.componentName || ''
-  return !PANEL_EXCLUDED_MATERIALS.has(name)
+  if (PANEL_EXCLUDED_MATERIALS.has(name)) {
+    return false
+  }
+
+  const canonicalName = resolveCanonicalMaterialName(name)
+  return Boolean(getComponentDefinition(canonicalName))
 }
 
 function getMaterialSortOrder(category: string, meta: MaterialMeta): number {
@@ -158,14 +183,14 @@ function getMaterialSortOrder(category: string, meta: MaterialMeta): number {
  * 解析组件名称（处理别名和大小写）
  */
 function resolveComponentName(name: string): string | null {
-  const targetName = ALIAS_MAP[name] || name
+  const canonicalName = resolveCanonicalMaterialName(name)
+  const candidates = [name, canonicalName, upperFirst(name), upperFirst(canonicalName)]
 
-  // 1. 精确匹配
-  if (componentMap[targetName]) return targetName
-
-  // 2. PascalCase 匹配
-  const pascalName = targetName.charAt(0).toUpperCase() + targetName.slice(1)
-  if (componentMap[pascalName]) return pascalName
+  for (const candidate of candidates) {
+    if (componentMap[candidate]) {
+      return candidate
+    }
+  }
 
   return null
 }

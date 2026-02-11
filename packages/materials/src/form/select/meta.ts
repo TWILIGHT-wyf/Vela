@@ -14,10 +14,10 @@ const meta: MaterialMeta = {
       defaultValue: [],
       group: '数据',
     },
-    defaultValue: {
-      name: 'defaultValue',
-      label: '默认值',
-      title: '默认值',
+    value: {
+      name: 'value',
+      label: '当前值',
+      title: '当前值',
       setter: 'StringSetter',
       defaultValue: '',
       group: '基础',

@@ -6,10 +6,10 @@ const meta: MaterialMeta = {
   version: '1.0.0',
   category: '表单',
   props: {
-    modelValue: {
-      name: 'modelValue',
-      label: '默认值',
-      title: '默认值',
+    value: {
+      name: 'value',
+      label: '当前值',
+      title: '当前值',
       setter: 'StringSetter',
       defaultValue: '',
       group: '基础',

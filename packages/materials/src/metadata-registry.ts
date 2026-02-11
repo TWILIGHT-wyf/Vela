@@ -1,5 +1,9 @@
 import type { MaterialMeta, PropSchema } from '@vela/core/types'
-import { COMPONENT_ALIASES } from '@vela/core/contracts'
+import {
+  COMPONENT_ALIASES,
+  getComponentDefinition,
+  resolveComponentAlias,
+} from '@vela/core/contracts'
 
 /**
  * Category configuration with order, label, and default sizes
@@ -104,6 +108,34 @@ export class MaterialRegistry {
 
   private constructor() {}
 
+  private toMetaDefaultSize(size: [number, number]): NonNullable<MaterialMeta['defaultSize']> {
+    return { width: size[0], height: size[1] }
+  }
+
+  private normalizeComponentName(name: string): string {
+    const source = name?.trim()
+    if (!source) return name
+
+    const aliased = resolveComponentAlias(source)
+    const candidates = new Set([
+      source,
+      aliased,
+      source.charAt(0).toLowerCase() + source.slice(1),
+      source.charAt(0).toUpperCase() + source.slice(1),
+      aliased.charAt(0).toLowerCase() + aliased.slice(1),
+      aliased.charAt(0).toUpperCase() + aliased.slice(1),
+    ])
+
+    for (const candidate of candidates) {
+      const definition = getComponentDefinition(candidate)
+      if (definition) {
+        return definition.name
+      }
+    }
+
+    return this.aliases[source] || source
+  }
+
   /**
    * Get singleton instance
    */
@@ -118,20 +150,7 @@ export class MaterialRegistry {
    * Resolve component name (handle aliases and casing)
    */
   resolveName(name: string): string {
-    // Check alias first
-    if (this.aliases[name]) {
-      return this.aliases[name]
-    }
-
-    // Normalize to PascalCase
-    const normalized = name.charAt(0).toUpperCase() + name.slice(1)
-
-    // If we have a registered material, return the normalized name
-    if (this.materials.has(normalized)) {
-      return normalized
-    }
-
-    return name
+    return this.normalizeComponentName(name)
   }
 
   /**
@@ -144,8 +163,8 @@ export class MaterialRegistry {
       return
     }
 
-    // Normalize the name
-    const normalizedName = name.charAt(0).toUpperCase() + name.slice(1)
+    // Normalize the name to core canonical component name
+    const normalizedName = this.normalizeComponentName(name)
 
     // Merge with category defaults
     const category = meta.category?.toLowerCase() || 'basic'
@@ -156,7 +175,8 @@ export class MaterialRegistry {
       name: normalizedName,
       componentName: normalizedName,
       category: category,
-      defaultSize: meta.defaultSize || categoryConfig?.defaultSize || [200, 100],
+      defaultSize:
+        meta.defaultSize || this.toMetaDefaultSize(categoryConfig?.defaultSize || [200, 100]),
     }
 
     this.materials.set(normalizedName, enhancedMeta)
@@ -289,14 +309,14 @@ export class MaterialRegistry {
   /**
    * Get default size for a material
    */
-  getDefaultSize(name: string): [number, number] {
+  getDefaultSize(name: string): NonNullable<MaterialMeta['defaultSize']> {
     const meta = this.get(name)
     if (meta?.defaultSize) {
-      return meta.defaultSize as [number, number]
+      return meta.defaultSize
     }
 
     const category = meta?.category?.toLowerCase() || 'basic'
-    return this.categories[category]?.defaultSize || [200, 100]
+    return this.toMetaDefaultSize(this.categories[category]?.defaultSize || [200, 100])
   }
 }
 

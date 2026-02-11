@@ -6,10 +6,10 @@ const meta: MaterialMeta = {
   version: '1.0.0',
   category: '表单',
   props: {
-    modelValue: {
-      name: 'modelValue',
-      label: '默认选中',
-      title: '默认选中',
+    checked: {
+      name: 'checked',
+      label: '选中状态',
+      title: '选中状态',
       setter: 'BooleanSetter',
       defaultValue: false,
       group: '基础',

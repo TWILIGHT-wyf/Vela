@@ -6,10 +6,10 @@ const meta: MaterialMeta = {
   version: '1.0.0',
   category: '表单',
   props: {
-    modelValue: {
-      name: 'modelValue',
-      label: '已选文件',
-      title: '已选文件',
+    value: {
+      name: 'value',
+      label: '文件列表',
+      title: '文件列表',
       setter: 'JsonSetter',
       defaultValue: [],
       group: '数据',

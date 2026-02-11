@@ -19,9 +19,18 @@ export default defineMaterial(vSelect, {
       valueField?: string
       [key: string]: unknown
     }
+    const nextProps: Record<string, unknown> = { ...rest }
+
+    if (nextProps.modelValue === undefined) {
+      if (nextProps.value !== undefined) {
+        nextProps.modelValue = nextProps.value
+      } else if (nextProps.defaultValue !== undefined) {
+        nextProps.modelValue = nextProps.defaultValue
+      }
+    }
 
     if (!options) {
-      return { ...rest, options: [] }
+      return { ...nextProps, options: [] }
     }
 
     const labelKey = labelField || 'label'
@@ -41,7 +50,7 @@ export default defineMaterial(vSelect, {
       }
     })
 
-    return { ...rest, options: transformedOptions }
+    return { ...nextProps, options: transformedOptions }
   },
 })
 </script>

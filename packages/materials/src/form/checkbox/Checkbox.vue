@@ -8,8 +8,14 @@ export default defineMaterial(vCheckbox, {
   fillContainer: true,
   propsAdapter: (props) => {
     const nextProps = { ...props }
-    if (nextProps.modelValue === undefined && nextProps.defaultValue !== undefined) {
-      nextProps.modelValue = nextProps.defaultValue
+    if (nextProps.modelValue === undefined) {
+      if (nextProps.checked !== undefined) {
+        nextProps.modelValue = nextProps.checked
+      } else if (nextProps.value !== undefined) {
+        nextProps.modelValue = nextProps.value
+      } else if (nextProps.defaultValue !== undefined) {
+        nextProps.modelValue = nextProps.defaultValue
+      }
     }
     return nextProps
   },

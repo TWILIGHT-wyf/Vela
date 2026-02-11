@@ -2,7 +2,7 @@ import type { MaterialMeta } from '@vela/core/types'
 
 const meta: MaterialMeta = {
   name: 'Grid',
-  title: '网格布局',
+  title: '网格编排',
   version: '1.0.0',
   category: '布局容器',
   isContainer: true,
