@@ -126,12 +126,6 @@ export const vTrigger = componentRegistry.vTrigger
 // Group 组件
 export const vGroup = componentRegistry.vGroup
 
-// Standard Components (New Architecture) - Static Imports for reliability
-import vKpiCard from './src/components/v2/kpi/KpiCard.vue'
-import vGridBox from './src/components/v2/layout/GridBox.vue'
-
-export { vKpiCard, vGridBox }
-
 // 导出组件注册表，供外部使用
 export { componentRegistry }
 
@@ -145,8 +139,6 @@ export * from './src/composables'
 export * from './src/utils/dataUtils'
 
 // 导出类型
-export type { TriggerLog } from './src/components/advanced/trigger/Trigger.vue'
-export type { GroupProps } from './src/components/group/Group.vue'
 export type { TableColumn } from './src/types/component-props'
 
 // 提供 Vue 插件式的安装方法

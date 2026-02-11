@@ -3,8 +3,8 @@ import { mount } from '@vue/test-utils'
 
 // 导入 Material 组件
 import Text from '../src/basic/text/Text.vue'
-import KpiCard from '../src/data/KpiCard/KpiCard.vue'
-import GridBox from '../src/layout/GridBox/GridBox.vue'
+import Stat from '../src/data/stat/Stat.vue'
+import Select from '../src/form/select/Select.vue'
 
 describe('Materials V2 Integration Tests', () => {
   describe('Text (Basic Component)', () => {
@@ -39,61 +39,57 @@ describe('Materials V2 Integration Tests', () => {
     })
   })
 
-  describe('KpiCard (Data Component)', () => {
-    it('应该正确渲染结构化数据配置', () => {
-      const wrapper = mount(KpiCard, {
+  describe('Stat (Data Component)', () => {
+    it('应该正确渲染统计信息配置', () => {
+      const wrapper = mount(Stat, {
         props: {
-          header: { title: '总收入' },
-          content: { value: 999, prefix: '$' },
-          footer: { trend: { value: '10%', type: 'up' } },
+          title: '总收入',
+          value: 999,
+          suffix: '$',
+          showChange: true,
+          change: 10,
         },
       })
 
-      expect(wrapper.find('.v-stat-card__title').text()).toBe('总收入')
-      expect(wrapper.find('.v-stat-card__prefix').text()).toBe('$')
-      expect(wrapper.find('.v-stat-card__value').text()).toBe('999')
-      expect(wrapper.find('.v-stat-card__trend').classes()).toContain('is-up')
+      expect(wrapper.find('.v-stat-title').text()).toBe('总收入')
+      expect(wrapper.find('.v-stat-value').text()).toBe('999$')
+      expect(wrapper.find('.v-stat-change').text()).toContain('+10.0%')
     })
 
     it('应该正确处理数值精度和千分位', () => {
-      const wrapper = mount(KpiCard, {
+      const wrapper = mount(Stat, {
         props: {
-          content: {
-            value: 1234.5678,
-            precision: 2,
-            separator: true,
-          },
+          value: 1234.5678,
+          precision: 2,
         },
       })
 
       // 1,234.57
       // 注意：toLocaleString 在不同 Node 环境可能表现不同，这里做宽松匹配
-      const text = wrapper.find('.v-stat-card__value').text()
+      const text = wrapper.find('.v-stat-value').text()
       expect(text).toMatch(/1,234\.57/)
     })
   })
 
-  describe('GridBox (Layout Container)', () => {
-    it('应该正确应用 Grid 布局样式', () => {
-      const wrapper = mount(GridBox, {
+  describe('Select (Form Component)', () => {
+    it('应该正确透传并渲染下拉选项', () => {
+      const wrapper = mount(Select, {
         props: {
-          layout: {
-            columns: 4,
-            gap: 20,
-          },
+          options: [
+            { label: '选项A', value: 'a' },
+            { label: '选项B', value: 'b' },
+          ],
+          value: 'a',
+          placeholder: '请选择',
         },
       })
 
-      console.log('GridBox HTML:', wrapper.html())
+      const select = wrapper.find('.select-container')
+      expect(select.exists()).toBe(true)
 
-      const grid = wrapper.find('.v-grid')
-      const style = grid.attributes('style')
-
-      expect(style).toContain('display: grid')
-      expect(style).toContain('grid-template-columns: repeat(4, 1fr)')
-      expect(style).toContain('gap: 20px 20px')
+      const style = select.attributes('style')
+      expect(style).toContain('width: 100%')
+      expect(style).toContain('height: 100%')
     })
-
-    // it('应该透传插槽内容', () => { ... }) // 暂时跳过 slot 测试
   })
 })
