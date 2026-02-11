@@ -1,18 +1,11 @@
-﻿<template>
+<template>
   <BaseButtonGroup v-bind="buttonGroupProps" @click="handleClick" />
 </template>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
-import {
-  vButtonGroup as BaseButtonGroup,
-  useDataSource,
-  extractWithFallback,
-} from '@vela/ui'
+import { computed } from 'vue'
+import { vButtonGroup as BaseButtonGroup, useDataSource, extractWithFallback } from '@vela/ui'
 
-// 按钮接口
 interface ButtonItem {
   label: string
   value: string | number
@@ -21,38 +14,63 @@ interface ButtonItem {
   disabled?: boolean
 }
 
-const props = defineProps<{
-  id: string
+type DataSourceLike = {
+  enabled?: boolean
+  dataPath?: string
+  labelField?: string
+  valueField?: string
+  [key: string]: unknown
+}
+
+const props = withDefaults(
+  defineProps<{
+    buttons?: ButtonItem[] | string
+    type?: 'default' | 'primary' | 'success' | 'warning' | 'info' | 'danger'
+    size?: 'large' | 'default' | 'small'
+    disabled?: boolean
+    plain?: boolean
+    round?: boolean
+    circle?: boolean
+    padding?: number
+    backgroundColor?: string
+    labelField?: string
+    valueField?: string
+    dataSource?: DataSourceLike
+  }>(),
+  {
+    buttons: () => [],
+    type: 'default',
+    size: 'default',
+    disabled: false,
+    plain: false,
+    round: false,
+    circle: false,
+    padding: 16,
+    backgroundColor: 'transparent',
+    labelField: 'label',
+    valueField: 'value',
+  },
+)
+
+const emit = defineEmits<{
+  click: [button: ButtonItem]
 }>()
 
-const { componentStore } = storeToRefs(useComponent())
-
-// 从 store 获取组件配置
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 数据源
-const dataSourceRef = toRef(() => comp.value?.dataSource)
+const dataSourceRef = computed(() => props.dataSource)
 const { data: remoteData } = useDataSource(dataSourceRef)
 
-// 字段映射
-const labelField = computed(() => String(comp.value?.props.labelField || 'label'))
-const valueField = computed(() => String(comp.value?.props.valueField || 'value'))
-
-// 按钮数据
-const buttons = computed<ButtonItem[]>(() => {
-  const ds = comp.value?.dataSource
-  const localButtons = comp.value?.props.buttons as ButtonItem[] | string
-
-  // 如果启用了数据源
-  if (ds?.enabled && remoteData.value) {
-    const extracted = extractWithFallback(remoteData.value, ds.dataPath, [])
+const resolvedButtons = computed<ButtonItem[]>(() => {
+  if (props.dataSource?.enabled && remoteData.value) {
+    const extracted = extractWithFallback(remoteData.value, props.dataSource.dataPath, [])
     if (Array.isArray(extracted)) {
+      const labelField = props.labelField || props.dataSource.labelField || 'label'
+      const valueField = props.valueField || props.dataSource.valueField || 'value'
       return extracted.map((item: unknown) => {
         if (typeof item === 'object' && item !== null) {
           const obj = item as Record<string, unknown>
           return {
-            label: String(obj[labelField.value] ?? obj.label ?? ''),
-            value: (obj[valueField.value] ?? obj.value ?? '') as string | number,
+            label: String(obj[labelField] ?? obj.label ?? ''),
+            value: (obj[valueField] ?? obj.value ?? '') as string | number,
             type: (obj.type as ButtonItem['type']) || undefined,
             icon: obj.icon ? String(obj.icon) : undefined,
             disabled: Boolean(obj.disabled),
@@ -63,39 +81,31 @@ const buttons = computed<ButtonItem[]>(() => {
     }
   }
 
-  // 本地按钮
-  if (Array.isArray(localButtons)) return localButtons
-
-  if (typeof localButtons === 'string') {
-    return localButtons.split(',').map((s) => {
-      const trimmed = s.trim()
-      return { label: trimmed, value: trimmed }
+  if (Array.isArray(props.buttons)) {
+    return props.buttons
+  }
+  if (typeof props.buttons === 'string') {
+    return props.buttons.split(',').map((item) => {
+      const text = item.trim()
+      return { label: text, value: text }
     })
   }
-
   return []
 })
 
-// 聚合 props
-const buttonGroupProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
+const buttonGroupProps = computed(() => ({
+  buttons: resolvedButtons.value,
+  type: props.type,
+  size: props.size,
+  disabled: props.disabled,
+  plain: props.plain,
+  round: props.round,
+  circle: props.circle,
+  padding: props.padding,
+  backgroundColor: props.backgroundColor,
+}))
 
-  return {
-    buttons: buttons.value,
-    type: p.type || 'default',
-    size: p.size || 'default',
-    disabled: p.disabled ?? false,
-    plain: p.plain ?? false,
-    round: p.round ?? false,
-    circle: p.circle ?? false,
-    padding: s.padding || 16,
-    backgroundColor: s.backgroundColor || 'transparent',
-  }
-})
-
-// 事件处理
-const handleClick = (button: ButtonItem) => {
-  console.log('Button clicked:', button)
+function handleClick(button: ButtonItem) {
+  emit('click', button)
 }
 </script>

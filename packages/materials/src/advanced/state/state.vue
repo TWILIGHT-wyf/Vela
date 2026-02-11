@@ -1,30 +1,74 @@
-﻿<script setup lang="ts">
+<template>
+  <BaseState v-bind="componentProps" />
+</template>
+
+<script setup lang="ts">
 import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useComponent } from '@vela/editor/stores/component'
 import { vState as BaseState, useDataSource, extractWithFallback } from '@vela/ui'
 
-const props = defineProps<{
-  id: string
-}>()
+type DataSourceLike = {
+  stateField?: string
+  [key: string]: unknown
+}
 
-const { componentStore } = storeToRefs(useComponent())
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    state?: string | Record<string, unknown>
+    stateData?: Record<string, unknown>
+    initialState?: Record<string, unknown>
+    viewMode?: 'list' | 'json' | 'table'
+    placeholder?: string
+    padding?: number
+    backgroundColor?: string
+    textColor?: string
+    fontSize?: number
+    lineHeight?: number
+    borderRadius?: number
+    border?: string
+    fontFamily?: string
+    dataSource?: DataSourceLike
+  }>(),
+  {
+    title: '状态管理器',
+    state: '{}',
+    stateData: () => ({}),
+    initialState: () => ({}),
+    viewMode: 'list',
+    placeholder: '暂无状态数据',
+    padding: 16,
+    backgroundColor: '#2d2d2d',
+    textColor: '#cccccc',
+    fontSize: 14,
+    lineHeight: 1.6,
+    borderRadius: 4,
+    border: '1px solid #3c3c3c',
+    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+  },
+)
 
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 数据源
-const dataSourceRef = computed(() => comp.value?.dataSource)
+const dataSourceRef = computed(() => props.dataSource)
 const { data: dataSourceData } = useDataSource(dataSourceRef)
 
-// 状态数据
-const stateData = computed(() => {
-  // 优先使用数据源
+const resolvedStateData = computed<Record<string, unknown>>(() => {
   if (dataSourceData.value) {
-    const stateField: string = (comp.value?.dataSource?.stateField as string) || 'state'
+    const stateField = props.dataSource?.stateField || 'state'
     return extractWithFallback<Record<string, unknown>>(dataSourceData.value, stateField, {})
   }
-  // 使用 props 中的 state
-  const stateStr = String(comp.value?.props?.state || '{}')
+
+  if (props.stateData && Object.keys(props.stateData).length > 0) {
+    return props.stateData
+  }
+
+  if (props.initialState && Object.keys(props.initialState).length > 0) {
+    return props.initialState
+  }
+
+  if (typeof props.state === 'object' && props.state !== null) {
+    return props.state
+  }
+
+  const stateStr = String(props.state || '{}')
   try {
     return JSON.parse(stateStr) as Record<string, unknown>
   } catch {
@@ -32,29 +76,18 @@ const stateData = computed(() => {
   }
 })
 
-// 聚合属性
-const componentProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
-
-  return {
-    title: String(p.title || '状态管理器'),
-    stateData: stateData.value,
-    viewMode: (p.viewMode as 'list' | 'json' | 'table') || 'list',
-    placeholder: String(p.placeholder || '暂无状态数据'),
-    // 样式
-    padding: Number(s.padding || 16),
-    backgroundColor: String(s.backgroundColor || '#2d2d2d'),
-    textColor: String(s.textColor || '#cccccc'),
-    fontSize: Number(s.fontSize || 14),
-    lineHeight: Number(s.lineHeight || 1.6),
-    borderRadius: Number(s.borderRadius || 4),
-    border: String(s.border || '1px solid #3c3c3c'),
-    fontFamily: String(s.fontFamily || 'Consolas, Monaco, "Courier New", monospace'),
-  }
-})
+const componentProps = computed(() => ({
+  title: props.title,
+  stateData: resolvedStateData.value,
+  viewMode: props.viewMode,
+  placeholder: props.placeholder,
+  padding: props.padding,
+  backgroundColor: props.backgroundColor,
+  textColor: props.textColor,
+  fontSize: props.fontSize,
+  lineHeight: props.lineHeight,
+  borderRadius: props.borderRadius,
+  border: props.border,
+  fontFamily: props.fontFamily,
+}))
 </script>
-
-<template>
-  <BaseState v-bind="componentProps" />
-</template>

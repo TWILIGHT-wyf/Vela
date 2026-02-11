@@ -1,11 +1,9 @@
-﻿<template>
+<template>
   <BreadcrumbBase v-bind="breadcrumbProps" @item-click="handleItemClick" />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
 import { vBreadcrumb as BreadcrumbBase } from '@vela/ui'
 
 interface BreadcrumbItem {
@@ -14,58 +12,55 @@ interface BreadcrumbItem {
   url?: string
 }
 
-const props = defineProps<{
-  id: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    id?: string
+    items?: BreadcrumbItem[]
+    separator?: string
+    fontSize?: number
+    color?: string
+    activeColor?: string
+    linkColor?: string
+  }>(),
+  {
+    id: '',
+    items: () => [],
+    separator: '/',
+    fontSize: 14,
+    color: '#606266',
+    activeColor: '#909399',
+    linkColor: '#409eff',
+  },
+)
 
 const emit = defineEmits<{
+  (e: 'itemClick', item: BreadcrumbItem): void
   (
     e: 'component-event',
     payload: { componentId: string; eventType: string; actions: unknown[] },
   ): void
 }>()
 
-const { componentStore } = storeToRefs(useComponent())
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 解析面包屑项
-function parseItems(): BreadcrumbItem[] {
-  const raw = comp.value?.props.items
-  if (Array.isArray(raw)) {
-    return raw.map(
-      (item): BreadcrumbItem => ({
-        label: String((item as Record<string, unknown>)?.label || ''),
-        pageId: (item as Record<string, unknown>)?.pageId as string | undefined,
-        url: (item as Record<string, unknown>)?.url as string | undefined,
-      }),
-    )
-  }
-  return []
-}
-
-// 聚合 props
-const breadcrumbProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
-
-  return {
-    items: parseItems(),
-    separator: String(p.separator || '/'),
-    fontSize: Number(s.fontSize) || 14,
-    color: typeof s.color === 'string' ? s.color : '#606266',
-    activeColor: typeof s.activeColor === 'string' ? s.activeColor : '#909399',
-    linkColor: typeof s.linkColor === 'string' ? s.linkColor : '#409eff',
-  }
-})
+const breadcrumbProps = computed(() => ({
+  items: props.items,
+  separator: props.separator,
+  fontSize: props.fontSize,
+  color: props.color,
+  activeColor: props.activeColor,
+  linkColor: props.linkColor,
+}))
 
 function handleItemClick(item: BreadcrumbItem) {
+  emit('itemClick', item)
   if (item.pageId) {
     emit('component-event', {
       componentId: props.id,
       eventType: 'click',
       actions: [{ id: 'nav', type: 'navigate-page', targetId: item.pageId }],
     })
-  } else if (item.url) {
+    return
+  }
+  if (item.url) {
     window.open(item.url, '_blank')
   }
 }

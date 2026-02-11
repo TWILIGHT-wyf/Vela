@@ -1,56 +1,89 @@
-﻿<template>
+<template>
   <BaseCheckboxGroup v-bind="checkboxProps" @change="handleChange" />
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef, watch } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
-import {
-  vCheckboxGroup as BaseCheckboxGroup,
-  useDataSource,
-  extractWithFallback,
-} from '@vela/ui'
+import { computed, ref, watch } from 'vue'
+import { vCheckboxGroup as BaseCheckboxGroup, useDataSource, extractWithFallback } from '@vela/ui'
 
-// 选项接口
 interface CheckboxOption {
   label: string
   value: string | number
   disabled?: boolean
 }
 
-const props = defineProps<{
-  id: string
+type DataSourceLike = {
+  enabled?: boolean
+  dataPath?: string
+  labelField?: string
+  valueField?: string
+  [key: string]: unknown
+}
+
+const props = withDefaults(
+  defineProps<{
+    modelValue?: (string | number)[]
+    defaultValue?: (string | number)[] | string
+    options?: CheckboxOption[] | string
+    size?: 'large' | 'default' | 'small'
+    disabled?: boolean
+    min?: number
+    max?: number
+    layout?: 'default' | 'button'
+    showBorder?: boolean
+    direction?: 'horizontal' | 'vertical'
+    gap?: number
+    padding?: number
+    backgroundColor?: string
+    checkedColor?: string
+    borderColor?: string
+    textColor?: string
+    labelField?: string
+    valueField?: string
+    dataSource?: DataSourceLike
+  }>(),
+  {
+    modelValue: () => [],
+    defaultValue: () => [],
+    options: () => [],
+    size: 'default',
+    disabled: false,
+    min: undefined,
+    max: undefined,
+    layout: 'default',
+    showBorder: false,
+    direction: 'horizontal',
+    gap: 12,
+    padding: 16,
+    backgroundColor: 'transparent',
+    checkedColor: '#409eff',
+    borderColor: '#dcdfe6',
+    textColor: '#606266',
+    labelField: 'label',
+    valueField: 'value',
+  },
+)
+
+const emit = defineEmits<{
+  'update:modelValue': [value: (string | number)[]]
+  change: [value: (string | number)[]]
 }>()
 
-const { componentStore } = storeToRefs(useComponent())
-
-// 从 store 获取组件配置
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 数据源
-const dataSourceRef = toRef(() => comp.value?.dataSource)
+const dataSourceRef = computed(() => props.dataSource)
 const { data: remoteData } = useDataSource(dataSourceRef)
 
-// 字段映射
-const labelField = computed(() => String(comp.value?.props.labelField || 'label'))
-const valueField = computed(() => String(comp.value?.props.valueField || 'value'))
-
-// 选项数据
-const options = computed<CheckboxOption[]>(() => {
-  const ds = comp.value?.dataSource
-  const localOptions = comp.value?.props.options as CheckboxOption[] | string
-
-  // 如果启用了数据源
-  if (ds?.enabled && remoteData.value) {
-    const extracted = extractWithFallback(remoteData.value, ds.dataPath, [])
+const resolvedOptions = computed<CheckboxOption[]>(() => {
+  if (props.dataSource?.enabled && remoteData.value) {
+    const extracted = extractWithFallback(remoteData.value, props.dataSource.dataPath, [])
     if (Array.isArray(extracted)) {
+      const labelField = props.labelField || props.dataSource.labelField || 'label'
+      const valueField = props.valueField || props.dataSource.valueField || 'value'
       return extracted.map((item: unknown) => {
         if (typeof item === 'object' && item !== null) {
           const obj = item as Record<string, unknown>
           return {
-            label: String(obj[labelField.value] ?? obj.label ?? ''),
-            value: (obj[valueField.value] ?? obj.value ?? '') as string | number,
+            label: String(obj[labelField] ?? obj.label ?? ''),
+            value: (obj[valueField] ?? obj.value ?? '') as string | number,
             disabled: Boolean(obj.disabled),
           }
         }
@@ -59,67 +92,67 @@ const options = computed<CheckboxOption[]>(() => {
     }
   }
 
-  // 本地选项
-  if (Array.isArray(localOptions)) return localOptions
-
-  if (typeof localOptions === 'string') {
-    return localOptions.split(',').map((s) => {
-      const trimmed = s.trim()
-      return { label: trimmed, value: trimmed }
+  if (Array.isArray(props.options)) {
+    return props.options
+  }
+  if (typeof props.options === 'string') {
+    return props.options.split(',').map((item) => {
+      const text = item.trim()
+      return { label: text, value: text }
     })
   }
-
   return []
 })
 
-// 复选框值
-const checkboxValue = ref<(string | number)[]>([])
+const innerValue = ref<(string | number)[]>([])
 
-// 监听默认值变化
 watch(
-  () => comp.value?.props.defaultValue,
-  (newVal) => {
-    if (newVal) {
-      if (typeof newVal === 'string') {
-        checkboxValue.value = newVal.split(',').map((s) => s.trim())
-      } else if (Array.isArray(newVal)) {
-        checkboxValue.value = newVal.map((v) => (typeof v === 'number' ? v : String(v))) as (
-          | string
-          | number
-        )[]
-      }
+  () => props.modelValue,
+  (value) => {
+    innerValue.value = Array.isArray(value) ? [...value] : []
+  },
+  { immediate: true },
+)
+
+watch(
+  () => props.defaultValue,
+  (value) => {
+    if (Array.isArray(props.modelValue) && props.modelValue.length > 0) {
+      return
+    }
+    if (typeof value === 'string') {
+      innerValue.value = value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    } else if (Array.isArray(value)) {
+      innerValue.value = value.map((item) => (typeof item === 'number' ? item : String(item)))
     }
   },
   { immediate: true },
 )
 
-// 聚合 props
-const checkboxProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
+const checkboxProps = computed(() => ({
+  modelValue: innerValue.value,
+  options: resolvedOptions.value,
+  size: props.size,
+  disabled: props.disabled,
+  min: props.min,
+  max: props.max,
+  layout: props.layout,
+  showBorder: props.showBorder,
+  direction: props.direction,
+  gap: props.gap,
+  padding: props.padding,
+  backgroundColor: props.backgroundColor,
+  checkedColor: props.checkedColor,
+  borderColor: props.borderColor,
+  textColor: props.textColor,
+}))
 
-  return {
-    modelValue: checkboxValue.value,
-    options: options.value,
-    size: p.size || 'default',
-    disabled: p.disabled ?? false,
-    min: p.min,
-    max: p.max,
-    layout: p.layout || 'default',
-    showBorder: p.showBorder ?? false,
-    direction: s.direction || 'horizontal',
-    gap: s.gap || 12,
-    padding: s.padding || 16,
-    backgroundColor: s.backgroundColor || 'transparent',
-    checkedColor: s.checkedColor || '#409eff',
-    borderColor: s.borderColor || '#dcdfe6',
-    textColor: s.textColor || '#606266',
-  }
-})
-
-// 事件处理
-const handleChange = (value: (string | number)[]) => {
-  checkboxValue.value = value
-  console.log('CheckboxGroup change:', value)
+function handleChange(value: (string | number)[]) {
+  innerValue.value = value
+  emit('update:modelValue', value)
+  emit('change', value)
 }
 </script>

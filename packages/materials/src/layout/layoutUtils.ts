@@ -1,29 +1,38 @@
 ﻿import { computed } from 'vue'
 import type { CSSProperties, ComputedRef } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
-import { componentRegistry } from '@vela/materials/registry'
 
 type LayoutComp = {
-  children?: string[]
+  children?: Array<
+    | string
+    | {
+        id?: string
+        component?: string
+        position?: { x?: number; y?: number }
+        size?: { width?: number; height?: number }
+      }
+  >
   layout?: Record<string, unknown>
   props?: Record<string, unknown>
   style?: Record<string, unknown>
 }
 
 export function useLayoutHelpers(comp: ComputedRef<LayoutComp | undefined>) {
-  const { componentStore } = storeToRefs(useComponent())
-
   const hasChildren = computed(() => {
     return comp.value?.children && comp.value.children.length > 0
   })
 
   const getChildComponent = (childId: string) => {
-    return componentStore.value.find((c) => c.id === childId)
+    const children = comp.value?.children
+    if (!children) return undefined
+    return children.find((child) => {
+      if (typeof child === 'string') return child === childId
+      return child?.id === childId
+    })
   }
 
   const getComponentByType = (type: string) => {
-    return componentRegistry[type] || 'div'
+    // Materials 包内只负责返回类型名，具体组件解析由渲染层处理。
+    return type || 'div'
   }
 
   const childrenContainerStyle = computed<CSSProperties>(() => {
@@ -98,13 +107,13 @@ export function useLayoutHelpers(comp: ComputedRef<LayoutComp | undefined>) {
     const mode = layout?.mode || 'absolute'
     const child = getChildComponent(childId)
 
-    if (mode === 'absolute' && child) {
+    if (mode === 'absolute' && child && typeof child !== 'string') {
       return {
         position: 'absolute',
-        left: `${child.position.x}px`,
-        top: `${child.position.y}px`,
-        width: `${child.size.width}px`,
-        height: `${child.size.height}px`,
+        left: `${child.position?.x ?? 0}px`,
+        top: `${child.position?.y ?? 0}px`,
+        width: `${child.size?.width ?? 0}px`,
+        height: `${child.size?.height ?? 0}px`,
       }
     }
 

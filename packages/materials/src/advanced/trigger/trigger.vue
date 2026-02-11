@@ -1,104 +1,149 @@
-﻿<script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useComponent } from '@vela/editor/stores/component'
-import { vTrigger as BaseTrigger, useDataSource } from '@vela/ui'
-import type { TriggerLog } from '@vela/ui'
+<template>
+  <BaseTrigger v-bind="componentProps" @trigger="manualTrigger" @clear="clearLogs" />
+</template>
 
-const props = defineProps<{
-  id: string
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { vTrigger as BaseTrigger } from '@vela/ui'
+
+interface TriggerLog {
+  time: string
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+}
+
+const props = withDefaults(
+  defineProps<{
+    enabled?: boolean
+    type?: 'click' | 'timer' | 'condition'
+    triggerType?: 'manual' | 'interval'
+    interval?: number
+    condition?: string
+    action?: string
+    actionData?: string
+    title?: string
+    showClearButton?: boolean
+    placeholder?: string
+    padding?: number
+    backgroundColor?: string
+    textColor?: string
+    fontSize?: number
+    lineHeight?: number
+    borderRadius?: number
+    border?: string
+    fontFamily?: string
+  }>(),
+  {
+    enabled: true,
+    type: 'click',
+    triggerType: undefined,
+    interval: 5000,
+    condition: '',
+    action: 'log',
+    actionData: '',
+    title: '触发器',
+    showClearButton: true,
+    placeholder: '暂无执行记录',
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+    textColor: '#e0e0e0',
+    fontSize: 13,
+    lineHeight: 1.5,
+    borderRadius: 4,
+    border: '1px solid #3c3c3c',
+    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+  },
+)
+
+const emit = defineEmits<{
+  trigger: [log: TriggerLog]
+  clear: []
 }>()
 
-const { componentStore } = storeToRefs(useComponent())
-
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
-
-// 数据源(预留)
-const dataSourceRef = computed(() => comp.value?.dataSource)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { data: dataSourceData } = useDataSource(dataSourceRef)
-
-// 触发日志
 const logs = ref<TriggerLog[]>([])
+let intervalId: number | undefined
 
-// 添加日志
-const addLog = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-  const time = new Date().toLocaleTimeString()
-  logs.value.unshift({ time, message, type })
-  // 限制日志数量
+const resolvedTriggerType = computed<'manual' | 'interval'>(() => {
+  if (props.triggerType) {
+    return props.triggerType
+  }
+  return props.type === 'timer' ? 'interval' : 'manual'
+})
+
+function addLog(message: string, type: TriggerLog['type'] = 'info') {
+  const log: TriggerLog = {
+    time: new Date().toLocaleTimeString(),
+    message,
+    type,
+  }
+  logs.value.unshift(log)
   if (logs.value.length > 50) {
     logs.value = logs.value.slice(0, 50)
   }
+  emit('trigger', log)
 }
 
-// 触发器状态
-const isEnabled = computed(() => comp.value?.props?.enabled !== false)
-const triggerType = computed(() => String(comp.value?.props?.triggerType || 'manual'))
-
-// 定时器
-let intervalId: number | undefined
-
-// 手动触发
-const manualTrigger = () => {
-  addLog('手动触发执行', 'success')
-  executeTrigger()
-}
-
-// 执行触发器
-const executeTrigger = () => {
-  if (!isEnabled.value) {
+function executeTrigger() {
+  if (!props.enabled) {
     addLog('触发器已禁用', 'warning')
     return
   }
 
-  const action = String(comp.value?.props?.action || 'log')
-  const actionData = String(comp.value?.props?.actionData || '')
-
-  switch (action) {
+  switch (props.action) {
     case 'log':
-      addLog(`执行日志: ${actionData || '触发器已执行'}`, 'info')
+      addLog(`执行日志: ${props.actionData || '触发器已执行'}`, 'info')
       break
     case 'alert':
       addLog('执行弹窗提示', 'success')
       break
     case 'dispatch':
-      addLog(`派发事件: ${actionData}`, 'success')
+      addLog(`派发事件: ${props.actionData || ''}`, 'success')
       break
     case 'api':
-      addLog(`调用 API: ${actionData}`, 'info')
+      addLog(`调用 API: ${props.actionData || ''}`, 'info')
       break
     default:
-      addLog('未知动作类型', 'error')
+      addLog(`未知动作类型: ${props.action || 'unknown'}`, 'error')
   }
 }
 
-// 定时触发
-const startInterval = () => {
+function startInterval() {
   if (intervalId) {
     clearInterval(intervalId)
+    intervalId = undefined
   }
 
-  const interval = Number(comp.value?.props?.interval || 5000)
-  if (interval > 0 && triggerType.value === 'interval') {
-    intervalId = window.setInterval(() => {
-      executeTrigger()
-    }, interval)
-    addLog(`启动定时触发 (间隔: ${interval}ms)`, 'info')
+  const interval = Number(props.interval) || 0
+  if (!props.enabled || resolvedTriggerType.value !== 'interval' || interval <= 0) {
+    return
   }
+
+  intervalId = window.setInterval(() => {
+    executeTrigger()
+  }, interval)
+  addLog(`启动定时触发 (间隔: ${interval}ms)`, 'info')
 }
 
-// 清除日志
-const clearLogs = () => {
+function manualTrigger() {
+  addLog('手动触发执行', 'success')
+  executeTrigger()
+}
+
+function clearLogs() {
   logs.value = []
-  addLog('日志已清除', 'info')
+  emit('clear')
 }
 
-// 生命周期
+watch(
+  () => [props.enabled, props.interval, props.type, props.triggerType],
+  () => {
+    startInterval()
+  },
+)
+
 onMounted(() => {
   addLog('触发器已初始化', 'info')
-  if (triggerType.value === 'interval') {
-    startInterval()
-  }
+  startInterval()
 })
 
 onBeforeUnmount(() => {
@@ -107,33 +152,22 @@ onBeforeUnmount(() => {
   }
 })
 
-// 聚合属性
-const componentProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
-
-  return {
-    title: String(p.title || '触发器'),
-    enabled: isEnabled.value,
-    triggerType: triggerType.value as 'manual' | 'interval',
-    interval: Number(p.interval || 5000),
-    action: String(p.action || 'log'),
-    logs: logs.value,
-    showClearButton: p.showClearButton !== false,
-    placeholder: String(p.placeholder || '暂无执行记录'),
-    // 样式
-    padding: Number(s.padding || 16),
-    backgroundColor: String(s.backgroundColor || '#1a1a1a'),
-    textColor: String(s.textColor || '#e0e0e0'),
-    fontSize: Number(s.fontSize || 13),
-    lineHeight: Number(s.lineHeight || 1.5),
-    borderRadius: Number(s.borderRadius || 4),
-    border: String(s.border || '1px solid #3c3c3c'),
-    fontFamily: String(s.fontFamily || 'Consolas, Monaco, "Courier New", monospace'),
-  }
-})
+const componentProps = computed(() => ({
+  title: props.title,
+  enabled: props.enabled,
+  triggerType: resolvedTriggerType.value,
+  interval: props.interval,
+  action: props.action,
+  logs: logs.value,
+  showClearButton: props.showClearButton,
+  placeholder: props.placeholder,
+  padding: props.padding,
+  backgroundColor: props.backgroundColor,
+  textColor: props.textColor,
+  fontSize: props.fontSize,
+  lineHeight: props.lineHeight,
+  borderRadius: props.borderRadius,
+  border: props.border,
+  fontFamily: props.fontFamily,
+}))
 </script>
-
-<template>
-  <BaseTrigger v-bind="componentProps" @trigger="manualTrigger" @clear="clearLogs" />
-</template>

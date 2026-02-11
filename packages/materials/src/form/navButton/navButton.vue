@@ -1,75 +1,86 @@
-﻿<template>
+<template>
   <NavButtonBase v-bind="buttonProps" @click="handleClick" />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useComponent } from '@vela/editor/stores/component'
-import { storeToRefs } from 'pinia'
 import { vNavButton as NavButtonBase } from '@vela/ui'
 
-const props = defineProps<{
-  id: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    id?: string
+    label?: string
+    showLabel?: boolean
+    icon?: string
+    iconSize?: number
+    backgroundColor?: string
+    color?: string
+    borderRadius?: number
+    paddingX?: number
+    paddingY?: number
+    fontSize?: number
+    shadow?: boolean
+    targetPageId?: string
+    url?: string
+    openInNewTab?: boolean
+  }>(),
+  {
+    id: '',
+    label: '跳转',
+    showLabel: true,
+    icon: 'ArrowRight',
+    iconSize: 20,
+    backgroundColor: '#409eff',
+    color: '#ffffff',
+    borderRadius: 8,
+    paddingX: 24,
+    paddingY: 12,
+    fontSize: 14,
+    shadow: false,
+    targetPageId: '',
+    url: '',
+    openInNewTab: false,
+  },
+)
 
 const emit = defineEmits<{
+  (e: 'click'): void
   (
     e: 'component-event',
     payload: { componentId: string; eventType: string; actions: unknown[] },
   ): void
 }>()
 
-const { componentStore } = storeToRefs(useComponent())
-const comp = computed(() => componentStore.value.find((c) => c.id === props.id))
+const buttonProps = computed(() => ({
+  label: props.label,
+  showLabel: props.showLabel,
+  icon: props.icon,
+  iconSize: props.iconSize,
+  backgroundColor: props.backgroundColor,
+  color: props.color,
+  borderRadius: props.borderRadius,
+  paddingX: props.paddingX,
+  paddingY: props.paddingY,
+  fontSize: props.fontSize,
+  shadow: props.shadow,
+}))
 
-// 聚合 props 传给基础组件
-const buttonProps = computed(() => {
-  const p = comp.value?.props || {}
-  const s = comp.value?.style || {}
-
-  return {
-    label: String(p.label || '跳转'),
-    showLabel: p.showLabel !== false,
-    icon: String(p.icon || 'ArrowRight'),
-    iconSize: Number(p.iconSize) || 20,
-    backgroundColor: typeof s.backgroundColor === 'string' ? s.backgroundColor : '#409eff',
-    color: typeof s.color === 'string' ? s.color : '#ffffff',
-    borderRadius: Number(s.borderRadius) || 8,
-    paddingX: Number(s.paddingX) || 24,
-    paddingY: Number(s.paddingY) || 12,
-    fontSize: Number(p.fontSize) || 14,
-    shadow: Boolean(s.shadow),
-  }
-})
-
-// 点击处理
 function handleClick() {
-  const events = comp.value?.events
-  const p = comp.value?.props || {}
+  emit('click')
 
-  // 如果配置了事件，触发事件
-  if (events?.click?.length) {
-    emit('component-event', {
-      componentId: props.id,
-      eventType: 'click',
-      actions: events.click,
-    })
-    return
-  }
-
-  // 默认行为：跳转
-  const url = String(p.url || '')
-  const targetPageId = String(p.targetPageId || '')
-  const openInNewTab = Boolean(p.openInNewTab)
+  const url = String(props.url || '')
+  const targetPageId = String(props.targetPageId || '')
 
   if (url) {
-    if (openInNewTab) {
+    if (props.openInNewTab) {
       window.open(url, '_blank')
     } else {
       window.location.href = url
     }
-  } else if (targetPageId) {
-    // 页面跳转通过事件系统处理
+    return
+  }
+
+  if (targetPageId) {
     emit('component-event', {
       componentId: props.id,
       eventType: 'click',
