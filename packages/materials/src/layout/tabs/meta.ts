@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Tabs',
   title: '标签页',
   version: '1.0.0',
-  category: '布局容器',
+  category: '布局',
   isContainer: true,
   props: {
     activeTab: {
@@ -20,12 +20,11 @@ const meta: MaterialMeta = {
       setter: 'SelectSetter',
       setterProps: {
         options: [
-          { label: '卡片化', value: 'card' },
-          { label: '边框卡片', value: 'border-card' },
-          { label: '默认', value: '' },
+          { label: '线条', value: 'line' },
+          { label: '卡片', value: 'card' },
         ],
       },
-      defaultValue: 'border-card',
+      defaultValue: 'line',
       group: '样式',
     },
     tabPosition: {
@@ -46,13 +45,6 @@ const meta: MaterialMeta = {
     closable: {
       name: 'closable',
       label: '可关闭',
-      setter: 'BooleanSetter',
-      defaultValue: false,
-      group: '交互',
-    },
-    addable: {
-      name: 'addable',
-      label: '可增加',
       setter: 'BooleanSetter',
       defaultValue: false,
       group: '交互',

@@ -18,52 +18,72 @@ import type { CSSProperties } from 'vue'
 const props = withDefaults(
   defineProps<{
     // Grid 布局属性
-    gridTemplateColumns?: string
-    gridTemplateRows?: string
-    gridGap?: number
-    gridAutoFlow?: 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
+    columns?: number | string
+    rows?: number | string
+    gap?: number | string
+    rowGap?: number | string
+    columnGap?: number | string
+    autoFlow?: 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
 
     // 容器样式
-    padding?: number
+    padding?: number | string
     backgroundColor?: string
-    border?: string
-    borderRadius?: number
-    minHeight?: number
-    textColor?: string
+    borderRadius?: number | string
+    minHeight?: number | string
 
     // 占位内容
     content?: string
     placeholderItems?: string[]
   }>(),
   {
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gridTemplateRows: 'auto',
-    gridGap: 16,
-    gridAutoFlow: 'row',
-    padding: 16,
+    columns: 'repeat(3, 1fr)',
+    rows: 'auto',
+    gap: '16px',
+    rowGap: '',
+    columnGap: '',
+    autoFlow: 'row',
+    padding: '16px',
     backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 4,
-    minHeight: 200,
-    textColor: '#333333',
+    borderRadius: '4px',
+    minHeight: '200px',
     placeholderItems: () => ['Grid 1', 'Grid 2', 'Grid 3'],
   },
 )
+
+function toCssLength(value: number | string | undefined, fallback = ''): string {
+  if (value === undefined || value === null || value === '') {
+    return fallback
+  }
+  if (typeof value === 'number') {
+    return `${value}px`
+  }
+  return value
+}
+
+function toTemplate(value: number | string | undefined, fallback: string): string {
+  if (value === undefined || value === null || value === '') {
+    return fallback
+  }
+  if (typeof value === 'number') {
+    return `repeat(${Math.max(1, Math.round(value))}, 1fr)`
+  }
+  return value
+}
 
 // 容器样式
 const containerStyle = computed<CSSProperties>(() => {
   return {
     display: 'grid',
-    gridTemplateColumns: props.gridTemplateColumns,
-    gridTemplateRows: props.gridTemplateRows,
-    gap: `${props.gridGap}px`,
-    gridAutoFlow: props.gridAutoFlow,
-    padding: `${props.padding}px`,
+    gridTemplateColumns: toTemplate(props.columns, 'repeat(3, 1fr)'),
+    gridTemplateRows: toTemplate(props.rows, 'auto'),
+    gap: toCssLength(props.gap, '16px'),
+    rowGap: toCssLength(props.rowGap),
+    columnGap: toCssLength(props.columnGap),
+    gridAutoFlow: props.autoFlow,
+    padding: toCssLength(props.padding, '16px'),
     backgroundColor: props.backgroundColor,
-    border: props.border,
-    borderRadius: `${props.borderRadius}px`,
-    minHeight: `${props.minHeight}px`,
-    color: props.textColor,
+    borderRadius: toCssLength(props.borderRadius, '4px'),
+    minHeight: toCssLength(props.minHeight, '200px'),
     boxSizing: 'border-box',
   }
 })

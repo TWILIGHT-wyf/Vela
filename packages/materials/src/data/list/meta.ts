@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'List',
   title: '列表',
   version: '1.0.0',
-  category: '数据展示',
+  category: '数据',
   props: {
     data: {
       name: 'data',
@@ -13,31 +13,67 @@ const meta: MaterialMeta = {
       defaultValue: [],
       group: '数据',
     },
-    itemLayout: {
-      name: 'itemLayout',
-      label: '布局方式',
-      setter: 'SelectSetter',
-      setterProps: {
-        options: [
-          { label: '水平', value: 'horizontal' },
-          { label: '垂直', value: 'vertical' },
-        ],
-      },
-      defaultValue: 'horizontal',
-      group: '布局',
+    titleField: {
+      name: 'titleField',
+      label: '标题字段',
+      setter: 'StringSetter',
+      defaultValue: 'title',
+      group: '字段映射',
     },
-    bordered: {
-      name: 'bordered',
-      label: '边框',
+    descriptionField: {
+      name: 'descriptionField',
+      label: '描述字段',
+      setter: 'StringSetter',
+      defaultValue: 'description',
+      group: '字段映射',
+    },
+    extraField: {
+      name: 'extraField',
+      label: '额外信息字段',
+      setter: 'StringSetter',
+      defaultValue: 'extra',
+      group: '字段映射',
+    },
+    showBorder: {
+      name: 'showBorder',
+      label: '显示边框',
       setter: 'BooleanSetter',
-      defaultValue: false,
-      group: '样式',
+      defaultValue: true,
+      group: '显示',
     },
-    split: {
-      name: 'split',
+    showSplit: {
+      name: 'showSplit',
       label: '分割线',
       setter: 'BooleanSetter',
       defaultValue: true,
+      group: '显示',
+    },
+    loading: {
+      name: 'loading',
+      label: '加载状态',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '状态',
+    },
+    emptyText: {
+      name: 'emptyText',
+      label: '空数据提示',
+      setter: 'StringSetter',
+      defaultValue: '暂无数据',
+      group: '状态',
+    },
+    size: {
+      name: 'size',
+      label: '尺寸',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: '小', value: 'small' },
+          { label: '默认', value: 'default' },
+          { label: '大', value: 'large' },
+        ],
+      },
+      defaultValue: 'default',
       group: '样式',
     },
   },

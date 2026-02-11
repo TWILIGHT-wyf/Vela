@@ -59,4 +59,18 @@ describe('materials core contract alignment', () => {
     expect(getPropNames('Stat')).toEqual(expect.arrayContaining(['change', 'showChange', 'icon']))
     expect(getPropNames('Badge')).toEqual(expect.arrayContaining(['color', 'showZero', 'offset']))
   })
+
+  it('uses canonical core prop keys for layout/data components', () => {
+    expect(getPropNames('Grid')).toEqual(
+      expect.arrayContaining(['columns', 'rows', 'gap', 'rowGap', 'columnGap', 'autoFlow']),
+    )
+    expect(getPropNames('Modal')).toEqual(
+      expect.arrayContaining(['visible', 'closable', 'closeOnClickModal']),
+    )
+    expect(getPropNames('Tabs')).toEqual(expect.arrayContaining(['tabs', 'activeTab', 'type']))
+    expect(getPropNames('List')).toEqual(
+      expect.arrayContaining(['titleField', 'descriptionField', 'extraField', 'showBorder']),
+    )
+    expect(getPropNames('Table')).toEqual(expect.arrayContaining(['rowKey', 'loading']))
+  })
 })

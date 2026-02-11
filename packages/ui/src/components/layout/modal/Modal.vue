@@ -5,7 +5,7 @@
     :width="width"
     :fullscreen="fullscreen"
     :close-on-click-modal="closeOnClickModal"
-    :show-close="showClose"
+    :show-close="closable"
     :append-to-body="true"
     @close="handleClose"
   >
@@ -38,7 +38,7 @@ const props = defineProps<{
   width?: string | number
   fullscreen?: boolean
   closeOnClickModal?: boolean
-  showClose?: boolean
+  closable?: boolean
   showFooter?: boolean
 
   // 内容

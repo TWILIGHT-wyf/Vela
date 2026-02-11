@@ -27,6 +27,8 @@ const props = withDefaults(
     showAction?: boolean
     showBorder?: boolean
     showSplit?: boolean
+    size?: 'small' | 'default' | 'large'
+    loading?: boolean
     emptyText?: string
     iconSize?: number
     scrollHeight?: string
@@ -61,6 +63,8 @@ const props = withDefaults(
     showAction: true,
     showBorder: true,
     showSplit: true,
+    size: 'default',
+    loading: false,
     emptyText: '暂无数据',
     iconSize: 20,
     scrollHeight: '100%',
@@ -171,11 +175,12 @@ function handleItemClick(item: ListItem, index: number) {
 
 <template>
   <div class="list-container" :style="containerStyle">
+    <div v-if="loading" class="loading-state">加载中...</div>
     <el-scrollbar :height="computedScrollHeight">
-      <div v-if="listData.length === 0" class="empty-state">
+      <div v-if="!loading && listData.length === 0" class="empty-state">
         <el-empty :description="emptyText" :image-size="80" />
       </div>
-      <div v-else class="list-wrapper">
+      <div v-else-if="!loading" class="list-wrapper">
         <div
           v-for="(item, index) in listData"
           :key="index"
@@ -225,6 +230,15 @@ function handleItemClick(item: ListItem, index: number) {
   align-items: center;
   justify-content: center;
   min-height: 200px;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #909399;
+  font-size: 14px;
 }
 
 .list-wrapper {

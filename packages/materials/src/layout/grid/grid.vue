@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
-import type { CSSProperties } from 'vue'
 import { vGrid as BaseGrid } from '@vela/ui'
 
 /**
@@ -11,29 +10,29 @@ import { vGrid as BaseGrid } from '@vela/ui'
  */
 const props = withDefaults(
   defineProps<{
-    gridTemplateColumns?: string
-    gridTemplateRows?: string
-    gridGap?: number | string
-    gridAutoFlow?: string
-    padding?: number | string
+    columns?: number | string
+    rows?: number | string
+    gap?: number | string
+    rowGap?: number | string
+    columnGap?: number | string
+    autoFlow?: string
+    padding?: string | number
     backgroundColor?: string
-    border?: string
-    borderRadius?: number | string
-    minHeight?: number | string
-    textColor?: string
+    borderRadius?: string | number
+    minHeight?: string | number
     content?: string
   }>(),
   {
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gridTemplateRows: 'auto',
-    gridGap: 16,
-    gridAutoFlow: 'row',
-    padding: 16,
+    columns: 'repeat(3, 1fr)',
+    rows: 'auto',
+    gap: '16px',
+    rowGap: '',
+    columnGap: '',
+    autoFlow: 'row',
+    padding: '16px',
     backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 4,
-    minHeight: 200,
-    textColor: '#333333',
+    borderRadius: '4px',
+    minHeight: '200px',
   },
 )
 
@@ -44,17 +43,17 @@ const hasChildren = computed(() => !!slots.default)
 const gridProps = computed((): Record<string, unknown> => {
   return {
     // Grid 布局属性
-    gridTemplateColumns: props.gridTemplateColumns,
-    gridTemplateRows: props.gridTemplateRows,
-    gridGap: props.gridGap,
-    gridAutoFlow: props.gridAutoFlow,
+    columns: props.columns,
+    rows: props.rows,
+    gap: props.gap,
+    rowGap: props.rowGap,
+    columnGap: props.columnGap,
+    autoFlow: props.autoFlow,
     // 容器样式
     padding: props.padding,
     backgroundColor: props.backgroundColor,
-    border: props.border,
     borderRadius: props.borderRadius,
     minHeight: props.minHeight,
-    textColor: props.textColor,
     // 占位内容（仅当没有子组件时显示）
     content: hasChildren.value ? undefined : props.content,
     placeholderItems: hasChildren.value ? [] : undefined,

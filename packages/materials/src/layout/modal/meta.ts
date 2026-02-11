@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Modal',
   title: '对话框',
   version: '1.0.0',
-  category: '布局容器',
+  category: '布局',
   isContainer: true,
   props: {
     visible: {
@@ -42,8 +42,8 @@ const meta: MaterialMeta = {
       defaultValue: true,
       group: '交互',
     },
-    showClose: {
-      name: 'showClose',
+    closable: {
+      name: 'closable',
       label: '显示关闭按钮',
       setter: 'BooleanSetter',
       defaultValue: true,

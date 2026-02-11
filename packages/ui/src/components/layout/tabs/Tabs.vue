@@ -2,10 +2,9 @@
   <div class="v-tabs-container" :style="containerStyle">
     <el-tabs
       v-model="activeTabValue"
-      :type="type"
+      :type="elTabsType"
       :tab-position="tabPosition"
       :closable="closable"
-      :addable="addable"
       @tab-change="handleTabChange"
     >
       <el-tab-pane
@@ -13,6 +12,7 @@
         :key="tab.name"
         :label="tab.label"
         :name="String(tab.name)"
+        :disabled="Boolean(tab.disabled)"
       >
         <!-- 使用具名插槽，允许外部自定义每个 tab 的内容 -->
         <slot :name="`tab-${idx}`" :tab="tab">
@@ -33,6 +33,7 @@ interface TabItem {
   label: string
   name: string
   content?: string
+  disabled?: boolean
 }
 
 // 定义纯 UI Props
@@ -42,10 +43,9 @@ const props = defineProps<{
   activeTab?: string
 
   // Tabs 配置
-  type?: '' | 'card' | 'border-card'
+  type?: 'line' | 'card'
   tabPosition?: 'top' | 'right' | 'bottom' | 'left'
   closable?: boolean
-  addable?: boolean
 
   // 容器样式
   backgroundColor?: string
@@ -57,6 +57,10 @@ const emit = defineEmits<{
   (e: 'update:activeTab', value: string): void
   (e: 'tab-change', value: string): void
 }>()
+
+const elTabsType = computed<'' | 'card'>(() => {
+  return props.type === 'card' ? 'card' : ''
+})
 
 // 当前激活的 tab
 const activeTabValue = ref(props.activeTab ?? '')

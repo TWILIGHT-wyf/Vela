@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Table',
   title: '表格',
   version: '1.0.0',
-  category: '数据展示',
+  category: '数据',
   props: {
     data: {
       name: 'data',
@@ -68,6 +68,20 @@ const meta: MaterialMeta = {
       },
       defaultValue: 'default',
       group: '样式',
+    },
+    rowKey: {
+      name: 'rowKey',
+      label: '行唯一键',
+      setter: 'StringSetter',
+      defaultValue: 'id',
+      group: '数据',
+    },
+    loading: {
+      name: 'loading',
+      label: '加载状态',
+      setter: 'BooleanSetter',
+      defaultValue: false,
+      group: '状态',
     },
     autoHeight: {
       name: 'autoHeight',

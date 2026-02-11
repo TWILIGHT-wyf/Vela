@@ -13,6 +13,8 @@ const props = withDefaults(
     stripe?: boolean
     border?: boolean
     size?: 'large' | 'default' | 'small'
+    rowKey?: string
+    loading?: boolean
     autoHeight?: boolean
     maxHeight?: number
     highlightCurrentRow?: boolean
@@ -35,6 +37,8 @@ const props = withDefaults(
     stripe: true,
     border: true,
     size: 'default',
+    rowKey: '',
+    loading: false,
     autoHeight: false,
     maxHeight: undefined,
     highlightCurrentRow: true,
@@ -70,7 +74,9 @@ const defaultColumns: TableColumn[] = [
 ]
 
 const tableData = computed(() => (props.data && props.data.length > 0 ? props.data : defaultData))
-const tableColumns = computed(() => (props.columns && props.columns.length > 0 ? props.columns : defaultColumns))
+const tableColumns = computed(() =>
+  props.columns && props.columns.length > 0 ? props.columns : defaultColumns,
+)
 
 // 样式
 const containerStyle = computed<CSSProperties>(() => ({
@@ -108,6 +114,7 @@ function handleRowClick(row: Record<string, unknown>) {
       :stripe="stripe"
       :border="border"
       :size="size"
+      :row-key="rowKey || undefined"
       :height="autoHeight ? undefined : '100%'"
       :max-height="maxHeight"
       :highlight-current-row="highlightCurrentRow"
