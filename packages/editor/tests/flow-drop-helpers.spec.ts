@@ -37,7 +37,9 @@ describe('flow drop helpers', () => {
 
   it('recognizes container component names from material registry', () => {
     expect(isContainerComponentName('Container')).toBe(true)
-    expect(isContainerComponentName('GridBox')).toBe(true)
+    expect(isContainerComponentName('Grid')).toBe(true)
+    expect(isContainerComponentName('GridBox')).toBe(false)
+    expect(isContainerComponentName('Card')).toBe(false)
     expect(isContainerComponentName('Button')).toBe(false)
   })
 })

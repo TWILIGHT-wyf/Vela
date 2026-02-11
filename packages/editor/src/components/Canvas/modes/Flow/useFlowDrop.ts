@@ -2,6 +2,11 @@ import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import type { NodeSchema, GridNodeGeometry } from '@vela/core'
 import { countTracks } from '@vela/core'
+import {
+  COMPONENT_REGISTRY,
+  getComponentDefinition,
+  resolveComponentAlias,
+} from '@vela/core/contracts'
 import { materialList } from '@vela/materials'
 import { useComponent } from '@/stores/component'
 import { useCanvasContext } from '../../composables/useCanvasContext'
@@ -11,45 +16,32 @@ import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
  * 容器类型组件列表
  * 这些组件可以接收子组件
  */
-const CONTAINER_COMPONENTS = [
-  'Container',
-  'Group',
-  'Row',
-  'Col',
-  'Flex',
-  'Grid',
-  'row',
-  'col',
-  'flex',
-  'grid',
-  'panel',
-  'tabs',
-  'modal',
-  'Panel',
-  'Card',
-  'Tabs',
-  'TabPane',
-  'Modal',
-  'Page',
-]
-
 const ROW_CONTAINER_COMPONENTS = new Set(['row', 'flex'])
 const COLUMN_CONTAINER_COMPONENTS = new Set(['col'])
 
-const CONTAINER_COMPONENT_SET = new Set<string>([
-  ...CONTAINER_COMPONENTS,
-  ...CONTAINER_COMPONENTS.map((name) => name.toLowerCase()),
-])
+const CONTAINER_COMPONENT_SET = new Set<string>()
+
+for (const definition of COMPONENT_REGISTRY) {
+  if (!definition.isContainer) continue
+  CONTAINER_COMPONENT_SET.add(definition.name)
+  CONTAINER_COMPONENT_SET.add(definition.name.toLowerCase())
+}
 
 for (const meta of materialList) {
   if (!meta?.isContainer) continue
   if (meta.name) {
+    const canonicalName = resolveComponentAlias(meta.name)
     CONTAINER_COMPONENT_SET.add(meta.name)
     CONTAINER_COMPONENT_SET.add(meta.name.toLowerCase())
+    CONTAINER_COMPONENT_SET.add(canonicalName)
+    CONTAINER_COMPONENT_SET.add(canonicalName.toLowerCase())
   }
   if (meta.componentName) {
+    const canonicalName = resolveComponentAlias(meta.componentName)
     CONTAINER_COMPONENT_SET.add(meta.componentName)
     CONTAINER_COMPONENT_SET.add(meta.componentName.toLowerCase())
+    CONTAINER_COMPONENT_SET.add(canonicalName)
+    CONTAINER_COMPONENT_SET.add(canonicalName.toLowerCase())
   }
 }
 
@@ -64,6 +56,11 @@ const MAX_NESTING_DEPTH = 10
  */
 export function isContainerComponentName(name: string): boolean {
   if (!name) return false
+  const canonicalName = resolveComponentAlias(name)
+  const definition = getComponentDefinition(canonicalName)
+  if (definition) {
+    return Boolean(definition.isContainer)
+  }
   return CONTAINER_COMPONENT_SET.has(name) || CONTAINER_COMPONENT_SET.has(name.toLowerCase())
 }
 
@@ -233,6 +230,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * @param node 目标节点
    * @param direction 目标节点在父容器中的排列方向
    * @param isAltPressed 是否按住 Alt 键（强制放入内部）
+   * @param isShiftPressed 是否按住 Shift 键（强制同级 before/after）
    */
   function calculateDropPosition(
     mouseX: number,
@@ -241,6 +239,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     node: NodeSchema,
     direction: FlowDirection,
     isAltPressed: boolean = false,
+    isShiftPressed: boolean = false,
   ): DropPosition {
     const isHorizontal = direction === 'row'
     const edgeSize = isHorizontal ? rect.width : rect.height
@@ -252,6 +251,12 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     // 容器特殊处理
     if (isContainerNode(node)) {
+      // Shift 键强制同级插入
+      if (isShiftPressed) {
+        const ratio = relative / edgeSize
+        return ratio < 0.5 ? 'before' : 'after'
+      }
+
       // Alt 键强制放入内部
       if (isAltPressed) {
         return 'inside'
@@ -262,9 +267,19 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
         return 'inside'
       }
 
-      // 为容器边缘保留固定像素命中区，降低放入内部失败率。
-      // 小组件至少 12px，大组件最多 24px。
-      const edgeZone = Math.min(24, Math.max(12, edgeSize * 0.2))
+      // 为容器边缘保留固定像素命中区，降低误放入容器内部的概率。
+      // 小组件至少 10px，大组件最多 28px。
+      const edgeZone = Math.min(28, Math.max(10, edgeSize * 0.18))
+      const centerZone = edgeSize - edgeZone * 2
+      const ratio = relative / edgeSize
+
+      // 非常小的目标节点，弱化 inside，避免误触发
+      if (centerZone < 20) {
+        if (ratio >= 0.4 && ratio <= 0.6) {
+          return 'inside'
+        }
+        return ratio < 0.5 ? 'before' : 'after'
+      }
 
       if (relative < edgeZone) {
         return 'before'
@@ -300,6 +315,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       node: NodeSchema,
       element: HTMLElement,
       isAltPressed: boolean,
+      isShiftPressed: boolean,
     ) => {
       const rect = element.getBoundingClientRect()
 
@@ -316,7 +332,15 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
         direction = inferDropDirectionForParent(parent || rootNode)
       }
 
-      const position = calculateDropPosition(mouseX, mouseY, rect, node, direction, isAltPressed)
+      const position = calculateDropPosition(
+        mouseX,
+        mouseY,
+        rect,
+        node,
+        direction,
+        isAltPressed,
+        isShiftPressed,
+      )
 
       // 更新指示器状态
       indicatorState.value = {
@@ -356,7 +380,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     e.preventDefault()
     e.stopPropagation()
 
-    updateIndicatorState(e.clientX, e.clientY, node, element, e.altKey)
+    updateIndicatorState(e.clientX, e.clientY, node, element, e.altKey, e.shiftKey)
   }
 
   /**
