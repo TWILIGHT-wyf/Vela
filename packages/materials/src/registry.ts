@@ -87,6 +87,28 @@ const CATEGORY_LABEL_MAP: Partial<Record<ComponentCategory, string>> = {
   advanced: '高级',
 }
 
+/**
+ * 冗余/过于底层的容器不再在物料面板直接暴露，避免用户在多套容器之间迷失。
+ * 这些组件仍可被历史数据正常渲染。
+ */
+const PANEL_EXCLUDED_MATERIALS = new Set([
+  'Row',
+  'Col',
+  'Grid',
+  'Group',
+  'Page',
+  'row',
+  'col',
+  'grid',
+  'group',
+  'page',
+])
+
+/**
+ * 布局类物料优先级（越靠前越优先展示）
+ */
+const LAYOUT_MATERIAL_PRIORITY = ['Container', 'GridBox', 'Flex', 'Panel', 'Tabs', 'Modal']
+
 function lowerFirst(name: string): string {
   return name ? name.charAt(0).toLowerCase() + name.slice(1) : name
 }
@@ -110,6 +132,26 @@ function resolveMaterialCategory(meta: MaterialMeta): string {
   }
 
   return normalizeCategoryName(meta.category || '其他')
+}
+
+function materialDisplayName(meta: MaterialMeta): string {
+  const title = meta.title
+  return typeof title === 'string' ? title : meta.name || meta.componentName || ''
+}
+
+function isMaterialVisibleInPanel(meta: MaterialMeta): boolean {
+  const name = meta.name || meta.componentName || ''
+  return !PANEL_EXCLUDED_MATERIALS.has(name)
+}
+
+function getMaterialSortOrder(category: string, meta: MaterialMeta): number {
+  if (category !== '布局') {
+    return Number.MAX_SAFE_INTEGER
+  }
+
+  const name = meta.name || meta.componentName || ''
+  const index = LAYOUT_MATERIAL_PRIORITY.indexOf(name)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }
 
 /**
@@ -177,12 +219,28 @@ export function getRegisteredComponents(): string[] {
 export function getMaterialsByCategory(): Record<string, MaterialMeta[]> {
   const grouped: Record<string, MaterialMeta[]> = {}
   materialList.forEach((meta) => {
+    if (!isMaterialVisibleInPanel(meta)) {
+      return
+    }
+
     const category = resolveMaterialCategory(meta)
     if (!grouped[category]) {
       grouped[category] = []
     }
     grouped[category].push(meta)
   })
+
+  Object.entries(grouped).forEach(([category, list]) => {
+    list.sort((a, b) => {
+      const orderA = getMaterialSortOrder(category, a)
+      const orderB = getMaterialSortOrder(category, b)
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      return materialDisplayName(a).localeCompare(materialDisplayName(b), 'zh-Hans-CN')
+    })
+  })
+
   return grouped
 }
 
@@ -190,10 +248,13 @@ export function getMaterialsByCategory(): Record<string, MaterialMeta[]> {
  * 从 MaterialMeta 的 props 中提取默认值
  * 支持 ObjectSetter 嵌套属性的递归提取
  */
-export function extractDefaultProps(
-  props: MaterialMeta['props'] | PropSchema[],
+function extractDefaultsFromSchema(
+  props: MaterialMeta['props'] | PropSchema[] | Record<string, PropSchema> | undefined,
 ): Record<string, unknown> {
   const defaults: Record<string, unknown> = {}
+  if (!props) {
+    return defaults
+  }
 
   // 统一转为数组处理
   const propList: PropSchema[] = Array.isArray(props)
@@ -205,7 +266,7 @@ export function extractDefaultProps(
 
     // 递归处理 ObjectSetter 的嵌套属性
     if (prop.setter === 'ObjectSetter' && prop.properties) {
-      const subDefaults = extractDefaultProps(prop.properties)
+      const subDefaults = extractDefaultsFromSchema(prop.properties)
       // 合并：显式 defaultValue 优先，嵌套属性填充缺失值
       if (typeof value === 'object' && value !== null) {
         value = { ...subDefaults, ...value }
@@ -220,6 +281,22 @@ export function extractDefaultProps(
   })
 
   return defaults
+}
+
+export function extractDefaultProps(
+  props: MaterialMeta['props'] | PropSchema[],
+): Record<string, unknown> {
+  return extractDefaultsFromSchema(props)
+}
+
+/**
+ * 从 MaterialMeta 的 styles 中提取默认 style 值。
+ * 历史物料可能将默认样式写在 styles，而不是 props。
+ */
+export function extractDefaultStyles(
+  styles: MaterialMeta['styles'] | Record<string, PropSchema> | undefined,
+): Record<string, unknown> {
+  return extractDefaultsFromSchema(styles)
 }
 
 // 保持向后兼容

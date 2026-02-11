@@ -67,4 +67,16 @@ describe('materials category classification', () => {
     expect(baseTitles).not.toContain('按钮（基础）')
     expect(baseTitles).not.toContain('容器增强')
   })
+
+  it('hides redundant low-level layout containers from material panel', () => {
+    const grouped = getMaterialsByCategory()
+    const layoutTitles = (grouped['布局'] || []).map((meta) => meta.title as string)
+
+    expect(layoutTitles).toEqual(
+      expect.arrayContaining(['网格编排', '弹性布局', '面板', '标签页', '对话框']),
+    )
+    expect(layoutTitles).not.toEqual(
+      expect.arrayContaining(['行容器', '列容器', '网格布局', '组合容器', '页面容器']),
+    )
+  })
 })
