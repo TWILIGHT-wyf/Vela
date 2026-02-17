@@ -245,6 +245,11 @@ export function createDevToolsPanel() {
  */
 export const devToolsPanel = createDevToolsPanel()
 
+function isDevMode(): boolean {
+  const meta = import.meta as ImportMeta & { env?: { DEV?: boolean } }
+  return Boolean(meta.env?.DEV)
+}
+
 /**
  * 初始化 DevTools（在应用入口调用）
  */
@@ -253,7 +258,7 @@ export function initDevTools(root: Ref<NodeSchema | null>) {
   devToolsPanel.setupKeyboardShortcuts()
 
   // 开发环境自动启用日志
-  if (import.meta.env?.DEV) {
+  if (isDevMode()) {
     logger.enabled.value = true
   }
 

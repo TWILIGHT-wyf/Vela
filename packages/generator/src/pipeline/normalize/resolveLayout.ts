@@ -42,6 +42,55 @@ function parseRotationFromTransform(style: NodeStyle | undefined): number {
   return parseNumber(match[1], 0)
 }
 
+interface GridPlacement {
+  start: number
+  end: number
+}
+
+function normalizeGridPlacement(start: number, end: number): GridPlacement {
+  const normalizedStart = Math.max(1, Math.round(start))
+  const normalizedEnd = Math.max(normalizedStart + 1, Math.round(end))
+  return {
+    start: normalizedStart,
+    end: normalizedEnd,
+  }
+}
+
+function parseGridPlacement(value: unknown): GridPlacement | undefined {
+  if (typeof value === 'number') {
+    const start = Math.max(1, Math.round(value))
+    return { start, end: start + 1 }
+  }
+
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  if (!normalized) {
+    return undefined
+  }
+
+  const spanMatch = normalized.match(/^span\s+(\d+)$/i)
+  if (spanMatch) {
+    const span = Math.max(1, Number.parseInt(spanMatch[1] || '1', 10) || 1)
+    return { start: 1, end: 1 + span }
+  }
+
+  const [startRaw, endRaw] = normalized.split('/').map((segment) => segment.trim())
+  if (!startRaw || !endRaw) {
+    return undefined
+  }
+
+  const start = parseNumber(startRaw, Number.NaN)
+  const end = parseNumber(endRaw, Number.NaN)
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return undefined
+  }
+
+  return normalizeGridPlacement(start, end)
+}
+
 export interface ResolveLayoutParams {
   node: Pick<NodeSchema, 'geometry' | 'container' | 'style'>
   parentChildMode: LayoutMode
@@ -84,6 +133,19 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
       ? (geometry.rotate ?? parseRotationFromTransform(style))
       : parseRotationFromTransform(style)
 
+  const gridColumnPlacement =
+    geometry?.mode === 'grid'
+      ? normalizeGridPlacement(geometry.gridColumnStart, geometry.gridColumnEnd)
+      : nodeMode === 'grid'
+        ? parseGridPlacement(style?.gridColumn)
+        : undefined
+  const gridRowPlacement =
+    geometry?.mode === 'grid'
+      ? normalizeGridPlacement(geometry.gridRowStart, geometry.gridRowEnd)
+      : nodeMode === 'grid'
+        ? parseGridPlacement(style?.gridRow)
+        : undefined
+
   return {
     mode: nodeMode,
     childMode,
@@ -94,5 +156,9 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
     zIndex,
     rotate,
     order: geometry?.mode === 'flow' ? geometry.order : undefined,
+    gridColumnStart: gridColumnPlacement?.start,
+    gridColumnEnd: gridColumnPlacement?.end,
+    gridRowStart: gridRowPlacement?.start,
+    gridRowEnd: gridRowPlacement?.end,
   }
 }

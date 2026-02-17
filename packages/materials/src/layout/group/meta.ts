@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Group',
   title: '组合容器',
   version: '1.0.0',
-  category: '布局容器',
+  category: '基础',
   isContainer: true,
   props: {
     opacity: {

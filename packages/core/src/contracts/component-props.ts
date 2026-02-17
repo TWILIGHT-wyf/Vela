@@ -354,6 +354,9 @@ export interface ImageSchemaProps {
 // ============================================================================
 
 export interface ContainerSchemaProps {
+  tag?: 'div' | 'section' | 'article' | 'main' | 'aside' | 'header' | 'footer' | 'nav' | 'form'
+  role?: string
+  ariaLabel?: string
   padding?: CSSLength
   backgroundColor?: string
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto'

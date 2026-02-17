@@ -38,6 +38,7 @@ export type CommandType =
   | 'update-style'
   | 'update-geometry'
   | 'update-data-source'
+  | 'update-events'
   | 'update-container-layout'
   | 'update-grid-template'
   | 'batch'

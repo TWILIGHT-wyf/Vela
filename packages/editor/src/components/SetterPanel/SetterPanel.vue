@@ -1,5 +1,5 @@
 <template>
-  <div class="setter-panel-root">
+  <div class="setter-panel-root sider-root properties-panel">
     <!-- 选中 Page 根节点或无选中时，显示页面设置 -->
     <template v-if="showPageSettings">
       <PageSettingPane />

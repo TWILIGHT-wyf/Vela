@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'DateRange',
   title: '日期范围选择',
   version: '1.0.0',
-  category: '基础控件',
+  category: '表单',
   props: {
     defaultValue: {
       name: 'defaultValue',

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Editor V2 Core Functions', () => {
   test.beforeEach(async ({ page }) => {
     // 访问本地开发环境 (使用 V2 路由)
-    await page.goto('http://localhost:5173/editor-v2')
+    await page.goto('/editor-v2')
 
     // 等待画布加载
     await page.waitForSelector('.editor-canvas-viewport', { state: 'visible', timeout: 30000 })

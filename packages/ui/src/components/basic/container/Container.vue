@@ -1,14 +1,29 @@
 <template>
-  <div class="v-container">
+  <component
+    :is="tag"
+    class="v-container"
+    :role="role || undefined"
+    :aria-label="ariaLabel || undefined"
+  >
     <slot />
-  </div>
+  </component>
 </template>
 
 <script setup lang="ts">
-// Container 组件是一个纯粹的容器，样式通过 style 透传 (继承自 $attrs)
-// 不需要定义任何 CSS 相关的 Props
+interface Props {
+  tag?: 'div' | 'section' | 'article' | 'main' | 'aside' | 'header' | 'footer' | 'nav' | 'form'
+  role?: string
+  ariaLabel?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  tag: 'div',
+  role: '',
+  ariaLabel: '',
+})
+
 defineOptions({
-  inheritAttrs: true, // 允许 attrs (style, class, id) 自动绑定到根元素
+  inheritAttrs: true,
 })
 </script>
 

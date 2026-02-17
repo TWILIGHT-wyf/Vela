@@ -24,8 +24,10 @@ export function useEditorShortcuts(
     pasteNodes,
     selectComponents,
     findParentNode,
+    getParentId,
     updateGeometry,
     updateStyle,
+    selectComponent,
     clearSelection,
   } = compStore
 
@@ -167,6 +169,19 @@ export function useEditorShortcuts(
 
     // Escape - 取消选中 / 关闭菜单
     if (e.key === 'Escape') {
+      const currentId = selectedId.value ?? selectedIds.value[0]
+      if (currentId && selectedIds.value.length === 1) {
+        const parentId = getParentId(currentId)
+        if (parentId) {
+          e.preventDefault()
+          if (options.closeMenu) {
+            options.closeMenu()
+          }
+          selectComponent(parentId)
+          return
+        }
+      }
+
       if (options.closeMenu) {
         options.closeMenu()
       } else {

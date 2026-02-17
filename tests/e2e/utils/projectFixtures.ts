@@ -1,88 +1,134 @@
 import type { Page } from '@playwright/test'
-import type { ServerProject } from '@/types/api'
-import type { Project as StoreProject } from '@/stores/project'
+import type { ProjectSchema } from '@vela/core'
+import type { ServerProject } from '@vela/core/contracts'
 
-const baseStyle = { opacity: 100, visible: true, locked: false } as const
+const primarySchema: ProjectSchema = {
+  id: 'project_schema_primary',
+  version: '2.0.0',
+  name: '演示项目',
+  description: 'GIS#示例项目',
+  config: {
+    target: 'pc',
+  },
+  pages: [
+    {
+      id: 'page_1',
+      type: 'page',
+      name: '首页',
+      path: '/',
+      config: {
+        defaultLayoutMode: 'free',
+      },
+      state: [],
+      apis: [],
+      children: {
+        id: 'root',
+        component: 'Page',
+        container: { mode: 'free' },
+        props: {},
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          backgroundColor: '#ffffff',
+        },
+        children: [
+          {
+            id: 'text_1',
+            component: 'Text',
+            props: { text: 'Vela Studio 演示项目' },
+            style: {
+              width: 280,
+              height: 64,
+              fontSize: 24,
+              color: '#1f2933',
+            },
+            geometry: {
+              mode: 'free',
+              x: 120,
+              y: 80,
+              width: 280,
+              height: 64,
+              zIndex: 2,
+            },
+            children: [],
+          },
+          {
+            id: 'button_1',
+            component: 'Button',
+            props: { text: '示例按钮', type: 'primary' },
+            style: {
+              width: 160,
+              height: 40,
+            },
+            geometry: {
+              mode: 'free',
+              x: 120,
+              y: 200,
+              width: 160,
+              height: 40,
+              zIndex: 1,
+            },
+            children: [],
+          },
+        ],
+      },
+    },
+  ],
+}
+
+const chartSchema: ProjectSchema = {
+  id: 'project_schema_chart',
+  version: '2.0.0',
+  name: '图表分析',
+  description: 'Chart#折线图看板',
+  config: {
+    target: 'pc',
+  },
+  pages: [
+    {
+      id: 'page_analytics',
+      type: 'page',
+      name: '分析页',
+      path: '/',
+      config: {
+        defaultLayoutMode: 'grid',
+      },
+      state: [],
+      apis: [],
+      children: {
+        id: 'root_chart',
+        component: 'Page',
+        container: { mode: 'grid', columns: '1fr', rows: '1fr', gap: 8 },
+        props: {},
+        style: {
+          width: '100%',
+          height: '100%',
+        },
+        children: [],
+      },
+    },
+  ],
+}
 
 const serverProjects: ServerProject[] = [
   {
     _id: 'mock-project',
     name: '演示项目',
     description: 'GIS#示例项目',
-    category: 'GIS',
-    cover: '',
+    schema: primarySchema,
     createdAt: new Date('2024-01-01T00:00:00Z').toISOString(),
     updatedAt: new Date('2024-03-01T00:00:00Z').toISOString(),
-    pages: [
-      {
-        id: 'page-1',
-        name: '首页',
-        components: [
-          {
-            id: 'text_1',
-            type: 'Text',
-            name: '标题',
-            position: { x: 120, y: 80 },
-            size: { width: 280, height: 64 },
-            rotation: 0,
-            zindex: 2,
-            style: { ...baseStyle, fontSize: 24, fontColor: '#1f2933' },
-            props: { text: 'Vela Studio 演示项目' },
-            dataSource: undefined,
-          },
-          {
-            id: 'panel_1',
-            type: 'panel',
-            name: '信息面板',
-            position: { x: 80, y: 180 },
-            size: { width: 320, height: 200 },
-            rotation: 0,
-            zindex: 1,
-            style: { ...baseStyle, backgroundColor: '#ffffff', border: '1px solid #e5e7eb' },
-            props: { title: '实时监控', content: '总览数据将在此展示' },
-            dataSource: undefined,
-          },
-        ],
-        canvasSettings: {
-          width: 1440,
-          height: 900,
-          backgroundColor: '#101623',
-          gridEnabled: true,
-          snapEnabled: true,
-        },
-      },
-    ],
   },
   {
     _id: 'chart-project',
     name: '图表分析',
     description: 'Chart#折线图看板',
-    category: 'Chart',
-    cover: '',
+    schema: chartSchema,
     createdAt: new Date('2024-02-01T00:00:00Z').toISOString(),
     updatedAt: new Date('2024-03-15T00:00:00Z').toISOString(),
-    pages: [
-      {
-        id: 'page-analytics',
-        name: '分析页',
-        components: [],
-      },
-    ],
   },
 ]
-
-const localProjects: StoreProject[] = serverProjects.map((project, idx) => ({
-  id: project._id,
-  name: project.name,
-  description: project.description,
-  cover: project.cover,
-  createdAt: Date.now() - idx * 1000,
-  updatedAt: Date.now() - idx * 1000,
-  pages: project.pages.map((page) => ({
-    ...page,
-    components: page.components.map((comp) => ({ ...comp })),
-  })),
-}))
 
 function buildServerResponse(body: unknown) {
   return {
@@ -94,33 +140,52 @@ function buildServerResponse(body: unknown) {
 
 export async function mockProjectApis(page: Page) {
   await page.route('**/api/projects**', async (route) => {
-    const url = new URL(route.request().url())
-    const isListEndpoint = url.pathname === '/api/projects'
-    if (route.request().method() !== 'GET') {
-      return route.fulfill({ status: 200, body: JSON.stringify({ data: null }) })
-    }
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname
+    const method = request.method()
 
-    if (isListEndpoint) {
+    if (method === 'GET' && path === '/api/projects') {
       return route.fulfill(buildServerResponse(serverProjects))
     }
 
-    const id = url.pathname.replace('/api/projects/', '')
-    const match = serverProjects.find((p) => p._id === id)
-    return route.fulfill(buildServerResponse(match ?? null))
+    if (method === 'GET' && path.startsWith('/api/projects/')) {
+      const id = path.replace('/api/projects/', '')
+      const match = serverProjects.find((p) => p._id === id) || null
+      return route.fulfill(buildServerResponse(match))
+    }
+
+    if (method === 'POST' && path === '/api/projects') {
+      return route.fulfill(buildServerResponse(serverProjects[0]))
+    }
+
+    if (method === 'PUT' && path.startsWith('/api/projects/')) {
+      const id = path.replace('/api/projects/', '')
+      const match = serverProjects.find((p) => p._id === id) || serverProjects[0]
+      return route.fulfill(buildServerResponse(match))
+    }
+
+    if (method === 'DELETE' && path.startsWith('/api/projects/')) {
+      return route.fulfill(buildServerResponse(null))
+    }
+
+    return route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Not Found' }),
+    })
   })
 }
 
-export async function seedLocalProjects(page: Page) {
-  await page.addInitScript((projects) => {
-    window.localStorage.setItem('vela_projects', JSON.stringify(projects))
-  }, localProjects)
+export async function seedLocalProject(page: Page) {
+  await page.addInitScript((project) => {
+    window.localStorage.setItem('vela_project', JSON.stringify(project))
+  }, primarySchema)
 }
 
 export async function bootstrapProjects(page: Page) {
   await mockProjectApis(page)
-  await seedLocalProjects(page)
+  await seedLocalProject(page)
 }
 
 export const PRIMARY_PROJECT_ID = serverProjects[0]._id
-export const serverProjectFixtures = serverProjects
-export const localProjectFixtures = localProjects

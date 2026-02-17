@@ -10,6 +10,10 @@ export interface NormalizedNodeLayout {
   zIndex: number
   rotate: number
   order?: number
+  gridColumnStart?: number
+  gridColumnEnd?: number
+  gridRowStart?: number
+  gridRowEnd?: number
 }
 
 export interface NormalizedNode {

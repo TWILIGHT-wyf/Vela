@@ -1,6 +1,19 @@
 import React, { forwardRef } from 'react'
 
-export interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
+type ContainerTag =
+  | 'div'
+  | 'section'
+  | 'article'
+  | 'main'
+  | 'aside'
+  | 'header'
+  | 'footer'
+  | 'nav'
+  | 'form'
+
+export interface ContainerProps extends React.HTMLAttributes<HTMLElement> {
+  tag?: ContainerTag
+  ariaLabel?: string
   width?: number | string
   height?: number | string
   maxWidth?: number | string
@@ -8,8 +21,11 @@ export interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   centered?: boolean
 }
 
-export const Container = forwardRef<HTMLDivElement, ContainerProps>(
-  ({ width, height, maxWidth, padding, centered, style, children, ...props }, ref) => {
+export const Container = forwardRef<HTMLElement, ContainerProps>(
+  (
+    { tag = 'div', ariaLabel, width, height, maxWidth, padding, centered, style, children, ...props },
+    ref,
+  ) => {
     const combinedStyle: React.CSSProperties = {
       width: typeof width === 'number' ? `${width}px` : width,
       height: typeof height === 'number' ? `${height}px` : height,
@@ -19,12 +35,18 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(
       ...style,
     }
 
-    return (
-      <div ref={ref} style={combinedStyle} {...props}>
-        {children}
-      </div>
+    const Tag = tag as React.ElementType
+    return React.createElement(
+      Tag,
+      {
+        ...props,
+        ref: ref as React.Ref<HTMLElement>,
+        style: combinedStyle,
+        'aria-label': ariaLabel || undefined,
+      },
+      children,
     )
-  }
+  },
 )
 
 Container.displayName = 'Container'

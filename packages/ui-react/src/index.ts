@@ -56,6 +56,8 @@ export { Pagination } from './components/Pagination'
 
 // Content Components
 export { Iframe } from './components/Iframe'
+export { Markdown } from './components/Markdown'
+export { Html } from './components/Html'
 
 // Media Components
 export { Image } from './components/Image'
@@ -106,6 +108,8 @@ export type { MultiSelectProps, MultiSelectOption } from './components/MultiSele
 export type { SearchBoxProps } from './components/SearchBox'
 export type { DateRangeProps, DateRangeValue } from './components/DateRange'
 export type { IframeProps } from './components/Iframe'
+export type { MarkdownProps } from './components/Markdown'
+export type { HtmlProps } from './components/Html'
 export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb'
 export type { NavButtonProps } from './components/NavButton'
 export type { PaginationProps } from './components/Pagination'

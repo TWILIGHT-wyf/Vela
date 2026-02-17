@@ -22,6 +22,12 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('e.ctrlKey || e.metaKey || e.shiftKey')
   })
 
+  it('普通点击应走命中链选择，支持重复点击逐级选父', () => {
+    const source = readFileSync(nodeWrapperPath, 'utf-8')
+    expect(source).toContain('selectByHitPath')
+    expect(source).toContain('const nextId = selectByHitPath(props.nodeId)')
+  })
+
   it('应支持 Alt + 点击快速选中父容器', () => {
     const source = readFileSync(nodeWrapperPath, 'utf-8')
     expect(source).toContain('if (e.altKey)')
@@ -70,8 +76,9 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain('margin-overlay-left')
     // 使用 overlay-label 替换旧 flow-spacing-hint
     expect(source).toContain('overlay-label')
-    // 任意布局模式均触发（不限制 grid 模式）
-    expect(source).toContain('return isSelected.value || isHovered.value')
+    // 有选中目标时仅显示当前选中，避免切换组件时出现多目标叠加异常
+    expect(source).toContain('if (selectedIds.value.length > 0) return isSelected.value')
+    expect(source).toContain('return isHovered.value')
     // 拖拽反馈进行中时关闭，避免视觉冲突
     expect(source).toContain('if (isDragFeedbackActive.value) return false')
   })
@@ -83,7 +90,7 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("handleFlowSpacingDragStart('bottom', $event)")
     expect(source).toContain("handleFlowSpacingDragStart('left', $event)")
     expect(source).toContain('parseMarginShorthand')
-    expect(source).toContain('resolveSpacingNumber(style, side)')
+    expect(source).toContain('const baseMargin = marginPx.value[side]')
     expect(source).toContain('const patch = { [styleKey]: Math.round(pendingMargin) }')
     // 使用面积型覆盖层替代旧的细线 handle
     expect(source).toContain('.margin-overlay-top')
@@ -115,9 +122,9 @@ describe('NodeWrapper 组件', () => {
     expect(source).toContain("if (side === 'top') next = baseVal + dy")
     // Escape 同样可取消 padding 调整
     expect(source).toContain('PADDING_RANGE')
-    // 选中即显示（最小 4px strip），不要求 padding > 0
+    // 选中即显示（保留最小命中 strip），不要求 padding > 0
     expect(source).toContain('return isSelected.value')
-    expect(source).toContain('Math.max(paddingPx.top, 4)')
+    expect(source).toContain('Math.max(paddingPx.top, MIN_PADDING_HIT_SIZE)')
     // 调整中仅显示当前侧
     expect(source).toContain("activeSpacingKind.value !== 'padding'")
     expect(source).toContain('return activeSpacingSide.value === side')

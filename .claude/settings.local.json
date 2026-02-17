@@ -34,7 +34,12 @@
       "Bash(find:*)",
       "Bash(for dir in \"c:\\\\Users\\\\TWILIGHT\\\\Desktop\\\\Typescript\\\\webgis\\\\packages\\\\materials\\\\src\\\\data\"/*)",
       "Bash(do [ -d \"$dir\" ])",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm test:run:*)",
+      "Bash(Select-String \"error TS\":*)",
+      "Bash(for file in c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/advanced/Html/meta.ts c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/advanced/Iframe/meta.ts c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/basic/container/meta.ts c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/data/badge/meta.ts c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/form/checkbox/meta.ts c:UsersTWILIGHTDesktopTypescriptwebgispackagesmaterialssrc/layout/grid/meta.ts)",
+      "Bash(do grep -E \"^\\\\s*\\(name|category|title\\):\" \"$file\")"
     ]
   }
 }

@@ -1,19 +1,29 @@
-import { inject, computed } from 'vue'
+import { provide, inject, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
+import { evaluate } from '@vela/core'
 import type { ActionSchema } from '@vela/core/types/action'
-import type { NodeSchema } from '@vela/core/types/schema'
+import { isNodeEventActionLinkRef, type NodeSchema } from '@vela/core/types/schema'
+
+type EditableAction = ActionSchema<string> & {
+  content?: string
+  blank?: boolean
+  stateName?: string
+}
 
 const ComponentEventsKey = Symbol('ComponentEvents') as unknown as import('vue').InjectionKey<{
   emitComponentEvent: (componentId: string, eventName: string, params?: unknown) => void
-  executeAction: (action: ActionSchema, sourceComponent?: NodeSchema) => Promise<void>
+  executeAction: (action: EditableAction, sourceComponent?: NodeSchema) => Promise<void>
 }>
 
 export function provideComponentEvents() {
   const componentStore = useComponent()
   const { rootNode } = storeToRefs(componentStore)
 
-  async function executeAction(action: ActionSchema, sourceComponent?: NodeSchema): Promise<void> {
+  async function executeAction(
+    action: EditableAction,
+    sourceComponent?: NodeSchema,
+  ): Promise<void> {
     console.log('[ComponentEvents] Executing action:', action.type)
 
     switch (action.type) {
@@ -24,7 +34,7 @@ export function provideComponentEvents() {
         break
       case 'openUrl':
         if ('url' in action) {
-          const url = action.url || ''
+          const url = typeof action.url === 'string' ? action.url : ''
           if (action.blank) {
             window.open(url, '_blank')
           } else {
@@ -33,23 +43,26 @@ export function provideComponentEvents() {
         }
         break
       case 'navigate':
-        if ('path' in action) {
-          window.location.hash = action.path || ''
+        if ('path' in action && typeof action.path === 'string') {
+          window.location.hash = action.path
         }
         break
       case 'updateState':
         if ('stateName' in action && 'value' in action) {
-          // @ts-ignore
+          // @ts-expect-error action narrowing incomplete for updateState
           console.log('Update state:', action.stateName, action.value)
         }
         break
       case 'customScript':
         if ('content' in action) {
           try {
-            const fn = new Function('component', 'rootNode', action.content || '')
-            fn(sourceComponent, rootNode?.value ?? null)
+            // 使用沙箱安全执行用户脚本
+            evaluate(action.content || '', {
+              component: sourceComponent ?? {},
+              rootNode: rootNode?.value ?? {},
+            })
           } catch (error) {
-            console.error('Error executing custom script:', error)
+            console.error('[ComponentEvents] Error executing custom script in sandbox:', error)
           }
         }
         break
@@ -65,7 +78,7 @@ export function provideComponentEvents() {
     executeAction,
   }
 
-  inject(ComponentEventsKey, context, true)
+  provide(ComponentEventsKey, context)
 }
 
 export function useComponentEvents() {
@@ -103,7 +116,8 @@ export function useComponentEventHandlers(componentId: string) {
     if (!comp?.events?.click) return
 
     for (const action of comp.events.click) {
-      await eventContext.executeAction(action, comp)
+      if (isNodeEventActionLinkRef(action)) continue
+      await eventContext.executeAction(action as EditableAction, comp)
     }
   }
 
@@ -112,7 +126,8 @@ export function useComponentEventHandlers(componentId: string) {
     if (!comp?.events?.mouseenter) return
 
     for (const action of comp.events.mouseenter) {
-      await eventContext.executeAction(action, comp)
+      if (isNodeEventActionLinkRef(action)) continue
+      await eventContext.executeAction(action as EditableAction, comp)
     }
   }
 
@@ -121,7 +136,8 @@ export function useComponentEventHandlers(componentId: string) {
     if (!comp?.events?.dblclick) return
 
     for (const action of comp.events.dblclick) {
-      await eventContext.executeAction(action, comp)
+      if (isNodeEventActionLinkRef(action)) continue
+      await eventContext.executeAction(action as EditableAction, comp)
     }
   }
 
@@ -130,7 +146,8 @@ export function useComponentEventHandlers(componentId: string) {
     if (!comp?.events?.[eventName]) return
 
     for (const action of comp.events[eventName]) {
-      await eventContext.executeAction(action, comp)
+      if (isNodeEventActionLinkRef(action)) continue
+      await eventContext.executeAction(action as EditableAction, comp)
     }
   }
 

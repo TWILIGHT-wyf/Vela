@@ -166,8 +166,8 @@ export const COMPONENT_REGISTRY: readonly ComponentDefinition[] = [
   { name: 'video', category: 'media', vueTag: 'vVideo', reactComponent: 'Video' },
 
   // ── Content ───────────────────────────────────────────────
-  { name: 'markdown', category: 'content', vueTag: 'vMarkdown', reactComponent: null },
-  { name: 'html', category: 'content', vueTag: 'vHtml', reactComponent: null },
+  { name: 'markdown', category: 'content', vueTag: 'vMarkdown', reactComponent: 'Markdown' },
+  { name: 'html', category: 'content', vueTag: 'vHtml', reactComponent: 'Html' },
   { name: 'iframe', category: 'content', vueTag: 'vIframe', reactComponent: 'Iframe' },
 
   // ── GIS ───────────────────────────────────────────────────

@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Progress',
   title: '进度条',
   version: '1.0.0',
-  category: '数据',
+  category: 'KPI',
   props: {
     percentage: {
       name: 'percentage',

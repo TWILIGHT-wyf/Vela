@@ -31,6 +31,13 @@ export function buildNodeStyleFromIR(node: IRNode): Record<string, string | numb
     }
   }
 
+  const hasMargin =
+    style.margin !== undefined ||
+    style.marginTop !== undefined ||
+    style.marginRight !== undefined ||
+    style.marginBottom !== undefined ||
+    style.marginLeft !== undefined
+
   // 2. Overlay layout properties
   if (node.layout.mode === 'free') {
     style.position = 'absolute'
@@ -44,6 +51,27 @@ export function buildNodeStyleFromIR(node: IRNode): Record<string, string | numb
     }
     if (style.zIndex === undefined) {
       style.zIndex = node.layout.zIndex
+    }
+  } else if (node.layout.mode === 'grid') {
+    const hasGridPlacement =
+      Number.isFinite(node.layout.gridColumnStart) &&
+      Number.isFinite(node.layout.gridColumnEnd) &&
+      Number.isFinite(node.layout.gridRowStart) &&
+      Number.isFinite(node.layout.gridRowEnd)
+
+    if (hasGridPlacement) {
+      style.gridColumn = `${node.layout.gridColumnStart} / ${node.layout.gridColumnEnd}`
+      style.gridRow = `${node.layout.gridRowStart} / ${node.layout.gridRowEnd}`
+    }
+
+    // Let CSS grid stretch fill the cell unless margin is explicitly configured.
+    if (!hasMargin) {
+      if (style.width === undefined) {
+        style.width = '100%'
+      }
+      if (style.height === undefined) {
+        style.height = '100%'
+      }
     }
   } else {
     // Flow mode

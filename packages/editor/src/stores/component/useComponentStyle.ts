@@ -1,5 +1,12 @@
 import { ref, computed } from 'vue'
-import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
+import {
+  countTracks,
+  type GridNodeGeometry,
+  type NodeGeometry,
+  type NodeSchema,
+  type NodeStyle,
+} from '@vela/core'
+import type { PropValue } from '@vela/core/types/expression'
 import type { ComponentIndexContext } from './useComponentIndex'
 
 /**
@@ -38,10 +45,18 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     const node = nodeIndex.get(id)
     if (!node) return
 
-    node.style = {
+    const nextStyle: Record<string, unknown> = {
       ...(node.style || {}),
       ...style,
     }
+
+    for (const [key, value] of Object.entries(style)) {
+      if (value === undefined) {
+        delete nextStyle[key]
+      }
+    }
+
+    node.style = nextStyle as NodeStyle
 
     incrementVersion(id)
     syncToProjectStore()
@@ -56,7 +71,7 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
 
     node.props = {
       ...(node.props || {}),
-      ...props,
+      ...(props as Record<string, PropValue>),
     }
 
     incrementVersion(id)
@@ -101,6 +116,39 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
       ...(node.container || {}),
       mode: layoutMode,
     } as NodeSchema['container']
+
+    if (layoutMode === 'grid') {
+      const container = node.container as unknown as Record<string, unknown>
+      const normalizedColumns =
+        typeof container.columns === 'string' && container.columns.trim().length > 0
+          ? container.columns
+          : '1fr'
+      const colCount = Math.max(1, countTracks(String(normalizedColumns)))
+      const children = node.children || []
+      const rowCount = Math.max(children.length, 1)
+
+      container.columns = normalizedColumns
+      if (typeof container.rows !== 'string' || container.rows.trim().length === 0) {
+        container.rows = Array(rowCount).fill('1fr').join(' ')
+      }
+      if (container.gap === undefined) {
+        container.gap = 8
+      }
+
+      children.forEach((child, index) => {
+        const geometry =
+          child.geometry?.mode === 'grid' ? (child.geometry as GridNodeGeometry) : undefined
+        child.geometry = {
+          ...(geometry || {}),
+          mode: 'grid',
+          gridColumnStart: geometry?.gridColumnStart ?? 1,
+          gridColumnEnd: geometry?.gridColumnEnd ?? colCount + 1,
+          gridRowStart: index + 1,
+          gridRowEnd: index + 2,
+        } as GridNodeGeometry
+      })
+    }
+
     incrementVersion(id)
     syncToProjectStore()
   }
@@ -204,6 +252,18 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
   }
 
   /**
+   * [Raw] 更新事件配置 - 不记录历史
+   */
+  function updateEventsRaw(id: string, events: Record<string, unknown[]>): void {
+    const node = nodeIndex.get(id)
+    if (!node) return
+
+    node.events = events as NodeSchema['events']
+    incrementVersion(id)
+    syncToProjectStore()
+  }
+
+  /**
    * [Raw] 更新响应式断点样式覆盖 - 不记录历史
    * Writes to node.responsive[breakpoint] instead of node.style
    */
@@ -239,6 +299,7 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     updatePropsRaw,
     updateDataSourceRaw,
     updateGeometryRaw,
+    updateEventsRaw,
     updateContainerLayoutRaw,
     updateGridTemplateRaw,
     updateResponsiveStyleRaw,

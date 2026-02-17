@@ -73,16 +73,21 @@ export const useBreakpointStore = defineStore('breakpoint', () => {
   }
 
   function syncToProject() {
+    const canvas = projectStore.currentPage?.config?.canvas || {}
     projectStore.updatePageConfig({
-      breakpoints: { ...breakpoints.value },
+      canvas: {
+        ...canvas,
+        breakpoints: { ...breakpoints.value },
+      },
     })
   }
 
   /** Load breakpoints from project config */
   function loadFromProject() {
     const config = projectStore.currentPage?.config
-    if (config?.breakpoints && Object.keys(config.breakpoints).length > 0) {
-      breakpoints.value = { ...config.breakpoints }
+    const pageBreakpoints = config?.canvas?.breakpoints
+    if (pageBreakpoints && Object.keys(pageBreakpoints).length > 0) {
+      breakpoints.value = { ...pageBreakpoints }
       responsiveEnabled.value = true
     }
   }

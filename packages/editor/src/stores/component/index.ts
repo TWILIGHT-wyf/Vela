@@ -14,6 +14,7 @@ import {
   UpdateGeometryCommand,
   UpdatePropsCommand,
   UpdateDataSourceCommand,
+  UpdateEventsCommand,
   UpdateChildLayoutCommand,
   UpdateGridTemplateCommand,
 } from '../commands/index'
@@ -148,6 +149,21 @@ export const useComponent = defineStore('component', () => {
   }
 
   /**
+   * 更新组件的事件配置（通过命令执行，支持撤销）
+   */
+  function updateEvents(id: string, events: Record<string, unknown[]>) {
+    const node = indexCtx.nodeIndex.get(id)
+    if (!node) {
+      console.warn(`[ComponentStore] Node not found: ${id}`)
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const cmd = new UpdateEventsCommand(id, events)
+    historyStore.executeCommand(cmd)
+  }
+
+  /**
    * 更新组件的布局模式（通过命令执行，支持撤销）
    */
   function updateContainerLayout(id: string, layoutMode: 'free' | 'flow' | 'grid') {
@@ -229,6 +245,15 @@ export const useComponent = defineStore('component', () => {
     deleteComponent,
     syncToProjectStore,
   )
+
+  // ========== Computed ==========
+
+  /**
+   * 组件数量（不含根节点），使用 Map.size O(1) 计算
+   */
+  const nodeCount = computed(() => {
+    return Math.max(0, indexCtx.nodeIndex.size - 1)
+  })
 
   // ========== Compatibility Shims ==========
 
@@ -337,6 +362,7 @@ export const useComponent = defineStore('component', () => {
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
     updateGeometryRaw: styleCtx.updateGeometryRaw,
+    updateEventsRaw: styleCtx.updateEventsRaw,
     updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
     updateGridTemplateRaw: styleCtx.updateGridTemplateRaw,
   })
@@ -355,6 +381,7 @@ export const useComponent = defineStore('component', () => {
     selectedNodes: selectionCtx.selectedNodes,
     hoveredNode: selectionCtx.hoveredNode,
     getStyleVersion: styleCtx.getStyleVersion,
+    nodeCount,
 
     // Utilities
     findNodeById: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
@@ -419,6 +446,7 @@ export const useComponent = defineStore('component', () => {
     updateStyle,
     updateGeometry,
     updateDataSource,
+    updateEvents,
     updateContainerLayout,
     updateGridTemplate,
     deleteComponent,
@@ -426,6 +454,7 @@ export const useComponent = defineStore('component', () => {
     moveComponent,
     selectComponent: selectionCtx.selectComponent,
     selectComponents: selectionCtx.selectComponents,
+    selectByHitPath: selectionCtx.selectByHitPath,
     toggleSelection: selectionCtx.toggleSelection,
     setHovered: selectionCtx.setHovered,
     clearSelection: selectionCtx.clearSelection,
@@ -439,6 +468,7 @@ export const useComponent = defineStore('component', () => {
     updatePropsRaw: styleCtx.updatePropsRaw,
     updateDataSourceRaw: styleCtx.updateDataSourceRaw,
     updateGeometryRaw: styleCtx.updateGeometryRaw,
+    updateEventsRaw: styleCtx.updateEventsRaw,
     updateChildLayoutRaw: styleCtx.updateContainerLayoutRaw,
     updateGridTemplateRaw: styleCtx.updateGridTemplateRaw,
 

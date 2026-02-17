@@ -505,6 +505,13 @@ function buildNodeStyle(node) {
     return style
   }
 
+  const hasMargin =
+    style.margin !== undefined ||
+    style.marginTop !== undefined ||
+    style.marginRight !== undefined ||
+    style.marginBottom !== undefined ||
+    style.marginLeft !== undefined
+
   if (node.layout.mode === 'free') {
     style.position = 'absolute'
     style.left = node.layout.x || 0
@@ -517,6 +524,26 @@ function buildNodeStyle(node) {
     }
     if (style.zIndex === undefined) {
       style.zIndex = node.layout.zIndex
+    }
+  } else if (node.layout.mode === 'grid') {
+    const hasGridPlacement =
+      Number.isFinite(node.layout.gridColumnStart) &&
+      Number.isFinite(node.layout.gridColumnEnd) &&
+      Number.isFinite(node.layout.gridRowStart) &&
+      Number.isFinite(node.layout.gridRowEnd)
+
+    if (hasGridPlacement) {
+      style.gridColumn = \`\${node.layout.gridColumnStart} / \${node.layout.gridColumnEnd}\`
+      style.gridRow = \`\${node.layout.gridRowStart} / \${node.layout.gridRowEnd}\`
+    }
+
+    if (!hasMargin) {
+      if (style.width === undefined) {
+        style.width = '100%'
+      }
+      if (style.height === undefined) {
+        style.height = '100%'
+      }
     }
   } else {
     if (style.width === undefined && node.layout.width !== undefined) {

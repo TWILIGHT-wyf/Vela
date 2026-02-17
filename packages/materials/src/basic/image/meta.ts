@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Image',
   title: '图片',
   version: '1.0.0',
-  category: '基础组件',
+  category: '媒体',
   props: {
     url: {
       name: 'url',

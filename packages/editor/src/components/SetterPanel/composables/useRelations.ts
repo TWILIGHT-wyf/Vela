@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
 
@@ -159,7 +159,7 @@ export function useLayoutConfig() {
   })
 
   const layoutAlign = computed({
-    get: () => selectedNode.value?.style?.alignItems || 'start',
+    get: () => selectedNode.value?.style?.alignItems || 'flex-start',
     set: (val) => {
       if (!selectedNode.value?.style) return
       selectedNode.value.style.alignItems = val

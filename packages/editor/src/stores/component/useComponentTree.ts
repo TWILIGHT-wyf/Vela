@@ -78,6 +78,16 @@ export function useComponentTree(
     })
   }
 
+  function normalizeGridHierarchy(node: NodeSchema | null | undefined) {
+    if (!node) return
+    if (node.container?.mode === 'grid') {
+      normalizeGridContainer(node)
+    }
+    if (node.children && node.children.length > 0) {
+      node.children.forEach((child) => normalizeGridHierarchy(child))
+    }
+  }
+
   /**
    * 扁平化树为数组
    */
@@ -92,6 +102,7 @@ export function useComponentTree(
    */
   function loadTree(tree: NodeSchema) {
     rootNode.value = cloneDeep(tree)
+    normalizeGridHierarchy(rootNode.value)
     rebuildIndex(rootNode.value)
     clearSelection()
   }
@@ -100,6 +111,7 @@ export function useComponentTree(
    * 设置组件树（不深拷贝，用于撤销/重做）
    */
   function setTree(tree: NodeSchema) {
+    normalizeGridHierarchy(tree)
     rootNode.value = tree
     rebuildIndex(rootNode.value)
   }

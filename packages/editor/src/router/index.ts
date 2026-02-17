@@ -21,6 +21,13 @@ const router = createRouter({
       meta: { title: 'Vela Engine' },
     },
     {
+      path: '/editor-v2/:id?',
+      redirect: (to) => {
+        const id = typeof to.params.id === 'string' ? to.params.id : ''
+        return id ? `/editor/${id}` : '/editor'
+      },
+    },
+    {
       path: '/preview',
       name: 'Preview',
       component: Preview,

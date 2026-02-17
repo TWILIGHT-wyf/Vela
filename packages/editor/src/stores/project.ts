@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { nanoid } from 'nanoid'
 import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/core'
 
 const STORAGE_KEY = 'vela_project'
+export type SaveStatus = 'saved' | 'saving' | 'unsaved'
 
 function createGridContainer(container?: NodeSchema['container']): NodeSchema['container'] {
   if (container?.mode === 'grid') {
@@ -40,13 +41,14 @@ export const useProjectStore = defineStore('project', () => {
 
   // Getters
   const currentPageId = ref<string>('')
+  const activePageId = computed(() => currentPageId.value)
 
   const currentPage = computed(() => {
     return project.value.pages.find((p) => p.id === currentPageId.value)
   })
 
   // Save Status
-  const saveStatus = ref<'saved' | 'saving' | 'unsaved'>('saved')
+  const saveStatus = ref<SaveStatus>('saved')
   const lastSavedTime = ref<number | null>(null)
 
   // Actions
@@ -161,6 +163,44 @@ export const useProjectStore = defineStore('project', () => {
     }
     project.value.pages.push(newPage)
     currentPageId.value = pageId
+    saveStatus.value = 'unsaved'
+  }
+
+  function switchPage(pageId: string) {
+    if (project.value.pages.some((page) => page.id === pageId)) {
+      currentPageId.value = pageId
+    }
+  }
+
+  function deletePage(pageId: string) {
+    const index = project.value.pages.findIndex((page) => page.id === pageId)
+    if (index === -1) return
+
+    project.value.pages.splice(index, 1)
+
+    if (project.value.pages.length === 0) {
+      createDefaultProject()
+      return
+    }
+
+    if (currentPageId.value === pageId) {
+      const next = project.value.pages[Math.min(index, project.value.pages.length - 1)]
+      currentPageId.value = next.id
+    }
+
+    saveStatus.value = 'unsaved'
+  }
+
+  function renamePage(pageId: string, name: string, route?: string) {
+    const page = project.value.pages.find((item) => item.id === pageId)
+    if (!page) return
+
+    page.name = name
+    if (page.type === 'page' && route && route.trim()) {
+      page.path = route.startsWith('/') ? route : `/${route}`
+    }
+
+    saveStatus.value = 'unsaved'
   }
 
   async function saveProject() {
@@ -175,6 +215,59 @@ export const useProjectStore = defineStore('project', () => {
       console.error('Save failed', e)
       saveStatus.value = 'unsaved'
     }
+  }
+
+  // ========== 自动保存 ==========
+
+  const AUTO_SAVE_DELAY = 1500 // ms
+  const MAX_RETRY = 3
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+  let retryCount = 0
+
+  /**
+   * 触发自动保存（防抖 1.5s）
+   * 在每次 saveStatus 变为 'unsaved' 时自动调度
+   */
+  function scheduleAutoSave() {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer)
+    }
+    autoSaveTimer = setTimeout(async () => {
+      autoSaveTimer = null
+      if (saveStatus.value !== 'unsaved') return
+      try {
+        await saveProject()
+        retryCount = 0
+      } catch {
+        retryCount++
+        if (retryCount < MAX_RETRY) {
+          // 3s 后重试
+          autoSaveTimer = setTimeout(scheduleAutoSave, 3000)
+        } else {
+          console.error('[AutoSave] Max retries reached, stopping auto-save')
+          retryCount = 0
+        }
+      }
+    }, AUTO_SAVE_DELAY)
+  }
+
+  // 监听 saveStatus 变化，自动触发保存
+  watch(saveStatus, (status) => {
+    if (status === 'unsaved') {
+      scheduleAutoSave()
+    }
+  })
+
+  // 页面关闭前提示未保存
+  function handleBeforeUnload(e: BeforeUnloadEvent) {
+    if (saveStatus.value === 'unsaved') {
+      e.preventDefault()
+      e.returnValue = '您有未保存的更改，确定要离开吗？'
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', handleBeforeUnload)
   }
 
   function updatePageConfig(config: Partial<PageConfig>) {
@@ -208,11 +301,15 @@ export const useProjectStore = defineStore('project', () => {
   return {
     project,
     currentPageId,
+    activePageId,
     currentPage,
     saveStatus,
     lastSavedTime,
     initProject,
     addPage,
+    switchPage,
+    deletePage,
+    renamePage,
     saveProject,
     updatePageConfig,
     changePageLayout,

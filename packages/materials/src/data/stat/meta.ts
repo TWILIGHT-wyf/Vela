@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Stat',
   title: '统计指标',
   version: '1.0.0',
-  category: '数据',
+  category: 'KPI',
   props: {
     title: {
       name: 'title',

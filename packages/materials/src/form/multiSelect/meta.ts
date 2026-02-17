@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'MultiSelect',
   title: '多选选择器',
   version: '1.0.0',
-  category: '基础控件',
+  category: '表单',
   props: {
     options: {
       name: 'options',

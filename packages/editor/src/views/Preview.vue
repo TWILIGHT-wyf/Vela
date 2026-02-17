@@ -62,8 +62,13 @@
       <!-- 运行预览 Tab -->
       <div v-show="activeTab === 'preview'" class="tab-content preview-tab">
         <div class="preview-viewport-wrapper">
-          <div class="preview-viewport">
-            <RuntimeRenderer v-if="rootNode" :root-node="rootNode" mode="preview" />
+          <div class="preview-viewport" :style="viewportStyle">
+            <RuntimeRenderer
+              v-if="rootNode"
+              :root-node="rootNode"
+              mode="preview"
+              :plugins="runtimePlugins"
+            />
             <div v-else class="empty-state">
               <div class="empty-icon">📄</div>
               <p>当前页面没有内容</p>
@@ -94,7 +99,9 @@
       <div v-show="activeTab === 'code'" class="tab-content code-tab">
         <div class="panel-card">
           <div class="panel-header">
-            <span class="panel-title">生成的 {{ codeOptions.framework === 'vue3' ? 'Vue' : 'React' }} 代码</span>
+            <span class="panel-title"
+              >生成的 {{ codeOptions.framework === 'vue3' ? 'Vue' : 'React' }} 代码</span
+            >
             <div class="panel-actions">
               <el-radio-group v-model="codeOptions.framework" size="small" class="framework-toggle">
                 <el-radio-button value="vue3">
@@ -121,7 +128,9 @@
               <el-icon class="is-loading"><Loading /></el-icon>
               <span>生成中...</span>
             </div>
-            <pre v-else><code class="hljs" :class="'language-' + getCodeLanguage()" v-html="highlightedCode"></code></pre>
+            <pre
+              v-else
+            ><code class="hljs" :class="'language-' + getCodeLanguage()" v-html="highlightedCode"></code></pre>
           </div>
         </div>
       </div>
@@ -138,7 +147,11 @@
               </div>
             </div>
             <div class="panel-actions">
-              <el-radio-group v-model="projectOptions.framework" size="small" class="framework-toggle">
+              <el-radio-group
+                v-model="projectOptions.framework"
+                size="small"
+                class="framework-toggle"
+              >
                 <el-radio-button value="vue3">
                   <span class="framework-icon vue-icon">V</span>
                   Vue3
@@ -199,7 +212,12 @@
                   <span class="file-path">{{ selectedFilePath || '选择一个文件以查看代码' }}</span>
                 </div>
                 <div class="code-actions">
-                  <el-button text size="small" @click="copyFileContent" :disabled="!selectedFileContent">
+                  <el-button
+                    text
+                    size="small"
+                    @click="copyFileContent"
+                    :disabled="!selectedFileContent"
+                  >
                     <el-icon><CopyDocument /></el-icon>
                     复制
                   </el-button>
@@ -226,6 +244,8 @@ import { useRouter } from 'vue-router'
 import { RuntimeRenderer } from '@vela/renderer'
 import { useComponent } from '@/stores/component'
 import { useProjectStore } from '@/stores/project'
+import { useSizeStore } from '@/stores/size'
+import { useRuntimePlugins } from '@/composables/useRuntimePlugins'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import {
@@ -263,9 +283,17 @@ hljs.registerLanguage('css', css)
 const router = useRouter()
 const compStore = useComponent()
 const projectStore = useProjectStore()
+const sizeStore = useSizeStore()
 
 const { rootNode } = storeToRefs(compStore)
 const { currentPage } = storeToRefs(projectStore)
+const runtimePlugins = useRuntimePlugins()
+
+// 预览视口尺寸跟随画布设置
+const viewportStyle = computed(() => ({
+  width: `${sizeStore.width}px`,
+  height: `${sizeStore.height}px`,
+}))
 
 const activeTab = ref<'preview' | 'json' | 'code' | 'project'>('preview')
 
@@ -301,10 +329,7 @@ interface GeneratorDiagnostic {
   path?: string
 }
 
-function buildGenerateOptions(
-  framework: 'vue3' | 'react',
-  language: 'ts' | 'js',
-) {
+function buildGenerateOptions(framework: 'vue3' | 'react', language: 'ts' | 'js') {
   if (framework === 'vue3') {
     return {
       framework,
@@ -747,8 +772,6 @@ const copyFileContent = async () => {
 
 .preview-viewport {
   position: relative;
-  width: 1920px;
-  height: 1080px;
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);

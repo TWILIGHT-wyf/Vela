@@ -192,9 +192,29 @@ export function defineMaterial<T extends Component>(
         })
       }
 
+      const splitForwardAttrs = (rawAttrs: Record<string, unknown>) => {
+        const wrapperAttrs: Record<string, unknown> = {}
+        const componentAttrs: Record<string, unknown> = {}
+
+        for (const [key, value] of Object.entries(rawAttrs)) {
+          const isWrapperAttr = key === 'class' || key === 'style' || key.startsWith('data-')
+          if (isWrapperAttr) {
+            wrapperAttrs[key] = value
+          } else {
+            componentAttrs[key] = value
+          }
+        }
+
+        return { wrapperAttrs, componentAttrs }
+      }
+
       // Props 适配（向后兼容）
       const adaptedProps = computed(() => {
-        const rawProps = { ...props, ...attrs }
+        const { componentAttrs } = splitForwardAttrs(attrs as Record<string, unknown>)
+        const rawProps = {
+          ...props,
+          ...(fillContainer ? componentAttrs : (attrs as Record<string, unknown>)),
+        }
         if (propsAdapter) {
           return propsAdapter(rawProps as Record<string, unknown>)
         }
@@ -254,18 +274,24 @@ export function defineMaterial<T extends Component>(
         const wrappedContent = h(WrappedComponent, enhancedAttrs.value, { ...slots })
 
         if (fillContainer) {
+          const { wrapperAttrs } = splitForwardAttrs(attrs as Record<string, unknown>)
+
           return h(
             'div',
             {
-              class: 'material-wrapper',
-              style: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'stretch',
-                // 确保容器本身不干扰 flex 布局
-                flexDirection: 'column',
-              },
+              ...wrapperAttrs,
+              class: ['material-wrapper', wrapperAttrs.class],
+              style: [
+                {
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  // 确保容器本身不干扰 flex 布局
+                  flexDirection: 'column',
+                },
+                wrapperAttrs.style,
+              ],
             },
             [wrappedContent],
           )

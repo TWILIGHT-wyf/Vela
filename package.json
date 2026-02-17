@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "docker-compose up -d && concurrently --kill-others -n \"SERVER,EDITOR\" -c \"blue,magenta\" \"pnpm -F @vela/server dev\" \"pnpm -F @vela/editor dev\"",
-    "build": "pnpm -F @vela/editor build",
+    "build": "pnpm -r --if-present build",
+    "build:editor": "pnpm -F @vela/editor build",
+    "preview": "pnpm -F @vela/editor exec vite preview --host 0.0.0.0 --port 4173 --strictPort",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -12,6 +14,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
+    "test:e2e": "pnpm exec playwright test",
     "prepare": "husky install"
   },
   "lint-staged": {

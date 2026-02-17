@@ -47,7 +47,7 @@
             <el-form-item label="子节点布局">
               <el-radio-group
                 :model-value="layoutModeValue"
-                @update:model-value="(val: 'grid' | 'free') => setLayoutMode(val)"
+                @update:model-value="(val) => setLayoutMode((val as 'grid' | 'free') || 'grid')"
               >
                 <el-radio-button label="grid">网格编排</el-radio-button>
                 <el-radio-button label="free">自由布局</el-radio-button>
@@ -184,6 +184,124 @@
                 @update:model-value="(val: string) => setStyleValue('padding', val)"
               />
             </el-form-item>
+
+            <div class="spacing-editor">
+              <div class="spacing-editor-block" v-if="!hasCustomStyle('margin')">
+                <div class="spacing-editor-title">Margin 四边（px）</div>
+                <div class="spacing-editor-grid">
+                  <label class="spacing-cell">
+                    <span>上</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('margin', 'top')"
+                      :step="1"
+                      :min="-500"
+                      :max="1000"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('margin', 'top', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>右</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('margin', 'right')"
+                      :step="1"
+                      :min="-500"
+                      :max="1000"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('margin', 'right', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>下</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('margin', 'bottom')"
+                      :step="1"
+                      :min="-500"
+                      :max="1000"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('margin', 'bottom', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>左</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('margin', 'left')"
+                      :step="1"
+                      :min="-500"
+                      :max="1000"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('margin', 'left', val)
+                      "
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div class="spacing-editor-block" v-if="!hasCustomStyle('padding')">
+                <div class="spacing-editor-title">Padding 四边（px）</div>
+                <div class="spacing-editor-grid">
+                  <label class="spacing-cell">
+                    <span>上</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('padding', 'top')"
+                      :step="1"
+                      :min="0"
+                      :max="500"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('padding', 'top', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>右</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('padding', 'right')"
+                      :step="1"
+                      :min="0"
+                      :max="500"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('padding', 'right', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>下</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('padding', 'bottom')"
+                      :step="1"
+                      :min="0"
+                      :max="500"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('padding', 'bottom', val)
+                      "
+                    />
+                  </label>
+                  <label class="spacing-cell">
+                    <span>左</span>
+                    <el-input-number
+                      :model-value="getSpacingSideValue('padding', 'left')"
+                      :step="1"
+                      :min="0"
+                      :max="500"
+                      controls-position="right"
+                      @update:model-value="
+                        (val: number | undefined) => setSpacingSideValue('padding', 'left', val)
+                      "
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
           </el-collapse-item>
 
           <!-- 字体 -->
@@ -359,7 +477,7 @@ const groupedStyles = computed(() => {
  * 获取样式值（响应式读取）
  * 通过订阅 styleVersion 实现响应式更新
  */
-function getStyleValue(styleName: string, defaultValue?: unknown): unknown {
+function getStyleValue(styleName: string, defaultValue?: unknown): any {
   if (!props.node) return defaultValue
 
   // 订阅版本号变化以触发响应式更新
@@ -376,13 +494,96 @@ function getStyleValue(styleName: string, defaultValue?: unknown): unknown {
  */
 function setStyleValue(styleName: string, value: unknown): void {
   if (!props.node) return
+  if (styleName === 'margin' || styleName === 'padding') {
+    const sideKeys = Object.values(spacingStyleKeyMap[styleName])
+    const patch: Record<string, unknown> = { [styleName]: value }
+    for (const key of sideKeys) {
+      patch[key] = undefined
+    }
+    componentStore.updateStyle(props.node.id, patch)
+    return
+  }
   componentStore.updateStyle(props.node.id, { [styleName]: value })
+}
+
+type SpacingKind = 'margin' | 'padding'
+type SpacingSide = 'top' | 'right' | 'bottom' | 'left'
+
+const spacingStyleKeyMap: Record<SpacingKind, Record<SpacingSide, string>> = {
+  margin: {
+    top: 'marginTop',
+    right: 'marginRight',
+    bottom: 'marginBottom',
+    left: 'marginLeft',
+  },
+  padding: {
+    top: 'paddingTop',
+    right: 'paddingRight',
+    bottom: 'paddingBottom',
+    left: 'paddingLeft',
+  },
+}
+
+function parseSpacingNumber(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return 0
+    const match = trimmed.match(/^(-?\d+(?:\.\d+)?)(px)?$/i)
+    if (match) {
+      return Number.parseFloat(match[1])
+    }
+  }
+  return 0
+}
+
+function parseSpacingShorthand(value: unknown): [number, number, number, number] | null {
+  if (typeof value !== 'string') return null
+  const parts = value
+    .trim()
+    .split(/\s+/)
+    .map((item) => parseSpacingNumber(item))
+
+  if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]]
+  if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]]
+  if (parts.length === 3) return [parts[0], parts[1], parts[2], parts[1]]
+  if (parts.length === 4) return [parts[0], parts[1], parts[2], parts[3]]
+  return null
+}
+
+function getSpacingSideValue(kind: SpacingKind, side: SpacingSide): number {
+  const sideKey = spacingStyleKeyMap[kind][side]
+  const sideValue = getStyleValue(sideKey)
+  if (sideValue !== undefined && sideValue !== null && sideValue !== '') {
+    return parseSpacingNumber(sideValue)
+  }
+
+  const shorthand = parseSpacingShorthand(getStyleValue(kind))
+  if (shorthand) {
+    const idx = side === 'top' ? 0 : side === 'right' ? 1 : side === 'bottom' ? 2 : 3
+    return shorthand[idx]
+  }
+
+  return 0
+}
+
+function setSpacingSideValue(kind: SpacingKind, side: SpacingSide, value: number | undefined): void {
+  if (!props.node) return
+  const sideKey = spacingStyleKeyMap[kind][side]
+  const numeric = Number.isFinite(value) ? Math.round(value as number) : 0
+  const bounded = kind === 'padding' ? Math.max(0, Math.min(500, numeric)) : Math.max(-500, numeric)
+  componentStore.updateStyle(props.node.id, {
+    [kind]: undefined,
+    [sideKey]: `${bounded}px`,
+  })
 }
 
 /**
  * 获取 Meta 定义的样式/属性值
  */
-function getMetaStyleValue(style: NamedStyleConfig): unknown {
+function getMetaStyleValue(style: NamedStyleConfig): any {
   if (!props.node) return style.defaultValue
 
   // 订阅版本号变化以触发响应式更新
@@ -511,5 +712,45 @@ const hasAllCustomStyles = (names: string[]) => {
   color: var(--el-text-color-secondary);
   margin-top: 4px;
   line-height: 1.5;
+}
+
+.spacing-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.spacing-editor-block {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--el-fill-color-extra-light);
+}
+
+.spacing-editor-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+  margin-bottom: 8px;
+}
+
+.spacing-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.spacing-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.spacing-cell :deep(.el-input-number) {
+  width: 128px;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flow-viewport"
+    class="flow-viewport editor-canvas-viewport"
     :class="{ 'is-embedded': embedded }"
     ref="viewportRef"
     @click="handleBackgroundClick"
@@ -8,7 +8,7 @@
   >
     <div class="flow-workspace" :style="workspaceStyle">
       <div
-        class="simulation-page"
+        class="simulation-page canvas-stage"
         :class="{
           'show-bounds': uiStore.canvasSettings.showCanvasBounds,
           'is-grid-mode': rootLayoutMode === 'grid',
@@ -79,8 +79,9 @@
       <span>Ctrl/Cmd/Shift + 点击：多选</span>
       <span v-if="rootLayoutMode === 'grid'">拖拽边缘手柄：调整 fr 比例</span>
       <span v-else>选中组件后拖拽边缘手柄：调整宽高</span>
-      <span>悬停节点可查看 margin 标注</span>
+      <span>选中节点可查看 margin / padding 标注</span>
       <span>拖拽橙色外侧线：调整 margin</span>
+      <span>拖拽绿色内侧线：调整 padding</span>
       <span>方向键微调（Shift 加速）</span>
       <span v-if="rootLayoutMode === 'free'">Alt + 拖拽：临时关闭吸附</span>
       <button class="zoom-fit-btn" @click="handleZoomToFit" title="Ctrl+0: Zoom to Fit">Fit</button>
@@ -115,7 +116,7 @@ const props = withDefaults(
 
 const componentStore = useComponent()
 const { rootNode } = storeToRefs(componentStore)
-const { selectComponent, toggleSelection, clearSelection } = componentStore
+const { selectComponent, clearSelection } = componentStore
 
 const uiStore = useUIStore()
 const sizeStore = useSizeStore()
@@ -297,7 +298,7 @@ function handleMenuAction(action: string) {
       }
       break
     default:
-      console.log('[FlowCanvas] Unhandled menu action:', action)
+      break
   }
 }
 
@@ -305,32 +306,14 @@ function handleMenuAction(action: string) {
  * 处理背景点击 - 取消选中
  */
 const handleBackgroundClick = (e: MouseEvent) => {
-  const target = e.target as HTMLElement
   const isMultiSelectModifier = e.ctrlKey || e.metaKey || e.shiftKey
-
-  // 检查是否点击了组件 (通过事件代理)
-  const nodeEl = target.closest('[data-id]')
-  if (nodeEl) {
-    const id = nodeEl.getAttribute('data-id')
-    if (id) {
-      console.log('[FlowCanvas] Selected component:', id)
-      if (isMultiSelectModifier) {
-        toggleSelection(id)
-      } else {
-        selectComponent(id)
-      }
-      e.stopPropagation()
-      return
-    }
-  }
 
   // 多选修饰键按下时，点击空白不清空选择，避免误操作
   if (isMultiSelectModifier) {
     return
   }
 
-  // 点击空白处，取消选中
-  console.log('[FlowCanvas] Clicked empty space, clearing selection')
+  // 组件选中统一由 NodeWrapper 处理；此处仅处理空白区域取消选中
   clearSelection()
 }
 
@@ -428,6 +411,11 @@ const handleRootDrop = (e: DragEvent) => {
   grid-template-columns: var(--vela-adaptive-columns, 1fr);
   grid-template-rows: var(--vela-adaptive-rows, 1fr);
   gap: var(--vela-adaptive-gap, 8px);
+  padding: 0;
+  align-content: stretch;
+  justify-content: stretch;
+  align-items: stretch;
+  justify-items: stretch;
   box-sizing: border-box;
 }
 

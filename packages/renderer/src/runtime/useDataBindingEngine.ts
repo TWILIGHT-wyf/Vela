@@ -16,7 +16,8 @@ export interface DataBindingEngine {
  * 归一化组件的数据绑定配置
  */
 function normalizeBindings(node: NodeSchema): DataBinding[] {
-  return Array.isArray(node.dataBindings) ? node.dataBindings : []
+  const dataBindings = (node as NodeSchema & { dataBindings?: DataBinding[] }).dataBindings
+  return Array.isArray(dataBindings) ? dataBindings : []
 }
 
 /**

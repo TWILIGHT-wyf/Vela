@@ -1,5 +1,21 @@
-﻿import type { PageTemplate } from '@vela/core/types/page'
-import { nanoid } from 'nanoid'
+﻿import { nanoid } from 'nanoid'
+
+interface TemplateComponentSchema {
+  id: string
+  type: string
+  [key: string]: unknown
+}
+
+type TemplateCategory = 'dashboard' | 'gis' | 'form' | 'chart' | 'other'
+
+interface PageTemplate {
+  id: string
+  name: string
+  description?: string
+  preview?: string
+  category: TemplateCategory
+  components: TemplateComponentSchema[]
+}
 
 // 默认样式基础对象
 const baseStyle = {
@@ -1386,7 +1402,6 @@ export const projectTemplate: PageTemplate = {
 // 所有模板
 export const templates: PageTemplate[] = [
   dashboardTemplate,
-  gisTemplate,
   formTemplate,
   chartAnalysisTemplate,
   iotTemplate,

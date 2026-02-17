@@ -3,78 +3,96 @@ import { storeToRefs } from 'pinia'
 import { nanoid } from 'nanoid'
 import { useComponent } from '@/stores/component'
 import type { ActionSchema } from '@vela/core/types/action'
+import { isNodeEventActionLinkRef, type NodeEventAction } from '@vela/core/types/schema'
+
+type EditableAction = ActionSchema<string> & {
+  content?: string
+  blank?: boolean
+  stateName?: string
+}
+
+function toEditableActions(actions?: NodeEventAction[]): EditableAction[] {
+  if (!actions) return []
+  return actions.filter((action): action is EditableAction => !isNodeEventActionLinkRef(action))
+}
+
+/**
+ * 深拷贝事件对象（安全处理 Vue 响应式代理）
+ */
+function cloneEvents(events: Record<string, NodeEventAction[]>): Record<string, unknown[]> {
+  return JSON.parse(JSON.stringify(events))
+}
 
 export function useEventConfiguration() {
   const componentStore = useComponent()
   const { selectedNode } = storeToRefs(componentStore)
 
-  function ensureEvents() {
-    if (!selectedNode.value) return
-    if (!selectedNode.value.events) {
-      selectedNode.value.events = {}
-    }
+  /**
+   * 通过命令系统更新事件（支持撤销/重做）
+   */
+  function commitEvents(updater: (events: Record<string, NodeEventAction[]>) => void) {
+    const node = selectedNode.value
+    if (!node) return
+    // 拷贝当前事件配置
+    const events = node.events ? cloneEvents(node.events) : {}
+    updater(events as Record<string, NodeEventAction[]>)
+    componentStore.updateEvents(node.id, events)
   }
 
-  const clickActions = computed<ActionSchema[]>({
+  const clickActions = computed<EditableAction[]>({
     get: () => {
-      if (!selectedNode.value?.events?.click) return []
-      return selectedNode.value.events.click
+      return toEditableActions(selectedNode.value?.events?.click)
     },
-    set: (value: ActionSchema[]) => {
-      if (selectedNode.value?.events) {
-        selectedNode.value.events.click = value
-        componentStore.syncToProjectStore()
-      }
+    set: (value: EditableAction[]) => {
+      commitEvents((events) => {
+        events.click = value as NodeEventAction[]
+      })
     },
   })
 
-  const hoverActions = computed<ActionSchema[]>({
+  const hoverActions = computed<EditableAction[]>({
     get: () => {
-      if (!selectedNode.value?.events?.hover) return []
-      return selectedNode.value.events.hover
+      return toEditableActions(selectedNode.value?.events?.hover)
     },
-    set: (value: ActionSchema[]) => {
-      if (selectedNode.value?.events) {
-        selectedNode.value.events.hover = value
-        componentStore.syncToProjectStore()
-      }
+    set: (value: EditableAction[]) => {
+      commitEvents((events) => {
+        events.hover = value as NodeEventAction[]
+      })
     },
   })
 
   function addClickAction() {
-    ensureEvents()
-    if (!selectedNode.value!.events!.click) {
-      selectedNode.value!.events!.click = []
-    }
-    selectedNode.value!.events!.click.push({
-      id: nanoid(),
-      type: '',
+    commitEvents((events) => {
+      if (!events.click) events.click = []
+      events.click.push({
+        id: nanoid(),
+        type: '',
+      } as NodeEventAction)
     })
-    componentStore.syncToProjectStore()
   }
 
   function removeClickAction(index: number) {
-    if (!selectedNode.value?.events?.click) return
-    selectedNode.value.events.click.splice(index, 1)
-    componentStore.syncToProjectStore()
+    commitEvents((events) => {
+      if (!events.click) return
+      events.click.splice(index, 1)
+    })
   }
 
   function addHoverAction() {
-    ensureEvents()
-    if (!selectedNode.value!.events!.hover) {
-      selectedNode.value!.events!.hover = []
-    }
-    selectedNode.value!.events!.hover.push({
-      id: nanoid(),
-      type: '',
+    commitEvents((events) => {
+      if (!events.hover) events.hover = []
+      events.hover.push({
+        id: nanoid(),
+        type: '',
+      } as NodeEventAction)
     })
-    componentStore.syncToProjectStore()
   }
 
   function removeHoverAction(index: number) {
-    if (!selectedNode.value?.events?.hover) return
-    selectedNode.value.events.hover.splice(index, 1)
-    componentStore.syncToProjectStore()
+    commitEvents((events) => {
+      if (!events.hover) return
+      events.hover.splice(index, 1)
+    })
   }
 
   return {

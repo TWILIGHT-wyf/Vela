@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Switch',
   title: '开关',
   version: '1.0.0',
-  category: '基础控件',
+  category: '表单',
   props: {
     defaultValue: {
       name: 'defaultValue',

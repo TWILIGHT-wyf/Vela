@@ -17,8 +17,8 @@ test('SetterPanel UI Verification', async ({ page }) => {
   })
 
   // 1. Navigate to the editor
-  console.log('Navigating to http://localhost:5173/editor-v2...')
-  await page.goto('http://localhost:5173/editor-v2', { waitUntil: 'domcontentloaded' })
+  console.log('Navigating to /editor-v2...')
+  await page.goto('/editor-v2', { waitUntil: 'domcontentloaded' })
 
   console.log('Waiting for .immersive-editor...')
   await page.waitForSelector('.immersive-editor', { timeout: 10000 })

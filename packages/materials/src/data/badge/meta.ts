@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'Badge',
   title: '徽章',
   version: '1.0.0',
-  category: '数据',
+  category: '基础',
   props: {
     value: {
       name: 'value',

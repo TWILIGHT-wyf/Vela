@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'ButtonGroup',
   title: '按钮组',
   version: '1.0.0',
-  category: '基础控件',
+  category: '表单',
   props: {
     buttons: {
       name: 'buttons',

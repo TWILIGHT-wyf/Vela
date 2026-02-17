@@ -4,12 +4,18 @@ import type { NodeSchema } from '@vela/core'
 import { useComponentSelection } from '@/stores/component/useComponentSelection'
 import type { ComponentIndexContext } from '@/stores/component/useComponentIndex'
 
-function createIndexCtx(nodes: NodeSchema[]): ComponentIndexContext {
+function createIndexCtx(
+  nodes: NodeSchema[],
+  parentRelations: Array<[childId: string, parentId: string]> = [],
+): ComponentIndexContext {
   const nodeIndex = new Map<string, NodeSchema>()
   const parentIndex = new Map<string, string>()
 
   nodes.forEach((node) => {
     nodeIndex.set(node.id, node)
+  })
+  parentRelations.forEach(([childId, parentId]) => {
+    parentIndex.set(childId, parentId)
   })
 
   return {
@@ -86,5 +92,52 @@ describe('useComponentSelection', () => {
     selection.selectComponents(['a', 'missing', 'c'])
 
     expect(selection.selectedNodes.value.map((node) => node.id)).toEqual(['a', 'c'])
+  })
+
+  it('selectByHitPath 重复点击同一命中点应逐级选中父节点', () => {
+    const selection = useComponentSelection(
+      createIndexCtx(
+        [
+          { id: 'root', component: 'Page' },
+          { id: 'parent', component: 'Container' },
+          { id: 'child', component: 'Text' },
+        ],
+        [
+          ['parent', 'root'],
+          ['child', 'parent'],
+        ],
+      ),
+    )
+
+    expect(selection.selectByHitPath('child')).toBe('child')
+    expect(selection.selectedId.value).toBe('child')
+
+    expect(selection.selectByHitPath('child')).toBe('parent')
+    expect(selection.selectedId.value).toBe('parent')
+
+    expect(selection.selectByHitPath('child')).toBe('root')
+    expect(selection.selectedId.value).toBe('root')
+  })
+
+  it('selectByHitPath 在普通选择切换后应重置命中链循环', () => {
+    const selection = useComponentSelection(
+      createIndexCtx(
+        [
+          { id: 'root', component: 'Page' },
+          { id: 'parent', component: 'Container' },
+          { id: 'child', component: 'Text' },
+        ],
+        [
+          ['parent', 'root'],
+          ['child', 'parent'],
+        ],
+      ),
+    )
+
+    selection.selectByHitPath('child')
+    selection.selectComponent('parent')
+
+    expect(selection.selectByHitPath('child')).toBe('child')
+    expect(selection.selectedId.value).toBe('child')
   })
 })

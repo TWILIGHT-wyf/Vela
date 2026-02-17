@@ -96,11 +96,8 @@ const selectedInfo = computed(() => {
   return `已选中 ${count} 个组件`
 })
 
-// 组件数量
-const componentCount = computed(() => {
-  if (!compStore.rootNode) return 0
-  return compStore.flattenTree(compStore.rootNode).length - 1 // 减去根节点
-})
+// 组件数量（O(1)，使用 Map.size）
+const componentCount = computed(() => compStore.nodeCount)
 
 // 缩放比例
 const zoom = computed(() => Math.round((scale.value || 1) * 100))

@@ -1,5 +1,5 @@
 <template>
-  <div class="canvas-board-wrapper">
+  <div class="canvas-board-wrapper" data-testid="canvas-board">
     <!-- Infinite canvas viewport (Figma-like) -->
     <CanvasViewport>
       <!-- Flow 画布嵌入在无限画布内 -->

@@ -3,78 +3,115 @@ import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
 import { nanoid } from 'nanoid'
 import type { ActionSchema } from '@vela/core/types/action'
+import { isNodeEventActionLinkRef, type NodeEventAction } from '@vela/core/types/schema'
+
+type EditableAction = ActionSchema<string> & {
+  content?: string
+  blank?: boolean
+  stateName?: string
+}
+
+function toEditableActions(actions?: NodeEventAction[]): EditableAction[] {
+  if (!actions) return []
+  return actions.filter((action): action is EditableAction => !isNodeEventActionLinkRef(action))
+}
+
+function mergeEditableActions(
+  existing: NodeEventAction[] | undefined,
+  editableActions: EditableAction[],
+): NodeEventAction[] {
+  if (!existing || existing.length === 0) {
+    return editableActions as NodeEventAction[]
+  }
+
+  const queue = [...editableActions]
+  const merged: NodeEventAction[] = []
+
+  for (const action of existing) {
+    if (isNodeEventActionLinkRef(action)) {
+      merged.push(action)
+      continue
+    }
+
+    const next = queue.shift()
+    if (next) {
+      merged.push(next as NodeEventAction)
+    }
+  }
+
+  for (const action of queue) {
+    merged.push(action as NodeEventAction)
+  }
+
+  return merged
+}
 
 export function useEventConfiguration() {
   const componentStore = useComponent()
   const { selectedNode } = storeToRefs(componentStore)
 
-  function ensureEvents() {
-    if (!selectedNode.value) return
-    if (!selectedNode.value.events) {
-      selectedNode.value.events = {}
+  function commitEventActions(type: 'click' | 'hover', editableActions: EditableAction[]) {
+    const node = selectedNode.value
+    if (!node) return
+
+    const existing = node.events?.[type]
+    const merged = mergeEditableActions(existing, editableActions)
+    const nextEvents = {
+      ...(node.events || {}),
+      [type]: merged,
     }
+
+    componentStore.updateEvents(node.id, nextEvents as Record<string, unknown[]>)
   }
 
-  const clickActions = computed<ActionSchema[]>({
+  const clickActions = computed<EditableAction[]>({
     get: () => {
-      if (!selectedNode.value?.events?.click) return []
-      return selectedNode.value.events.click
+      return toEditableActions(selectedNode.value?.events?.click)
     },
-    set: (value: ActionSchema[]) => {
-      if (selectedNode.value?.events) {
-        selectedNode.value.events.click = value
-        componentStore.syncToProjectStore()
-      }
+    set: (value: EditableAction[]) => {
+      commitEventActions('click', value)
     },
   })
 
-  const hoverActions = computed<ActionSchema[]>({
+  const hoverActions = computed<EditableAction[]>({
     get: () => {
-      if (!selectedNode.value?.events?.hover) return []
-      return selectedNode.value.events.hover
+      return toEditableActions(selectedNode.value?.events?.hover)
     },
-    set: (value: ActionSchema[]) => {
-      if (selectedNode.value?.events) {
-        selectedNode.value.events.hover = value
-        componentStore.syncToProjectStore()
-      }
+    set: (value: EditableAction[]) => {
+      commitEventActions('hover', value)
     },
   })
 
   function addClickAction() {
-    ensureEvents()
-    if (!selectedNode.value!.events!.click) {
-      selectedNode.value!.events!.click = []
-    }
-    selectedNode.value!.events!.click.push({
+    const next = [...clickActions.value]
+    next.push({
       id: nanoid(),
       type: 'alert',
-    } as ActionSchema)
-    componentStore.syncToProjectStore()
+    } as EditableAction)
+    commitEventActions('click', next)
   }
 
   function removeClickAction(index: number) {
-    if (!selectedNode.value?.events?.click) return
-    selectedNode.value.events.click.splice(index, 1)
-    componentStore.syncToProjectStore()
+    const next = [...clickActions.value]
+    if (index < 0 || index >= next.length) return
+    next.splice(index, 1)
+    commitEventActions('click', next)
   }
 
   function addHoverAction() {
-    ensureEvents()
-    if (!selectedNode.value!.events!.hover) {
-      selectedNode.value!.events!.hover = []
-    }
-    selectedNode.value!.events!.hover.push({
+    const next = [...hoverActions.value]
+    next.push({
       id: nanoid(),
       type: 'alert',
-    } as ActionSchema)
-    componentStore.syncToProjectStore()
+    } as EditableAction)
+    commitEventActions('hover', next)
   }
 
   function removeHoverAction(index: number) {
-    if (!selectedNode.value?.events?.hover) return
-    selectedNode.value.events.hover.splice(index, 1)
-    componentStore.syncToProjectStore()
+    const next = [...hoverActions.value]
+    if (index < 0 || index >= next.length) return
+    next.splice(index, 1)
+    commitEventActions('hover', next)
   }
 
   return {

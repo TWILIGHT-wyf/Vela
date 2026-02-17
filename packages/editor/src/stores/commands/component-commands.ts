@@ -35,6 +35,7 @@ export interface ComponentStoreAccessor {
   updatePropsRaw(id: string, props: Record<string, unknown>): void
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
   updateGeometryRaw(id: string, geometry: Partial<NodeGeometry>): void
+  updateEventsRaw(id: string, events: Record<string, unknown[]>): void
   updateChildLayoutRaw(id: string, childLayout: 'free' | 'flow' | 'grid' | undefined): void
   updateGridTemplateRaw(id: string, columns: string, rows: string): void
 }
@@ -528,6 +529,64 @@ export class UpdateGridTemplateCommand implements Command {
     const merged = new UpdateGridTemplateCommand(this.id, this.newColumns, this.newRows)
     merged.oldColumns = otherCmd.oldColumns
     merged.oldRows = otherCmd.oldRows
+    return merged
+  }
+}
+
+/**
+ * 更新事件配置命令
+ * 用于事件的增删改，支持撤销/重做
+ */
+export class UpdateEventsCommand implements Command {
+  readonly type: CommandType = 'update-events'
+  readonly description: string
+
+  private id: string
+  private newEvents: Record<string, unknown[]>
+  private oldEvents?: Record<string, unknown[]>
+  private timestamp: number
+
+  constructor(id: string, newEvents: Record<string, unknown[]>) {
+    this.id = id
+    this.newEvents = clonePayload(newEvents)
+    this.timestamp = Date.now()
+    this.description = `Update events of ${id}`
+  }
+
+  execute(): void {
+    const store = getStore()
+    const node = store.findNodeById(null, this.id)
+
+    // 保存旧值
+    if (node) {
+      this.oldEvents = node.events ? (safeClone(node.events) as Record<string, unknown[]>) : {}
+    }
+
+    store.updateEventsRaw(this.id, this.newEvents)
+  }
+
+  undo(): void {
+    const store = getStore()
+    if (this.oldEvents !== undefined) {
+      store.updateEventsRaw(this.id, this.oldEvents)
+    }
+  }
+
+  redo(): void {
+    const store = getStore()
+    store.updateEventsRaw(this.id, this.newEvents)
+  }
+
+  canMerge(other: Command): boolean {
+    if (other.type !== 'update-events') return false
+    const otherCmd = other as UpdateEventsCommand
+    return otherCmd.id === this.id && this.timestamp - otherCmd.timestamp < 300
+  }
+
+  merge(other: Command): Command {
+    const otherCmd = other as UpdateEventsCommand
+    const merged = new UpdateEventsCommand(this.id, this.newEvents)
+    merged.oldEvents = otherCmd.oldEvents
     return merged
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="event-pane">
+  <div class="event-pane" data-testid="events-panel">
     <el-empty v-if="!node" description="请选择一个组件" :image-size="80">
       <template #image>
         <el-icon :size="64"><Select /></el-icon>
@@ -12,7 +12,14 @@
           <div class="event-section">
             <div class="section-header">
               <span>点击事件</span>
-              <el-button type="primary" size="small" :icon="Plus" @click="addClickAction" circle />
+              <el-button
+                type="primary"
+                size="small"
+                :icon="Plus"
+                @click="addClickAction"
+                data-testid="add-click-event"
+                circle
+              />
             </div>
 
             <el-empty v-if="clickActions.length === 0" description="暂无事件" :image-size="40" />
@@ -21,7 +28,7 @@
               <div
                 v-for="(action, index) in clickActions"
                 :key="action.id || index"
-                class="action-item"
+                class="action-item action-card"
               >
                 <div class="action-header">
                   <el-select
@@ -94,7 +101,7 @@
               <div
                 v-for="(action, index) in hoverActions"
                 :key="action.id || index"
-                class="action-item"
+                class="action-item action-card"
               >
                 <div class="action-header">
                   <el-select
@@ -166,6 +173,12 @@ import type { NodeSchema } from '@vela/core'
 import type { ActionSchema } from '@vela/core/types/action'
 import { Plus, Delete, Select } from '@element-plus/icons-vue'
 
+type EditableAction = ActionSchema<string> & {
+  content?: string
+  blank?: boolean
+  stateName?: string
+}
+
 interface Props {
   node?: NodeSchema | null
 }
@@ -181,42 +194,42 @@ const {
   removeHoverAction,
 } = useEventConfiguration()
 
-function onActionTypeChange(action: ActionSchema) {
+function onActionTypeChange(action: EditableAction) {
   if (action.type !== 'customScript') {
     delete action.content
   }
 }
 
 // Type-safe getters for action properties
-function getActionPath(action: ActionSchema): string {
+function getActionPath(action: EditableAction): string {
   return action.path || ''
 }
 
-function setActionPath(action: ActionSchema, value: string) {
+function setActionPath(action: EditableAction, value: string) {
   action.path = value
 }
 
-function getActionUrl(action: ActionSchema): string {
+function getActionUrl(action: EditableAction): string {
   return action.url || ''
 }
 
-function setActionUrl(action: ActionSchema, value: string) {
+function setActionUrl(action: EditableAction, value: string) {
   action.url = value
 }
 
-function getActionMessage(action: ActionSchema): string {
+function getActionMessage(action: EditableAction): string {
   return action.message || ''
 }
 
-function setActionMessage(action: ActionSchema, value: string) {
+function setActionMessage(action: EditableAction, value: string) {
   action.message = value
 }
 
-function getActionContent(action: ActionSchema): string {
+function getActionContent(action: EditableAction): string {
   return action.content || ''
 }
 
-function setActionContent(action: ActionSchema, value: string) {
+function setActionContent(action: EditableAction, value: string) {
   action.content = value
 }
 </script>

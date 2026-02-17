@@ -1,5 +1,5 @@
 <template>
-  <div class="material-panel-content">
+  <div class="material-panel-content component-bar-root">
     <!-- 搜索框 -->
     <div class="search-wrapper">
       <el-input
@@ -81,8 +81,13 @@ import {
   getCategoryConfig,
   getComponentIcon,
   resolveCanonicalMaterialName,
-  type CategoryConfig,
 } from '@vela/materials'
+
+type PanelCategoryConfig = {
+  order: number
+  defaultWidth: number
+  defaultHeight: number
+}
 
 // --- 类型定义 ---
 type Category = {
@@ -98,7 +103,16 @@ type Item = {
   width?: number
   height?: number
   icon?: Component
-  categoryConfig: CategoryConfig
+  categoryConfig: PanelCategoryConfig
+}
+
+function resolveMaterialLabel(meta: MaterialMeta): string {
+  const title = meta.title
+  if (typeof title === 'string') return title
+  if (title && typeof title === 'object') {
+    return title['zh-CN'] || title['zh'] || title['en'] || meta.name
+  }
+  return meta.name
 }
 
 // --- 状态管理 ---
@@ -112,11 +126,11 @@ const categories = computed<Category[]>(() => {
   const result: Category[] = []
 
   Object.entries(materialsByCategory).forEach(([categoryName, materials]) => {
-    const config = getCategoryConfig(categoryName)
+    const config = getCategoryConfig(categoryName) as PanelCategoryConfig
 
     const items = materials.map((meta) => ({
       name: meta.name,
-      label: meta.title,
+      label: resolveMaterialLabel(meta),
       meta,
       categoryConfig: config,
       icon: getComponentIcon(meta.name),
@@ -202,8 +216,6 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
     component: canonicalName,
     props: defaultProps as Record<string, PropValue>,
     style: styleWithDefaults as NodeSchema['style'],
-    width,
-    height,
     children: [],
   }
 

@@ -8,50 +8,52 @@
     :parent-layout-mode="effectiveParentLayoutMode"
     v-bind="$attrs"
   >
-    <!-- Actual Component -->
-    <component
-      v-if="isResolved"
-      :is="componentRef"
-      v-bind="resolvedProps"
-      :style="innerStyle"
-      :data-id="node.id"
-      :data-component="node.component"
-      class="universal-node-content"
-    >
-      <!-- Recursive Children -->
-      <template v-if="node.children && node.children.length">
-        <UniversalRenderer
-          v-for="child in node.children"
-          :key="child.id"
-          :node="child"
-          :wrapper="wrapper"
-          :parent-layout-mode="selfChildrenLayoutMode"
-          v-bind="$attrs"
-        />
-      </template>
-    </component>
+    <ErrorBoundary :component-name="componentName" @error="handleRenderError">
+      <!-- Actual Component -->
+      <component
+        v-if="isResolved"
+        :is="componentRef"
+        v-bind="resolvedProps"
+        :style="innerStyle"
+        :data-id="node.id"
+        :data-component="node.component"
+        class="universal-node-content"
+      >
+        <!-- Recursive Children -->
+        <template v-if="node.children && node.children.length">
+          <UniversalRenderer
+            v-for="child in node.children"
+            :key="child.id"
+            :node="child"
+            :wrapper="wrapper"
+            :parent-layout-mode="selfChildrenLayoutMode"
+            v-bind="$attrs"
+          />
+        </template>
+      </component>
 
-    <!-- Fallback for unresolved components -->
-    <div
-      v-else
-      class="universal-node-content node-unresolved"
-      :data-id="node.id"
-      :data-component="node.component"
-      :style="innerStyle"
-    >
-      <div class="unresolved-label">{{ node.component }} (未找到)</div>
-      <!-- Still render children -->
-      <template v-if="node.children && node.children.length">
-        <UniversalRenderer
-          v-for="child in node.children"
-          :key="child.id"
-          :node="child"
-          :wrapper="wrapper"
-          :parent-layout-mode="selfChildrenLayoutMode"
-          v-bind="$attrs"
-        />
-      </template>
-    </div>
+      <!-- Fallback for unresolved components -->
+      <div
+        v-else
+        class="universal-node-content node-unresolved"
+        :data-id="node.id"
+        :data-component="node.component"
+        :style="innerStyle"
+      >
+        <div class="unresolved-label">{{ node.component }} (未找到)</div>
+        <!-- Still render children -->
+        <template v-if="node.children && node.children.length">
+          <UniversalRenderer
+            v-for="child in node.children"
+            :key="child.id"
+            :node="child"
+            :wrapper="wrapper"
+            :parent-layout-mode="selfChildrenLayoutMode"
+            v-bind="$attrs"
+          />
+        </template>
+      </div>
+    </ErrorBoundary>
   </component>
 </template>
 
@@ -60,6 +62,8 @@ import { computed, toRef, type Component, type CSSProperties } from 'vue'
 import type { NodeSchema, GridContainerLayout } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
+import { useComponent } from '@/stores/component'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 
 defineOptions({
   name: 'UniversalRenderer',
@@ -72,17 +76,30 @@ const props = defineProps<{
   parentLayoutMode?: 'free' | 'grid'
 }>()
 
+const componentName = computed(() => props.node.component || props.node.componentName || '')
+
 // Component Resolution
 const isResolved = computed(() => {
-  return hasComponent(props.node.component)
+  return hasComponent(componentName.value)
 })
 const componentRef = computed(() => {
-  return getComponent(props.node.component)
+  return getComponent(componentName.value)
 })
+
+// Error Handling
+function handleRenderError(error: Error, info: string) {
+  console.error(
+    `[UniversalRenderer] Component "${componentName.value}" (id: ${props.node.id}) render error:`,
+    error,
+    info,
+  )
+}
 
 // Data Source Adapter
 const nodeRef = toRef(props, 'node')
 const { resolvedProps } = useDataSourceAdapter(nodeRef)
+
+const componentStore = useComponent()
 
 const normalizeLayoutMode = (mode: 'free' | 'flow' | 'grid' | undefined): 'free' | 'grid' =>
   mode === 'free' ? 'free' : 'grid'
@@ -97,6 +114,8 @@ const selfChildrenLayoutMode = computed(() => {
 // Style Logic: Only strip sizing properties managed by wrapper
 // With layout/style separation, free-mode geometry lives in node.geometry
 const innerStyle = computed<CSSProperties>(() => {
+  // Subscribe to styleVersion to ensure reactive updates during drag (padding, etc.)
+  void componentStore.styleVersion[props.node.id]
   if (!props.node.style) return {}
   const style = { ...(props.node.style as CSSProperties) }
 

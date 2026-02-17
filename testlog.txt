@@ -1,0 +1,562 @@
+
+> lowcode-monorepo@ test:run C:\Users\TWILIGHT\Desktop\Typescript\webgis
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.17 [39m[90mC:/Users/TWILIGHT/Desktop/Typescript/webgis[39m
+
+ [31m❯[39m tests/components/LeftSidebar.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/store.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/api.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/dataBindingEngine.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/components/PropertiesPanel.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/components/event-graph.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/eventGraph.unit.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/components/AnimationPanel.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/geometry.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/integration/echarts-integration.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/dataBindingEngine.unit.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/integration/event-flow.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/toCode.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/unit/eventExecutor.spec.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m packages/materials/tests/decoupling.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m tests/components/NodeWrapper.spec.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/unit/contracts/component-registry.spec.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m tests/unit/generateFromProject.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+[90mstdout[2m | packages/core/tests/history.spec.ts[2m > [22m[2mHistory Manager[2m > [22m[2mshould record operations
+[22m[39m[History] Snapshot commited. Undo stack: [33m1[39m
+
+[90mstdout[2m | packages/core/tests/benchmark.spec.ts[2m > [22m[2mCore Performance[2m > [22m[2mshould handle 1000 nodes insertion < 50ms (Batch)
+[22m[39m[Bench] Insert 1000 nodes (Batch): 4.95ms
+
+ [32m✓[39m packages/core/tests/fuzz.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+[90mstdout[2m | packages/core/tests/history.spec.ts[2m > [22m[2mHistory Manager[2m > [22m[2mshould undo insertion
+[22m[39m[History] Snapshot commited. Undo stack: [33m1[39m
+
+[90mstdout[2m | packages/core/tests/history.spec.ts[2m > [22m[2mHistory Manager[2m > [22m[2mshould redo insertion
+[22m[39m[History] Snapshot commited. Undo stack: [33m1[39m
+
+ [32m✓[39m packages/core/tests/history.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m packages/core/tests/selection.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+[90mstdout[2m | packages/core/tests/integration.spec.ts[2m > [22m[2mCore Integration & Consistency[2m > [22m[2mshould restore exact state after Undo/Redo loop
+[22m[39m[History] Snapshot commited. Undo stack: [33m1[39m
+
+ [32m✓[39m packages/core/tests/integration.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+[90mstdout[2m | packages/core/tests/benchmark.spec.ts[2m > [22m[2mCore Performance[2m > [22m[2mshould handle 1000 nodes insertion < 1000ms (No Batch)
+[22m[39m[Bench] Insert 1000 nodes (No Batch): 132.11ms
+
+[90mstdout[2m | packages/core/tests/benchmark.spec.ts[2m > [22m[2mCore Performance[2m > [22m[2mshould rebuild index for 5000 nodes < 20ms
+[22m[39m[Bench] Rebuild Index (5000 nodes): 2.58ms
+
+ [32m✓[39m packages/core/tests/benchmark.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 169[2mms[22m[39m
+ [32m✓[39m packages/core/tests/sandbox.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/core/tests/id.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/unit/contracts/component-props.spec.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/core/tests/tree.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/unit/editorShortcuts.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m packages/core/tests/tree-index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/core/tests/diff.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/unit/resolveLayout.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/unit/componentSelection.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/core/tests/material-v2.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/core/tests/serializer.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m packages/core/tests/i18n.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/unit/styleUtils.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m packages/core/tests/validator.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/unit/layoutConverter.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/components/CanvasBoard.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/unit/reactGenerator.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/components/UniversalRenderer.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [2m[90m↓[39m[22m tests/unit/snap.unit.spec.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [32m✓[39m tests/unit/generatorPublicApi.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+[90mstderr[2m | tests/unit/sandbox.spec.ts[2m > [22m[2museEventExecutor Sandbox[2m > [22m[2mshould execute safe code
+[22m[39m[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+Not implemented: navigation to another Document
+[90mstderr[2m | tests/unit/sandbox.spec.ts[2m > [22m[2museEventExecutor Sandbox[2m > [22m[2mshould prevent access to window
+[22m[39m[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ [32m✓[39m tests/unit/sandbox.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+[90mstdout[2m | packages/editor/tests/grid-interactions.spec.ts[2m > [22m[2mgrid interactions normalization[2m > [22m[2mreindexes grid rows when moving nodes in same grid parent
+[22m[39m[ComponentIndex] Index rebuilt: 4 nodes
+[History] Executed: move-component, stack size: 1
+[ComponentStore] Moved component c via command to parent root at index 0
+
+[90mstdout[2m | packages/editor/tests/grid-interactions.spec.ts[2m > [22m[2mgrid interactions normalization[2m > [22m[2mextends rows and assigns correct row positions when adding in grid mode
+[22m[39m[ComponentIndex] Index rebuilt: 3 nodes
+[History] Executed: add-component, stack size: 1
+[ComponentStore] Added component via command: x
+
+[90mstdout[2m | packages/editor/tests/grid-interactions.spec.ts[2m > [22m[2mgrid interactions normalization[2m > [22m[2mshrinks rows and compacts geometry rows after deletion in grid mode
+[22m[39m[ComponentIndex] Index rebuilt: 4 nodes
+[History] Executed: delete-component, stack size: 1
+[ComponentStore] Deleted component via command: b
+
+ [32m✓[39m packages/editor/tests/grid-interactions.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2mupdateProps 应该递增 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2mupdateStyle 应该递增 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2mupdateProps 应该正确更新节点 props
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2mupdateStyle 应该正确更新节点 style
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2m多次更新应该累积 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-props, stack size: 1
+[History] Merged command: update-props
+[History] Executed: update-style, stack size: 2
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2mComponentStore 核心功能[2m > [22m[2m不同节点的 styleVersion 应该独立
+[22m[39m[ComponentIndex] Index rebuilt: 3 nodes
+[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m响应式工厂方法[2m > [22m[2mcreatePropRef 应该创建可读写的响应式引用
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m响应式工厂方法[2m > [22m[2mcreateStyleRef 应该创建可读写的响应式引用
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m响应式工厂方法[2m > [22m[2mcreatePropRefs 应该批量创建响应式引用
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'text': '修改按钮文本'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'text': '修改按钮文本'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'type': '修改按钮类型'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'type': '修改按钮类型'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'disabled': '禁用按钮'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'disabled': '禁用按钮'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'width': '修改宽度'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'width': '修改宽度'
+[22m[39m[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'backgroundColor': '修改背景色'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'backgroundColor': '修改背景色'
+[22m[39m[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'按钮' ('Button') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[History] Executed: update-props, stack size: 1
+[History] Merged command: update-props
+[History] Merged command: update-props
+[History] Executed: update-style, stack size: 2
+[History] Merged command: update-style
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'content': '修改文本内容'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'content': '修改文本内容'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'fontSize': '修改字体大小'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'fontSize': '修改字体大小'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'color': '修改文字颜色'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'color': '修改文字颜色'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'文本' ('Text') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[History] Executed: update-props, stack size: 1
+[History] Merged command: update-props
+[History] Merged command: update-props
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'title': '修改标题'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'title': '修改标题'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'value': '修改数值'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2mProps 更新[2m > [22m[2m应该正确更新 'value': '修改数值'
+[22m[39m[History] Executed: update-props, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'统计卡片' ('Stat') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[History] Executed: update-props, stack size: 1
+[History] Merged command: update-props
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'width': '修改容器宽度'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'width': '修改容器宽度'
+[22m[39m[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'height': '修改容器高度'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'height': '修改容器高度'
+[22m[39m[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'backgroundColor': '修改背景色'
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2mStyle 更新[2m > [22m[2m应该正确更新 'backgroundColor': '修改背景色'
+[22m[39m[History] Executed: update-style, stack size: 1
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[ComponentIndex] Index rebuilt: 2 nodes
+
+[90mstdout[2m | packages/editor/tests/two-way-binding.spec.ts[2m > [22m[2m画布与属性面板双向绑定[2m > [22m[2m'容器' ('Container') 双向绑定[2m > [22m[2m连续更新多个属性应该正确累积 styleVersion
+[22m[39m[History] Executed: update-style, stack size: 1
+[History] Merged command: update-style
+[History] Merged command: update-style
+
+ [32m✓[39m packages/editor/tests/two-way-binding.spec.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/default-style-extraction.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/extractDefaultProps.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/core-registry-coverage.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/category-classification.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/core-contract-alignment.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor/tests/flow-drop-helpers.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m packages/materials/tests/metadata-contract.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+[90mstderr[2m | packages/materials/tests/materials-v2.spec.ts[2m > [22m[2mMaterials V2 Integration Tests[2m > [22m[2mSelect (Form Component)[2m > [22m[2m应该正确透传并渲染下拉选项
+[22m[39m[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveComponent can only be used in render() or setup().
+[Vue warn]: resolveDirective can only be used in render() or setup().
+[Vue warn]: withDirectives can only be used inside render functions.
+[Material:Select] Render error: TypeError: Cannot read properties of null (reading 'ce')
+    at renderSlot (C:\Users\TWILIGHT\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:3009:32)
+    at C:/Users/TWILIGHT/Desktop/Typescript/webgis/node_modules/[4m.pnpm[24m/element-plus@2.13.1_vue@3.5.25_typescript@5.9.3_/packages/components/select/src/select.vue:218:22
+    at normalizeChildren (C:\Users\TWILIGHT\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:7687:34)
+    at createBaseVNode (C:\Users\TWILIGHT\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:7491:5)
+    at _createVNode (C:\Users\TWILIGHT\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:7568:10)
+    at _createVNode (C:\Users\TWILIGHT\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:7445:10)
+    at Proxy._sfc_render (C:/Users/TWILIGHT/Desktop/Typescript/webgis/node_modules/[4m.pnpm[24m/element-plus@2.13.1_vue@3.5.25_typescript@5.9.3_/packages/components/select/src/select.vue:9:5)
+    at renderComponentRoot [90m(C:\Users\TWILIGHT\Desktop\Typescript\webgis\[39mnode_modules\[4m.pnpm[24m\@vue+runtime-core@3.5.25\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:4473:16[90m)[39m
+    at ReactiveEffect.componentUpdateFn [as fn] [90m(C:\Users\TWILIGHT\Desktop\Typescript\webgis\[39mnode_modules\[4m.pnpm[24m\@vue+runtime-core@3.5.25\node_modules\[4m@vue[24m\runtime-core\dist\runtime-core.cjs.js:5974:46[90m)[39m
+    at ReactiveEffect.run [90m(C:\Users\TWILIGHT\Desktop\Typescript\webgis\[39mnode_modules\[4m.pnpm[24m\@vue+reactivity@3.5.25\node_modules\[4m@vue[24m\reactivity\dist\reactivity.cjs.js:241:19[90m)[39m
+
+ [32m✓[39m packages/materials/tests/materials-v2.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 14 [49m[22m[31m⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/components/AnimationPanel.spec.ts[2m [ tests/components/AnimationPanel.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/components/siderBar/animation/animation.vue" from "tests/components/AnimationPanel.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/components/AnimationPanel.spec.ts[39m:6:27
+[33m  1  |  import { mount } from "@vue/test-utils";
+  2  |  import { describe, it, expect } from "vitest";
+  3  |  import AnimationPanel from "../../src/components/siderBar/animation/animation.vue";
+     |                              ^
+  4  |  import { createPinia } from "pinia";
+  5  |  describe("AnimationPanel 动画面板", () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/components/event-graph.spec.ts[2m [ tests/components/event-graph.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/stores/component" from "tests/components/event-graph.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/components/event-graph.spec.ts[39m:5:29
+[33m  2  |  import { describe, it, expect, beforeEach, vi } from "vitest";
+  3  |  import { createPinia, setActivePinia } from "pinia";
+  4  |  import { useComponent } from "../../src/stores/component";
+     |                                ^
+  5  |  describe("组件事件系统 - Event Graph 与联动", () => {
+  6  |    let pinia;[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/components/LeftSidebar.spec.ts[2m [ tests/components/LeftSidebar.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/components/siderBar/siderBar.vue" from "tests/components/LeftSidebar.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/components/LeftSidebar.spec.ts[39m:6:24
+[33m  1  |  import { mount } from "@vue/test-utils";
+  2  |  import { describe, it, expect } from "vitest";
+  3  |  import LeftSidebar from "../../src/components/siderBar/siderBar.vue";
+     |                           ^
+  4  |  import { createPinia } from "pinia";
+  5  |  describe("LeftSidebar 侧边栏", () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/components/PropertiesPanel.spec.ts[2m [ tests/components/PropertiesPanel.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/components/siderBar/properties/properties.vue" from "tests/components/PropertiesPanel.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/components/PropertiesPanel.spec.ts[39m:7:28
+[33m  2  |  import { ref, computed } from "vue";
+  3  |  import { describe, it, expect, beforeEach } from "vitest";
+  4  |  import PropertiesPanel from "../../src/components/siderBar/properties/properties.vue";
+     |                               ^
+  5  |  import { useDataSource } from "../../src/datasource/useDataSource";
+  6  |  import { setActivePinia, createPinia } from "pinia";[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/echarts-integration.spec.ts[2m [ tests/integration/echarts-integration.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/customComponents/chart/barChart/barChart.vue" from "tests/integration/echarts-integration.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/integration/echarts-integration.spec.ts[39m:6:0
+[33m  15 |  }));
+  16 |  const __vi_import_0__ = await import("@vue/test-utils");
+  17 |  const __vi_import_1__ = await import("../../src/customComponents/chart/barChart/barChart.vue");
+     |                                       ^
+  18 |  const __vi_import_2__ = await import("pinia");
+  19 |  const __vi_import_3__ = await import("../../src/stores/component");[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/event-flow.spec.ts[2m [ tests/integration/event-flow.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "@/components/siderBar/events/events" from "tests/integration/event-flow.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/integration/event-flow.spec.ts[39m:6:39
+[33m  4  |  import { createPinia, setActivePinia } from "pinia";
+  5  |  import { useComponent } from "@/stores/component";
+  6  |  import { provideComponentEvents } from "@/components/siderBar/events/events";
+     |                                          ^
+  7  |  describe("集成：组件间联动 (Cross-Component Interaction)", () => {
+  8  |    beforeEach(() => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/api.spec.ts[2m [ tests/unit/api.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/services/http" from "tests/unit/api.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/api.spec.ts[39m:5:17
+[33m  1  |  import { describe, it, expect, vi } from "vitest";
+  2  |  import http from "../../src/services/http";
+     |                    ^
+  3  |  describe("API 请求逻辑（基于 axios 实例）", () => {
+  4  |    it("http.get 成功返回 data", async () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/dataBindingEngine.spec.ts[2m [ tests/unit/dataBindingEngine.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/runtime/useDataBindingEngine" from "tests/unit/dataBindingEngine.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/dataBindingEngine.spec.ts[39m:10:37
+[33m  1  |  import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+  2  |  import { ref, nextTick, reactive } from "vue";
+  3  |  import { useDataBindingEngine } from "../../src/runtime/useDataBindingEngine";
+     |                                        ^
+  4  |  function createComponent(partial) {
+  5  |    return reactive({[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/dataBindingEngine.unit.spec.ts[2m [ tests/unit/dataBindingEngine.unit.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/stores/dataLinkage/engine" from "tests/unit/dataBindingEngine.unit.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/dataBindingEngine.unit.spec.ts[39m:4:37
+[33m  1  |  import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+  2  |  import { ref, nextTick, reactive } from "vue";
+  3  |  import { useDataBindingEngine } from "../../src/stores/dataLinkage/engine";
+     |                                        ^
+  4  |  function makeComp(partial) {
+  5  |    return reactive({[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/eventExecutor.spec.ts[2m [ tests/unit/eventExecutor.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/runtime/useEventExecutor" from "tests/unit/eventExecutor.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/eventExecutor.spec.ts[39m:67:32
+[33m  47 |    beforeEach(async () => {
+  48 |      vi.useFakeTimers();
+  49 |      const module = await import("../../src/runtime/useEventExecutor");
+     |                                  ^
+  50 |      useEventExecutor = module.useEventExecutor;
+  51 |      const epModule = await import("element-plus");[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/eventGraph.unit.spec.ts[2m [ tests/unit/eventGraph.unit.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "@/components/siderBar/events/events" from "tests/unit/eventGraph.unit.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/eventGraph.unit.spec.ts[39m:4:38
+[33m  2  |  import { createPinia, setActivePinia } from "pinia";
+  3  |  import { useComponent } from "@/stores/component";
+  4  |  import { useEventConfiguration } from "@/components/siderBar/events/events";
+     |                                         ^
+  5  |  global.alert = vi.fn();
+  6  |  describe("事件配置逻辑 (useEventConfiguration)", () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/geometry.spec.ts[2m [ tests/unit/geometry.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/utils/snap" from "tests/unit/geometry.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/geometry.spec.ts[39m:5:28
+[33m  1  |  import { describe, it, expect } from "vitest";
+  2  |  import { computeSnap } from "../../src/utils/snap";
+     |                               ^
+  3  |  describe("几何计算与吸附算法", () => {
+  4  |    it("computeSnap 在中心距小于阈值时应吸附到目标中心", () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/store.spec.ts[2m [ tests/unit/store.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "../../src/stores/component" from "tests/unit/store.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/store.spec.ts[39m:6:50
+[33m  1  |  import { setActivePinia, createPinia } from "pinia";
+  2  |  import { describe, it, expect, beforeEach } from "vitest";
+  3  |  import { useComponent as useComponentStore } from "../../src/stores/component";
+     |                                                     ^
+  4  |  describe("Component Pinia Store", () => {
+  5  |    beforeEach(() => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/unit/toCode.spec.ts[2m [ tests/unit/toCode.spec.ts ][22m
+[31m[1mError[22m: Failed to resolve import "@/utils/toCode" from "tests/unit/toCode.spec.ts". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/TWILIGHT/Desktop/Typescript/webgis/tests/unit/toCode.spec.ts[39m:2:32
+[33m  1  |  import { describe, it, expect } from "vitest";
+  2  |  import { generateVueCode } from "@/utils/toCode";
+     |                                   ^
+  3  |  describe("toCode.generateVueCode", () => {
+  4  |    it("包含从 @twi1i9ht/visual-lib 的导入并使用单引号绑定 props", () => {[39m
+[90m [2m❯[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42528:41[22m[39m
+[90m [2m❯[22m TransformPluginContext.error node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42525:16[22m[39m
+[90m [2m❯[22m normalizeUrl node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40504:23[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40623:37[22m[39m
+[90m [2m❯[22m TransformPluginContext.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m40550:7[22m[39m
+[90m [2m❯[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m42323:18[22m[39m
+[90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@6.4.1_@types+node@20.19.27_jiti@2.6.1_sass-embedded@1.93.3_sass@1.93.3_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:[2m35739:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m39 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (54)[39m
+[2m      Tests [22m [1m[32m229 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (230)[39m
+[2m   Start at [22m 23:46:09
+[2m   Duration [22m 14.17s[2m (transform 55.43s, setup 29.21s, import 99.70s, tests 807ms, environment 143.67s)[22m
+
+ ELIFECYCLE  Command failed with exit code 1.

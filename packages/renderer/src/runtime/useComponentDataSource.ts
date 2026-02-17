@@ -37,7 +37,7 @@ interface DataSourceConfig {
  */
 export function useComponentDataSource(component: Ref<NodeSchema>) {
   const dataSourceRef = computed(() => component.value.dataSource)
-  const { data: remoteData } = useDataSource(dataSourceRef)
+  const { data: remoteData, loading, error } = useDataSource(dataSourceRef)
 
   const dataSourceProps = computed(() => {
     const comp = component.value
@@ -173,5 +173,5 @@ export function useComponentDataSource(component: Ref<NodeSchema>) {
     return props
   })
 
-  return { dataSourceProps }
+  return { dataSourceProps, remoteData, loading, error }
 }

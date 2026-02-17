@@ -7,6 +7,40 @@ const meta: MaterialMeta = {
   category: '基础',
   isContainer: true,
   props: {
+    tag: {
+      name: 'tag',
+      label: '语义标签',
+      setter: 'SelectSetter',
+      setterProps: {
+        options: [
+          { label: 'div', value: 'div' },
+          { label: 'section', value: 'section' },
+          { label: 'article', value: 'article' },
+          { label: 'main', value: 'main' },
+          { label: 'aside', value: 'aside' },
+          { label: 'header', value: 'header' },
+          { label: 'footer', value: 'footer' },
+          { label: 'nav', value: 'nav' },
+          { label: 'form', value: 'form' },
+        ],
+      },
+      defaultValue: 'div',
+      group: '语义',
+    },
+    role: {
+      name: 'role',
+      label: 'ARIA Role',
+      setter: 'StringSetter',
+      defaultValue: '',
+      group: '语义',
+    },
+    ariaLabel: {
+      name: 'ariaLabel',
+      label: 'ARIA Label',
+      setter: 'StringSetter',
+      defaultValue: '',
+      group: '语义',
+    },
     padding: {
       name: 'padding',
       label: '内边距',

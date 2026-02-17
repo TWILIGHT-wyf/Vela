@@ -1,5 +1,5 @@
 import { ref, reactive, computed, type Ref } from 'vue'
-import type { NodeSchema } from '@vela/core'
+import { getNodeComponent, type NodeSchema } from '@vela/core'
 
 /**
  * 组件检查器状态
@@ -48,6 +48,15 @@ export function createInspector() {
   const nodeIndex = new Map<string, NodeSchema>()
   const parentIndex = new Map<string, string>()
   const depthIndex = new Map<string, number>()
+
+  function resolveComponentName(node: NodeSchema): string {
+    return getNodeComponent(node) || 'Unknown'
+  }
+
+  function getLegacyDataBindings(node: NodeSchema): unknown[] {
+    const dataBindings = (node as NodeSchema & { dataBindings?: unknown[] }).dataBindings
+    return Array.isArray(dataBindings) ? dataBindings : []
+  }
 
   /**
    * 初始化检查器
@@ -141,7 +150,7 @@ export function createInspector() {
     while (currentId) {
       const node = nodeIndex.get(currentId)
       if (node) {
-        path.unshift(node.componentName)
+        path.unshift(resolveComponentName(node))
       }
       currentId = parentIndex.get(currentId)
     }
@@ -158,10 +167,10 @@ export function createInspector() {
 
     return {
       id: node.id,
-      componentName: node.componentName,
+      componentName: resolveComponentName(node),
       props: node.props || {},
       style: node.style || {},
-      dataBindings: node.dataBindings || [],
+      dataBindings: getLegacyDataBindings(node),
       events: node.events || {},
       children: node.children?.length || 0,
       depth: depthIndex.get(id) || 0,
@@ -186,7 +195,7 @@ export function createInspector() {
     function buildTree(node: NodeSchema): object {
       return {
         id: node.id,
-        name: node.componentName,
+        name: resolveComponentName(node),
         children: node.children?.map(buildTree) || [],
       }
     }
@@ -202,8 +211,9 @@ export function createInspector() {
     const lowerQuery = query.toLowerCase()
 
     nodeIndex.forEach((node, id) => {
+      const componentName = resolveComponentName(node)
       if (
-        node.componentName.toLowerCase().includes(lowerQuery) ||
+        componentName.toLowerCase().includes(lowerQuery) ||
         id.toLowerCase().includes(lowerQuery)
       ) {
         const info = getComponentInfo(id)
@@ -228,8 +238,9 @@ export function createInspector() {
     const componentCounts = new Map<string, number>()
 
     nodeIndex.forEach((node) => {
-      const count = componentCounts.get(node.componentName) || 0
-      componentCounts.set(node.componentName, count + 1)
+      const componentName = resolveComponentName(node)
+      const count = componentCounts.get(componentName) || 0
+      componentCounts.set(componentName, count + 1)
     })
 
     return {

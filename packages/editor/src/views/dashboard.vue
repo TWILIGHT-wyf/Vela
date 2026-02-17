@@ -220,19 +220,11 @@ const createDialogVisible = ref(false)
 const createForm = ref({
   name: '',
   description: '',
-  category: 'GIS' as string,
+  category: 'Chart' as string,
 })
 
 // 增强的分类配置
 const categoryOptions = [
-  {
-    label: 'GIS 地图',
-    value: 'GIS',
-    icon: markRaw(MapLocation),
-    color: '#4285F4',
-    bgColor: '#e8f0fe',
-    desc: '基于地理信息的空间可视化',
-  },
   {
     label: '数据图表',
     value: 'Chart',
@@ -299,13 +291,11 @@ async function loadProjects() {
 }
 
 function formatServerProject(p: ServerProject): DashboardProject {
-  const categoryKey = p.description?.includes('GIS')
-    ? 'GIS'
-    : p.description?.includes('图表')
-      ? 'Chart'
-      : p.description?.includes('IoT')
-        ? 'IoT'
-        : 'Other'
+  const categoryKey = p.description?.includes('图表')
+    ? 'Chart'
+    : p.description?.includes('IoT')
+      ? 'IoT'
+      : 'Other'
   const categoryConfig = categoryOptions.find((c) => c.value === categoryKey) || categoryOptions[0]
   const pages = p.schema?.pages || []
 
@@ -326,8 +316,6 @@ function formatServerProject(p: ServerProject): DashboardProject {
 
 function getGradientByCategory(cat: string): string {
   switch (cat) {
-    case 'GIS':
-      return 'linear-gradient(135deg, #1f1c2c, #928dab)'
     case 'Chart':
       return 'linear-gradient(135deg, #667eea, #764ba2)'
     case 'IoT':
@@ -344,7 +332,7 @@ const filteredProjects = computed(() => {
 
 // 打开创建对话框
 const handleCreate = () => {
-  createForm.value = { name: '', description: '', category: 'GIS' }
+  createForm.value = { name: '', description: '', category: 'Chart' }
   createDialogVisible.value = true
 }
 
@@ -362,6 +350,7 @@ const submitCreate = async () => {
       name: createForm.value.name,
       description: `${selectedCat?.label || ''}#${createForm.value.description}`, // 将类型标签存入描述方便解析
       schema: {
+        id: generateId('project'),
         version: '2.0.0',
         name: createForm.value.name,
         description: createForm.value.description,
@@ -376,12 +365,12 @@ const submitCreate = async () => {
             name: 'Home',
             path: '/',
             config: {
-              defaultLayoutMode: 'free',
+              defaultLayoutMode: 'grid',
             },
             children: {
               id: generateId('root'),
               component: 'Page',
-              container: { mode: 'free' },
+              container: { mode: 'grid', columns: '1fr', rows: '1fr', gap: 8 },
               props: {},
               style: {
                 width: '100%',
@@ -410,16 +399,46 @@ const submitCreate = async () => {
 const handleOpen = (id: string) => {
   router.push(`/editor/${id}`)
 }
-const handlePreview = (id: string) => window.open(`/runtime?projectId=${id}`, '_blank')
+const handlePreview = (id: string) => window.open(`/preview/${id}`, '_blank')
 const handleCommand = async (cmd: string, project: DashboardProject) => {
   switch (cmd) {
     case 'rename':
-      // TODO: 实现重命名功能
-      ElMessage.info('重命名功能待实现')
+      try {
+        const { value: newName } = await ElMessageBox.prompt('请输入新的项目名称', '重命名项目', {
+          confirmButtonText: '确认',
+          cancelButtonText: '取消',
+          inputValue: project.name,
+          inputPattern: /\S+/,
+          inputErrorMessage: '项目名称不能为空',
+        })
+        if (newName && newName !== project.name && project.id) {
+          await projectService.updateProject(project.id, { name: newName })
+          project.name = newName
+          ElMessage.success('重命名成功')
+        }
+      } catch {
+        // 用户取消
+      }
       break
     case 'copy':
-      // TODO: 实现复制功能
-      ElMessage.info('复制功能待实现')
+      try {
+        const originalProject = await projectService.getProject(project.id)
+        if (!originalProject) {
+          ElMessage.error('获取项目数据失败')
+          break
+        }
+        const payload: ProjectInput = {
+          name: `${project.name} - 副本`,
+          description: originalProject.description || '',
+          schema: originalProject.schema,
+        }
+        await projectService.createProject(payload)
+        ElMessage.success('项目已复制')
+        await loadProjects()
+      } catch (error) {
+        console.error('复制项目失败:', error)
+        ElMessage.error('复制失败，请重试')
+      }
       break
     case 'delete':
       if (project.id) {

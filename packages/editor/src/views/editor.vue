@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
 import { useHistoryStore } from '@/stores/history'
+import { useRuntimePlugins } from '@/composables/useRuntimePlugins'
 import { convertLayout } from '@/utils/layoutConverter'
 import type { LayoutMode } from '@vela/core'
 
@@ -47,6 +48,7 @@ const { isSimulationMode, canvasMode } = storeToRefs(uiStore)
 const { toggleSimulationMode } = uiStore
 const { canUndo, canRedo } = storeToRefs(historyStore)
 const { undo, redo, clear: resetHistory } = historyStore
+const runtimePlugins = useRuntimePlugins()
 
 // --- Panel States ---
 const showMaterials = ref(true)
@@ -178,6 +180,7 @@ async function switchCanvasMode(mode: LayoutMode) {
           :pages="[]"
           :is-project-mode="false"
           mode="simulation"
+          :plugins="runtimePlugins"
         />
       </div>
 

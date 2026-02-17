@@ -36,12 +36,20 @@ describe('editor shortcuts / transform interaction', () => {
     expect(source).toContain('clearSnap()')
   })
 
+  it('Escape 应优先逐级选中父节点，再执行清空逻辑', () => {
+    const source = readFileSync(shortcutsPath, 'utf-8')
+    expect(source).toContain("if (e.key === 'Escape')")
+    expect(source).toContain('const parentId = getParentId(currentId)')
+    expect(source).toContain('selectComponent(parentId)')
+  })
+
   it('画布应展示交互提示文案', () => {
     const source = readFileSync(flowCanvasPath, 'utf-8')
     expect(source).toContain('Ctrl/Cmd/Shift + 点击：多选')
     expect(source).toContain('选中组件后拖拽边缘手柄：调整宽高')
-    expect(source).toContain('悬停节点可查看 margin 标注')
+    expect(source).toContain('选中节点可查看 margin / padding 标注')
     expect(source).toContain('拖拽橙色外侧线：调整 margin')
+    expect(source).toContain('拖拽绿色内侧线：调整 padding')
     expect(source).toContain('方向键微调（Shift 加速）')
     expect(source).toContain('Alt + 拖拽：临时关闭吸附')
   })

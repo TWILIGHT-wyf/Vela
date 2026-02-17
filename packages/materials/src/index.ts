@@ -8,4 +8,5 @@ export {
   getMaterial,
   listMaterials,
 } from './metadata-registry'
-export type { CategoryConfig } from './metadata-registry'
+export type { CategoryConfig } from './materialsMeta'
+export type { CategoryConfig as RegistryCategoryConfig } from './metadata-registry'

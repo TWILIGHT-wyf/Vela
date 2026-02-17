@@ -9,7 +9,7 @@
     <!-- Alt+Hover Distance Indicators -->
     <DistanceIndicators />
 
-    <!-- Selection Box -->
+    <!-- Selection Box -->                  
     <div
       v-if="selectedNode && selectedId && isFreeSelection && boxStyle"
       class="selection-box"
@@ -39,14 +39,13 @@
       </div>
 
       <!-- Label -->
-      <div v-if="!isDragging && !isResizing && !isRotating" class="selection-label">
-        {{ selectedNode.title || selectedNode.component }}
+      <div
+        v-if="!isDragging && !isResizing && !isRotating && selectionLabel"
+        class="selection-label"
+      >
+        {{ selectionLabel }}
       </div>
 
-      <!-- Resize dimension tooltip -->
-      <div v-if="isResizing && resizeInfo" class="resize-tooltip">
-        {{ resizeInfo.width }} × {{ resizeInfo.height }}
-      </div>
     </div>
   </div>
 </template>
@@ -73,7 +72,6 @@ const {
   isDragging,
   isResizing,
   isRotating,
-  resizeInfo,
 } = useTransform()
 
 const handles: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se']
@@ -87,6 +85,12 @@ const isFreeSelection = computed(() => {
 
   const parent = store.findParentNode(selectedId.value)
   return parent?.container?.mode === 'free'
+})
+
+const selectionLabel = computed(() => {
+  const raw = selectedNode.value?.title || selectedNode.value?.component || ''
+  if (/^c\d+xr\d+$/i.test(raw)) return ''
+  return raw
 })
 
 // Counter-scale for resize handles with position fix
@@ -300,19 +304,4 @@ const handleRotateStart = (e: MouseEvent) => {
   pointer-events: none;
 }
 
-.resize-tooltip {
-  position: absolute;
-  right: 0;
-  bottom: -22px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 100;
-}
 </style>

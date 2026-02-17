@@ -86,4 +86,45 @@ describe('resolveLayout', () => {
     expect(layout.width).toBe('80vw')
     expect(layout.height).toBe('min(60vh, 480px)')
   })
+
+  it('grid 模式应保留网格线几何信息', () => {
+    const layout = resolveLayout({
+      node: createNode({
+        geometry: {
+          mode: 'grid',
+          gridColumnStart: 2,
+          gridColumnEnd: 5,
+          gridRowStart: 3,
+          gridRowEnd: 7,
+        },
+      }),
+      parentChildMode: 'grid',
+      pageDefaultMode: 'grid',
+    })
+
+    expect(layout.mode).toBe('grid')
+    expect(layout.gridColumnStart).toBe(2)
+    expect(layout.gridColumnEnd).toBe(5)
+    expect(layout.gridRowStart).toBe(3)
+    expect(layout.gridRowEnd).toBe(7)
+  })
+
+  it('grid 模式在缺少 geometry 时应回退解析 style.gridColumn/gridRow', () => {
+    const layout = resolveLayout({
+      node: createNode({
+        style: {
+          gridColumn: '2 / 4',
+          gridRow: 'span 3',
+        },
+      }),
+      parentChildMode: 'grid',
+      pageDefaultMode: 'grid',
+    })
+
+    expect(layout.mode).toBe('grid')
+    expect(layout.gridColumnStart).toBe(2)
+    expect(layout.gridColumnEnd).toBe(4)
+    expect(layout.gridRowStart).toBe(1)
+    expect(layout.gridRowEnd).toBe(4)
+  })
 })

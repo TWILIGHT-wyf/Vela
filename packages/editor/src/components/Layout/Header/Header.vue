@@ -157,7 +157,7 @@ function exportJSON() {
 }
 
 // 预览
-function openPreview() {
+function openPreview(_scope?: 'page' | 'project') {
   router.push('/preview')
 }
 

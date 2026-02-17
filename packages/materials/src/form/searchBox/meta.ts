@@ -4,7 +4,7 @@ const meta: MaterialMeta = {
   name: 'SearchBox',
   title: '搜索框',
   version: '1.0.0',
-  category: '基础控件',
+  category: '表单',
   props: {
     placeholder: {
       name: 'placeholder',
