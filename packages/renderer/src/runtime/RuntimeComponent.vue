@@ -81,7 +81,14 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  'trigger-event': [payload: { componentId: string; eventType: string; actions: unknown[] }]
+  'trigger-event': [
+    payload: {
+      componentId: string
+      eventType: string
+      actions: unknown[]
+      event?: Event
+    },
+  ]
   'update-prop': [payload: { componentId: string; path: string; value: unknown }]
 }>()
 
@@ -250,7 +257,7 @@ const eventHandlers = computed(() => {
 })
 
 // ========== Event Handler Implementations ==========
-function handleClick() {
+function handleClick(event?: Event) {
   const node = props.node
 
   // Animation trigger
@@ -264,11 +271,12 @@ function handleClick() {
       componentId: node.id,
       eventType: 'click',
       actions: node.events.click,
+      event,
     })
   }
 }
 
-function handleMouseEnter() {
+function handleMouseEnter(event?: Event) {
   const node = props.node
 
   // Animation trigger
@@ -282,6 +290,7 @@ function handleMouseEnter() {
       componentId: node.id,
       eventType: 'hover',
       actions: node.events.hover,
+      event,
     })
   }
 }
@@ -295,7 +304,7 @@ function handleMouseLeave() {
   }
 }
 
-function handleDoubleClick() {
+function handleDoubleClick(event?: Event) {
   const node = props.node
 
   if (node.events?.doubleClick && node.events.doubleClick.length > 0) {
@@ -303,6 +312,7 @@ function handleDoubleClick() {
       componentId: node.id,
       eventType: 'doubleClick',
       actions: node.events.doubleClick,
+      event,
     })
   }
 }

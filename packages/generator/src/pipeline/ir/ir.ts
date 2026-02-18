@@ -6,6 +6,7 @@ export interface IRNode {
   component: string
   title?: string
   layout: NormalizedNodeLayout
+  container?: NodeSchema['container']
   props?: NodeSchema['props']
   style?: NodeSchema['style']
   dataSource?: NodeSchema['dataSource']
@@ -40,4 +41,3 @@ export interface IRProject {
   pages: IRPage[]
   raw: ProjectSchema
 }
-

@@ -1,33 +1,32 @@
 import { type Ref, type ComputedRef, onUnmounted } from 'vue'
 import { type Router } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { NodeSchema } from '@vela/core'
+import type { AnyActionSchema, NodeSchema } from '@vela/core'
 import type { Page } from '../types'
 
-/**
- * Generic event action type for runtime execution
- * This is intentionally permissive to handle various action types dynamically
- */
-interface EventAction {
-  id: string
-  type: string
-  targetId?: string
-  delay?: number
-  message?: string
-  messageType?: 'success' | 'warning' | 'error' | 'info'
-  url?: string
-  openInNewTab?: boolean
-  script?: string
-  content?: string
-  eventName?: string
-  pageId?: string
-  path?: string
-  blank?: boolean
-  value?: unknown
-  [key: string]: unknown
+type UnknownRecord = Record<string, unknown>
+
+interface RuntimePage extends Page {
+  actions?: AnyActionSchema[]
 }
 
-// 类型定义
+interface ActionRecord extends UnknownRecord {
+  id?: string
+  type: string
+}
+
+interface RefActionRecord extends UnknownRecord {
+  type: 'ref'
+  id: string
+  scope?: 'global' | 'page' | 'node'
+  pageId?: string
+  nodeId?: string
+}
+
+interface InlineActionRecord extends UnknownRecord {
+  type: 'inline'
+  code: string
+}
 
 export interface EventExecutorContext {
   components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>
@@ -37,33 +36,20 @@ export interface EventExecutorContext {
   onNavigate?: (pageId: string) => void
 }
 
-// 常量与配置
-
 const HIGHLIGHT_CLASS = 'editor-highlight-active'
-const HIGHLIGHT_DURATION = 2000 // 高亮持续时间（毫秒）
+const HIGHLIGHT_DURATION = 2000
 const STYLE_ID = 'editor-event-executor-styles'
 
-// 高亮动画 CSS（呼吸灯脉冲效果）
 const HIGHLIGHT_STYLES = `
   @keyframes editor-highlight-pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.7);
-    }
-    50% {
-      box-shadow: 0 0 0 12px rgba(64, 158, 255, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);
-    }
+    0% { box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.7); }
+    50% { box-shadow: 0 0 0 12px rgba(64, 158, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(64, 158, 255, 0); }
   }
 
   @keyframes editor-highlight-border {
-    0%, 100% {
-      border-color: rgba(64, 158, 255, 0.8);
-    }
-    50% {
-      border-color: rgba(64, 158, 255, 0.3);
-    }
+    0%, 100% { border-color: rgba(64, 158, 255, 0.8); }
+    50% { border-color: rgba(64, 158, 255, 0.3); }
   }
 
   .${HIGHLIGHT_CLASS} {
@@ -86,12 +72,131 @@ const HIGHLIGHT_STYLES = `
   }
 `
 
-// 辅助函数
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null
+}
 
-/**
- * 自动注入高亮样式到 <head>
- */
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : []
+}
+
+function isActionRecord(value: unknown): value is ActionRecord {
+  return isRecord(value) && typeof value.type === 'string'
+}
+
+function isRefAction(value: unknown): value is RefActionRecord {
+  return isRecord(value) && value.type === 'ref' && typeof value.id === 'string'
+}
+
+function isInlineAction(value: unknown): value is InlineActionRecord {
+  return isRecord(value) && value.type === 'inline' && typeof value.code === 'string'
+}
+
+function isExpressionLike(
+  value: unknown,
+): value is { type: string; value: string; mock?: unknown } {
+  return isRecord(value) && typeof value.type === 'string' && typeof value.value === 'string'
+}
+
+function toStringValue(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value
+  if (value === undefined || value === null) return fallback
+  return String(value)
+}
+
+function normalizeActionType(type: string): string {
+  const normalized = type.trim()
+  switch (normalized) {
+    case 'alert':
+      return 'showToast'
+    case 'show-tooltip':
+      return 'showToast'
+    case 'customScript':
+    case 'custom-script':
+      return 'runScript'
+    case 'updateState':
+      return 'setState'
+    case 'navigate-page':
+      return 'navigate'
+    default:
+      return normalized
+  }
+}
+
+function resolveExpression(
+  input: { value: string; mock?: unknown },
+  scope: UnknownRecord,
+): unknown {
+  if (input.mock !== undefined) {
+    return input.mock
+  }
+
+  try {
+    const keys = Object.keys(scope)
+    const values = keys.map((key) => scope[key])
+    const evaluator = new Function(...keys, `return (${input.value})`)
+    return evaluator(...values)
+  } catch (error) {
+    console.warn('[RuntimeEventExecutor] expression evaluation failed', error)
+    return undefined
+  }
+}
+
+function resolveValue(input: unknown, scope: UnknownRecord): unknown {
+  if (isExpressionLike(input)) {
+    return resolveExpression(input, scope)
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => resolveValue(item, scope))
+  }
+  if (isRecord(input)) {
+    const output: UnknownRecord = {}
+    for (const [key, value] of Object.entries(input)) {
+      output[key] = resolveValue(value, scope)
+    }
+    return output
+  }
+  return input
+}
+
+function setByPath(target: unknown, path: string, value: unknown, merge: boolean): void {
+  if (!isRecord(target)) {
+    return
+  }
+
+  const segments = path
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+  if (segments.length === 0) {
+    return
+  }
+
+  let current: UnknownRecord = target
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const segment = segments[index]
+    if (!isRecord(current[segment])) {
+      current[segment] = {}
+    }
+    current = current[segment] as UnknownRecord
+  }
+
+  const lastSegment = segments[segments.length - 1]
+  if (merge && isRecord(current[lastSegment]) && isRecord(value)) {
+    current[lastSegment] = {
+      ...(current[lastSegment] as UnknownRecord),
+      ...value,
+    }
+    return
+  }
+
+  current[lastSegment] = value
+}
+
 function injectHighlightStyles(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
   if (document.getElementById(STYLE_ID)) return
 
   const styleEl = document.createElement('style')
@@ -100,28 +205,23 @@ function injectHighlightStyles(): void {
   document.head.appendChild(styleEl)
 }
 
-/**
- * 移除注入的样式
- */
 function removeHighlightStyles(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
   const styleEl = document.getElementById(STYLE_ID)
   if (styleEl) {
     styleEl.remove()
   }
 }
 
-/**
- * 安全获取组件 DOM 元素
- * @param componentId 组件ID
- * @returns DOM 元素或 null
- */
-function getNodeSchemaEl(componentId: string): HTMLElement | null {
-  if (!componentId) return null
+function getNodeElement(componentId: string): HTMLElement | null {
+  if (!componentId || typeof document === 'undefined') return null
 
-  // 尝试多种选择器
   const selectors = [
     `[data-component-id="${componentId}"]`,
     `[data-id="${componentId}"]`,
+    `[data-node-id="${componentId}"]`,
     `#${componentId}`,
   ]
 
@@ -130,426 +230,603 @@ function getNodeSchemaEl(componentId: string): HTMLElement | null {
       const el = document.querySelector<HTMLElement>(selector)
       if (el) return el
     } catch {
-      // 选择器无效时跳过
+      // ignore invalid selector
     }
   }
-
   return null
 }
 
-/**
- * 安全执行用户脚本（沙箱）
- */
-function executeSandboxedScript(
-  code: string,
-  context: {
-    component?: NodeSchema
-    components: NodeSchema[]
-    navigateToPage: (pageId: string) => void
-    allPages: Page[]
-  },
-): void {
-  // 安全的全局对象白名单
-  const SAFE_GLOBALS = [
-    'console',
-    'Math',
-    'Date',
-    'JSON',
-    'Array',
-    'Object',
-    'String',
-    'Number',
-    'Boolean',
-    'parseInt',
-    'parseFloat',
-    'isNaN',
-    'isFinite',
-    'setTimeout',
-    'clearTimeout',
-    'setInterval',
-    'clearInterval',
-    'Promise',
-    'Set',
-    'Map',
-    'WeakSet',
-    'WeakMap',
-  ] as const
-
-  // 创建 Proxy 代理，拦截所有变量访问
-  const proxy = new Proxy(context, {
-    // 拦截 in 操作符 (例如: 'window' in proxy)
-    has(target, key: string | symbol) {
-      // 只对 context 中的属性和安全全局变量返回 true
-      if (key in target) return true
-      if (typeof key === 'string' && (SAFE_GLOBALS as readonly string[]).includes(key)) return true
-      // 对其他变量返回 false，防止访问外层作用域（包括 window）
-      return false
-    },
-    // 拦截读取操作
-    get(target, key: string | symbol) {
-      // 1. 处理 Symbol.unscopables
-      if (key === Symbol.unscopables) return undefined
-
-      // 2. 优先返回 context 中的属性（component, components, navigateToPage, allPages）
-      if (key in target) {
-        return Reflect.get(target, key)
-      }
-
-      // 3. 允许访问安全的全局对象
-      if (typeof key === 'string' && (SAFE_GLOBALS as readonly string[]).includes(key)) {
-        return window[key as keyof Window]
-      }
-
-      // 4. 其他情况返回 undefined（阻止访问 window 等危险对象）
-      return undefined
-    },
-
-    // 拦截设置操作，防止修改 context 对象
-    set(target, key: string | symbol, value: unknown) {
-      // 只允许修改 context 中已存在的属性
-      if (key in target) {
-        return Reflect.set(target, key, value)
-      }
-      // 阻止添加新属性
-      console.warn(`[沙箱] 禁止添加新属性: ${String(key)}`)
-      return false
-    },
-  })
-
+function executeScript(code: string, scope: UnknownRecord): Promise<void> {
   try {
-    // 构造参数名列表和参数值列表
-    const paramNames = Object.keys(context)
-    const paramValues = Object.values(context)
-
-    // 使用 new Function 创建一个封闭的作用域
-    // 参数直接作为函数的参数传入，不再依赖 with
-    const fn = new Function(...paramNames, code)
-
-    // 执行函数
-    fn(...paramValues)
+    const runner = new Function('context', code)
+    const result = runner(scope) as unknown
+    if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+      return Promise.resolve(result as PromiseLike<unknown>).then(() => undefined)
+    }
+    return Promise.resolve()
   } catch (error) {
-    console.warn('[事件] 脚本执行失败:', error)
-    ElMessage.error('脚本执行失败')
+    console.warn('[RuntimeEventExecutor] script execution failed', error)
+    return Promise.resolve()
   }
 }
 
-// 主 Hook
+function findActionById(actions: unknown[], actionId: string): ActionRecord | null {
+  for (const action of actions) {
+    if (isActionRecord(action) && typeof action.id === 'string' && action.id === actionId) {
+      return action
+    }
+  }
+  return null
+}
+
+function extractPayload(action: ActionRecord): UnknownRecord {
+  return isRecord(action.payload) ? (action.payload as UnknownRecord) : {}
+}
 
 export function useEventExecutor(context: EventExecutorContext) {
   const { components, pages, isProjectMode, router, onNavigate } = context
 
-  // 存储高亮定时器，用于清理
   const highlightTimers = new Map<string, number>()
+  const runtimeState: UnknownRecord = {}
 
-  // 初始化：注入样式
   injectHighlightStyles()
 
-  // 组件卸载时清理资源
   onUnmounted(() => {
-    // 清理所有高亮定时器
     highlightTimers.forEach((timer) => clearTimeout(timer))
     highlightTimers.clear()
-    // 移除注入的样式
     removeHighlightStyles()
   })
 
-  /**
-   * 处理组件事件
-   */
-  async function handleComponentEvent(payload: {
-    componentId: string
-    eventType: string
-    actions: EventAction[]
-  }): Promise<void> {
-    const { componentId, actions } = payload
-    const sourceComp = components.value.find((c) => c.id === componentId)
+  function findComponentById(componentId: string): NodeSchema | undefined {
+    return components.value.find((component) => component.id === componentId)
+  }
 
-    for (const action of actions) {
-      await executeAction(action, sourceComp)
+  function resolveNodeActions(nodeId: string): unknown[] {
+    return asArray<unknown>(findComponentById(nodeId)?.actions)
+  }
+
+  function resolvePageActions(pageId?: string): unknown[] {
+    const runtimePages = pages.value as RuntimePage[]
+    if (pageId) {
+      const page = runtimePages.find((item) => item.id === pageId)
+      return asArray<unknown>(page?.actions)
+    }
+    return runtimePages.flatMap((item) => asArray<unknown>(item.actions))
+  }
+
+  function resolveActionReference(
+    actionRef: string | RefActionRecord,
+    nodeId: string,
+  ): ActionRecord | null {
+    if (typeof actionRef === 'string') {
+      return (
+        findActionById(resolveNodeActions(nodeId), actionRef) ||
+        findActionById(resolvePageActions(), actionRef)
+      )
+    }
+
+    const scope = actionRef.scope || 'global'
+    if (scope === 'node') {
+      const targetNodeId = toStringValue(actionRef.nodeId, nodeId)
+      return findActionById(resolveNodeActions(targetNodeId), actionRef.id)
+    }
+    if (scope === 'page') {
+      return findActionById(resolvePageActions(actionRef.pageId), actionRef.id)
+    }
+
+    return findActionById(resolvePageActions(), actionRef.id)
+  }
+
+  function resolveActionInput(
+    actionLike: unknown,
+    nodeId: string,
+  ): ActionRecord | InlineActionRecord | null {
+    if (typeof actionLike === 'string' || isRefAction(actionLike)) {
+      return resolveActionReference(actionLike, nodeId)
+    }
+    if (isInlineAction(actionLike)) {
+      return actionLike
+    }
+    if (isActionRecord(actionLike)) {
+      return actionLike
+    }
+    return null
+  }
+
+  function createScope(sourceNode?: NodeSchema, event?: Event): UnknownRecord {
+    return {
+      state: runtimeState,
+      component: sourceNode,
+      components: components.value,
+      pages: pages.value,
+      event,
+      timestamp: Date.now(),
+      window: typeof window !== 'undefined' ? window : undefined,
     }
   }
 
-  /**
-   * 执行单个事件动作
-   */
-  async function executeAction(action: EventAction, sourceNodeSchema?: NodeSchema): Promise<void> {
-    // 延迟执行
-    if (action.delay && action.delay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, action.delay))
+  async function executeActionLike(
+    actionLike: unknown,
+    sourceNode: NodeSchema | undefined,
+    nodeId: string,
+    event?: Event,
+  ): Promise<void> {
+    const resolved = resolveActionInput(actionLike, nodeId)
+    if (!resolved) {
+      return
+    }
+    await executeResolvedAction(resolved, sourceNode, nodeId, event)
+  }
+
+  async function executeResolvedAction(
+    action: ActionRecord | InlineActionRecord,
+    sourceNode: NodeSchema | undefined,
+    nodeId: string,
+    event?: Event,
+  ): Promise<void> {
+    if (isInlineAction(action)) {
+      await executeScript(action.code, createScope(sourceNode, event))
+      return
     }
 
-    switch (action.type) {
+    const delay = Number(action.delay)
+    if (Number.isFinite(delay) && delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+
+    const actionType = normalizeActionType(action.type)
+
+    switch (actionType) {
+      case 'setState':
+        handleSetState(action, sourceNode, event)
+        break
+      case 'navigate':
+        await handleNavigate(action)
+        break
+      case 'openUrl':
+        handleOpenUrl(action, sourceNode, event)
+        break
+      case 'showToast':
+        handleShowToast(action, sourceNode, event)
+        break
+      case 'runScript':
+        await handleRunScript(action, sourceNode, event)
+        break
+      case 'callApi':
+        await handleCallApi(action, sourceNode, event)
+        break
+      case 'emit':
+        handleEmit(action, sourceNode, event)
+        break
+      case 'showDialog':
+        dispatchRuntimeEvent('vela:dialog:open', {
+          dialogId: extractPayload(action).dialogId,
+          title: resolveValue(extractPayload(action).title, createScope(sourceNode, event)),
+          content: resolveValue(extractPayload(action).content, createScope(sourceNode, event)),
+          data: resolveValue(extractPayload(action).data, createScope(sourceNode, event)),
+        })
+        break
+      case 'closeDialog':
+        dispatchRuntimeEvent('vela:dialog:close', {
+          dialogId: extractPayload(action).dialogId,
+          result: resolveValue(extractPayload(action).result, createScope(sourceNode, event)),
+        })
+        break
+      case 'callMethod':
+        dispatchRuntimeEvent('vela:call-method', {
+          targetRef: extractPayload(action).targetRef,
+          method: extractPayload(action).method,
+          args: resolveValue(extractPayload(action).args, createScope(sourceNode, event)),
+        })
+        break
       case 'toggle-visibility':
         handleToggleVisibility(action)
         break
-
       case 'scroll-to':
         handleScrollTo(action)
         break
-
-      case 'show-tooltip':
-        handleShowTooltip(action)
-        break
-
-      case 'navigate':
-        handleNavigate(action)
-        break
-
-      case 'navigate-page':
-        handleNavigatePage(action)
-        break
-
       case 'fullscreen':
         handleFullscreen(action)
         break
-
-      case 'custom-script':
-        handleCustomScript(action, sourceNodeSchema)
-        break
-
       case 'play-animation':
         handlePlayAnimation(action)
         break
-
       case 'highlight':
         handleHighlight(action)
         break
-
       case 'refresh-data':
-        handleRefreshData(action, sourceNodeSchema)
+        handleRefreshData(action, sourceNode)
         break
-
       default:
-        console.warn('[\u4e8b\u4ef6] \u672a\u77e5\u52a8\u4f5c\u7c7b\u578b:', action.type)
+        console.warn('[RuntimeEventExecutor] unsupported action type:', action.type)
+    }
+
+    if (action.next !== undefined) {
+      await executeActionLike(action.next, sourceNode, nodeId, event)
     }
   }
 
-  /**
-   * 切换组件可见性
-   */
-  function handleToggleVisibility(action: EventAction): void {
-    if (!action.targetId) return
-
-    const target = components.value.find((c) => c.id === action.targetId)
-    if (!target) return
-
-    if (!target.style) target.style = {}
-    const currentVisible = target.style.visible !== false
-    target.style.visible = !currentVisible
+  function getTargetNode(action: ActionRecord, sourceNode?: NodeSchema): NodeSchema | undefined {
+    const payload = extractPayload(action)
+    const targetId = toStringValue(payload.targetId ?? action.targetId, sourceNode?.id || '')
+    if (!targetId) {
+      return sourceNode
+    }
+    return findComponentById(targetId) || sourceNode
   }
 
-  /**
-   * 滚动到指定组件
-   */
-  function handleScrollTo(action: EventAction): void {
-    if (!action.targetId) return
+  function handleSetState(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+    const payload = extractPayload(action)
+    const path = toStringValue(payload.path ?? action.path ?? payload.stateName, '')
+    if (!path) {
+      return
+    }
 
-    const el = getNodeSchemaEl(action.targetId)
-    if (!el) return
+    const scope = createScope(sourceNode, event)
+    const rawValue = payload.value !== undefined ? payload.value : action.value
+    const resolvedValue = resolveValue(rawValue, scope)
+    const merge = Boolean(payload.merge)
+    const target = getTargetNode(action, sourceNode)
 
-    // 使用 scrollIntoView 并处理可能的错误
+    const writesToNode =
+      path.startsWith('props.') ||
+      path.startsWith('style.') ||
+      path.startsWith('state.') ||
+      path.startsWith('dataSource.')
+
+    if (writesToNode && target) {
+      setByPath(target, path, resolvedValue, merge)
+      return
+    }
+
+    setByPath(runtimeState, path, resolvedValue, merge)
+  }
+
+  async function handleNavigate(action: ActionRecord): Promise<void> {
+    const payload = extractPayload(action)
+    const pageId = toStringValue(payload.pageId ?? action.pageId ?? action.targetId, '')
+    if (pageId && isProjectMode.value) {
+      navigateToPage(pageId)
+      return
+    }
+
+    const scope = createScope()
+    const rawPath = payload.path !== undefined ? payload.path : (action.path ?? action.content)
+    const resolvedPath = toStringValue(resolveValue(rawPath, scope), '')
+    if (!resolvedPath) {
+      return
+    }
+
+    const byIdOrName = pages.value.find(
+      (page) =>
+        page.id === resolvedPath || page.route === resolvedPath || page.name === resolvedPath,
+    )
+    if (byIdOrName && isProjectMode.value) {
+      navigateToPage(byIdOrName.id)
+      return
+    }
+
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+      window.open(resolvedPath, '_blank')
+      return
+    }
+
+    if (resolvedPath.startsWith('/')) {
+      const mode = toStringValue(payload.mode, 'push')
+      if (mode === 'replace') {
+        await Promise.resolve(router.replace(resolvedPath))
+      } else {
+        await Promise.resolve(router.push(resolvedPath))
+      }
+      return
+    }
+
+    const routePage = pages.value.find((page) => page.route === `/${resolvedPath}`)
+    if (routePage && isProjectMode.value) {
+      navigateToPage(routePage.id)
+      return
+    }
+
+    window.open(resolvedPath, '_blank')
+  }
+
+  function handleOpenUrl(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+    const payload = extractPayload(action)
+    const scope = createScope(sourceNode, event)
+    const rawUrl = payload.url !== undefined ? payload.url : (action.url ?? action.content)
+    const url = toStringValue(resolveValue(rawUrl, scope), '')
+    if (!url) {
+      return
+    }
+
+    const target =
+      toStringValue(payload.target, '') || (Boolean(action.openInNewTab) ? '_blank' : '_self')
+    if (target === '_self') {
+      window.location.href = url
+      return
+    }
+
+    const features = toStringValue(payload.features, '')
+    window.open(url, target || '_blank', features)
+  }
+
+  function handleShowToast(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+    const payload = extractPayload(action)
+    const scope = createScope(sourceNode, event)
+    const rawMessage =
+      payload.message !== undefined ? payload.message : (action.message ?? action.content)
+    const message = toStringValue(resolveValue(rawMessage, scope), '提示消息')
+    const type = toStringValue(payload.type ?? action.messageType, 'info') as
+      | 'success'
+      | 'warning'
+      | 'error'
+      | 'info'
+
+    switch (type) {
+      case 'success':
+        ElMessage.success(message)
+        break
+      case 'warning':
+        ElMessage.warning(message)
+        break
+      case 'error':
+        ElMessage.error(message)
+        break
+      default:
+        ElMessage.info(message)
+        break
+    }
+  }
+
+  async function handleRunScript(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+  ): Promise<void> {
+    const payload = extractPayload(action)
+    const rawCode =
+      payload.code !== undefined ? payload.code : (action.code ?? action.script ?? action.content)
+    const code = toStringValue(rawCode, '')
+    if (!code) {
+      return
+    }
+    await executeScript(code, createScope(sourceNode, event))
+  }
+
+  async function handleCallApi(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+  ): Promise<void> {
+    if (typeof fetch !== 'function') {
+      return
+    }
+
+    const payload = extractPayload(action)
+    const scope = createScope(sourceNode, event)
+    const endpointInput = payload.url !== undefined ? payload.url : (payload.apiId ?? action.url)
+    const endpoint = toStringValue(resolveValue(endpointInput, scope), '')
+    if (!endpoint) {
+      return
+    }
+
+    const method = toStringValue(payload.method, 'GET').toUpperCase()
+    const requestBody = resolveValue(payload.body, scope)
+    const requestInit: RequestInit = { method }
+
+    if (requestBody !== undefined && method !== 'GET' && method !== 'HEAD') {
+      requestInit.headers = {
+        'Content-Type': 'application/json',
+      }
+      requestInit.body = JSON.stringify(requestBody)
+    }
+
     try {
-      el.scrollIntoView({
+      const response = await fetch(endpoint, requestInit)
+      const contentType = response.headers.get('content-type') || ''
+      const result = contentType.includes('application/json')
+        ? await response.json()
+        : await response.text()
+
+      const resultPath = toStringValue(payload.resultPath, '')
+      if (resultPath) {
+        setByPath(runtimeState, resultPath, result, false)
+      }
+    } catch (error) {
+      console.warn('[RuntimeEventExecutor] callApi failed:', error)
+    }
+  }
+
+  function handleEmit(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+    const payload = extractPayload(action)
+    const scope = createScope(sourceNode, event)
+    const eventName = toStringValue(payload.event ?? action.eventName, '')
+    if (!eventName || typeof window === 'undefined') {
+      return
+    }
+
+    const detail = resolveValue(payload.data, scope)
+    window.dispatchEvent(new CustomEvent(eventName, { detail }))
+  }
+
+  function handleToggleVisibility(action: ActionRecord): void {
+    const targetId = toStringValue(action.targetId, '')
+    if (!targetId) {
+      return
+    }
+    const target = findComponentById(targetId)
+    if (!target) {
+      return
+    }
+    if (!target.style) {
+      target.style = {}
+    }
+
+    const style = target.style as UnknownRecord
+    const currentVisible = style.visible !== false
+    style.visible = !currentVisible
+  }
+
+  function handleScrollTo(action: ActionRecord): void {
+    const targetId = toStringValue(action.targetId, '')
+    if (!targetId) {
+      return
+    }
+    const element = getNodeElement(targetId)
+    if (!element) {
+      return
+    }
+
+    try {
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
         inline: 'center',
       })
     } catch {
-      // 降级方案：直接滚动
-      el.scrollIntoView(true)
+      element.scrollIntoView(true)
     }
   }
 
-  /**
-   * 显示提示消息
-   */
-  function handleShowTooltip(action: EventAction): void {
-    const content = action.content || '提示消息'
-    const messageType = (action as { messageType?: string }).messageType || 'info'
-
-    switch (messageType) {
-      case 'success':
-        ElMessage.success(content)
-        break
-      case 'warning':
-        ElMessage.warning(content)
-        break
-      case 'error':
-        ElMessage.error(content)
-        break
-      default:
-        ElMessage.info(content)
-    }
-  }
-
-  /**
-   * 页面导航（兼容多种跳转方式）
-   */
-  function handleNavigate(action: EventAction): void {
-    if (!action.content) return
-
-    // 检查是否是内部页面跳转
-    const targetPage = pages.value.find(
-      (p) => p.id === action.content || p.route === action.content || p.name === action.content,
-    )
-
-    if (targetPage && isProjectMode.value) {
-      navigateToPage(targetPage.id)
-    } else if (action.content.startsWith('http') || action.content.startsWith('/')) {
-      window.open(action.content, '_blank')
-    } else {
-      const pageByRoute = pages.value.find((p) => p.route === `/${action.content}`)
-      if (pageByRoute && isProjectMode.value) {
-        navigateToPage(pageByRoute.id)
-      } else {
-        window.open(action.content, '_blank')
-      }
-    }
-  }
-
-  /**
-   * 页面间跳转（专用）
-   */
-  function handleNavigatePage(action: EventAction): void {
-    if (!action.targetId || !isProjectMode.value) return
-
-    const targetPage = pages.value.find((p) => p.id === action.targetId)
-    if (targetPage) {
-      navigateToPage(targetPage.id)
-    } else {
-      ElMessage.warning('目标页面不存在')
-    }
-  }
-
-  /**
-   * 全屏切换（支持特定组件全屏）
-   */
-  function handleFullscreen(action: EventAction): void {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {})
+  function handleFullscreen(action: ActionRecord): void {
+    if (typeof document === 'undefined') {
       return
     }
 
-    let targetEl: Element = document.documentElement
-    if (action.targetId) {
-      const componentEl = getNodeSchemaEl(action.targetId)
-      if (componentEl) targetEl = componentEl
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined)
+      return
     }
 
-    targetEl.requestFullscreen().catch(() => {
+    let targetElement: Element = document.documentElement
+    const targetId = toStringValue(action.targetId, '')
+    if (targetId) {
+      const componentElement = getNodeElement(targetId)
+      if (componentElement) {
+        targetElement = componentElement
+      }
+    }
+
+    targetElement.requestFullscreen().catch(() => {
       ElMessage.warning('无法进入全屏')
     })
   }
 
-  /**
-   * 执行自定义脚本（沙箱环境）
-   */
-  function handleCustomScript(action: EventAction, sourceNodeSchema?: NodeSchema): void {
-    if (!action.content) return
+  function handlePlayAnimation(action: ActionRecord): void {
+    const targetId = toStringValue(action.targetId, '')
+    if (!targetId) {
+      return
+    }
 
-    executeSandboxedScript(action.content, {
-      component: sourceNodeSchema,
-      components: components.value,
-      navigateToPage,
-      allPages: pages.value,
-    })
-  }
+    const target = findComponentById(targetId)
+    const element = getNodeElement(targetId)
+    if (!target || !element) {
+      return
+    }
 
-  /**
-   * 播放动画
-   */
-  function handlePlayAnimation(action: EventAction): void {
-    if (!action.targetId) return
+    const animationName = toStringValue(target.animation?.name, 'fadeIn')
+    const duration =
+      typeof target.animation?.duration === 'number' ? target.animation.duration : 1000
 
-    const target = components.value.find((c) => c.id === action.targetId)
-    const el = getNodeSchemaEl(action.targetId)
-    if (!el) return
-
-    const animationName = target?.animation?.name || 'fadeIn'
-    const duration = target?.animation?.duration || 1000
-
-    // 移除旧动画类
-    el.classList.forEach((cls) => {
-      if (cls.startsWith('animate__')) {
-        el.classList.remove(cls)
+    element.classList.forEach((className) => {
+      if (className.startsWith('animate__')) {
+        element.classList.remove(className)
       }
     })
 
-    // 强制重绘以重新触发动画
-    void el.offsetWidth
+    void element.offsetWidth
+    element.classList.add('animate__animated', `animate__${animationName}`)
+    element.style.setProperty('--animate-duration', `${duration}ms`)
 
-    // 添加 animate.css 动画类
-    el.classList.add('animate__animated', `animate__${animationName}`)
-    el.style.setProperty('--animate-duration', `${duration}ms`)
-
-    // 动画结束后移除类
     const onAnimationEnd = () => {
-      el.classList.remove('animate__animated', `animate__${animationName}`)
-      el.removeEventListener('animationend', onAnimationEnd)
+      element.classList.remove('animate__animated', `animate__${animationName}`)
+      element.removeEventListener('animationend', onAnimationEnd)
     }
-    el.addEventListener('animationend', onAnimationEnd, { once: true })
+    element.addEventListener('animationend', onAnimationEnd, { once: true })
   }
 
-  /**
-   * 高亮组件（呼吸灯效果）
-   */
-  function handleHighlight(action: EventAction): void {
-    if (!action.targetId) return
+  function handleHighlight(action: ActionRecord): void {
+    const targetId = toStringValue(action.targetId, '')
+    if (!targetId) {
+      return
+    }
+    const element = getNodeElement(targetId)
+    if (!element) {
+      return
+    }
 
-    const el = getNodeSchemaEl(action.targetId)
-    if (!el) return
-
-    // 清除之前的定时器（如果存在）
-    const existingTimer = highlightTimers.get(action.targetId)
+    const existingTimer = highlightTimers.get(targetId)
     if (existingTimer) {
       clearTimeout(existingTimer)
-      el.classList.remove(HIGHLIGHT_CLASS)
+      element.classList.remove(HIGHLIGHT_CLASS)
     }
 
-    // 添加高亮类
-    el.classList.add(HIGHLIGHT_CLASS)
+    element.classList.add(HIGHLIGHT_CLASS)
 
-    // 设置自动移除
-    const duration = (action as { duration?: number }).duration || HIGHLIGHT_DURATION
+    const duration = Number(action.duration)
+    const ttl = Number.isFinite(duration) && duration > 0 ? duration : HIGHLIGHT_DURATION
     const timer = window.setTimeout(() => {
-      el.classList.remove(HIGHLIGHT_CLASS)
-      highlightTimers.delete(action.targetId!)
-    }, duration)
+      element.classList.remove(HIGHLIGHT_CLASS)
+      highlightTimers.delete(targetId)
+    }, ttl)
 
-    highlightTimers.set(action.targetId, timer)
+    highlightTimers.set(targetId, timer)
   }
 
-  /**
-   * 刷新数据源
-   */
-  function handleRefreshData(action: EventAction, sourceNodeSchema?: NodeSchema): void {
-    const targetId = action.targetId || sourceNodeSchema?.id
-    if (!targetId) return
-
-    const target = components.value.find((c) => c.id === targetId)
-    if (target?.dataSource?.enabled) {
-      // 触发数据刷新事件（由组件自身监听处理）
-      const el = getNodeSchemaEl(targetId)
-      if (el) {
-        el.dispatchEvent(new CustomEvent('data-refresh', { bubbles: true }))
-      }
+  function handleRefreshData(action: ActionRecord, sourceNode?: NodeSchema): void {
+    const targetId = toStringValue(action.targetId, sourceNode?.id || '')
+    if (!targetId) {
+      return
+    }
+    const target = findComponentById(targetId)
+    if (!target?.dataSource) {
+      return
+    }
+    const element = getNodeElement(targetId)
+    if (element) {
+      element.dispatchEvent(new CustomEvent('data-refresh', { bubbles: true }))
     }
   }
 
-  /**
-   * 页面跳转核心函数
-   */
+  function dispatchRuntimeEvent(eventName: string, detail: UnknownRecord): void {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.dispatchEvent(new CustomEvent(eventName, { detail }))
+  }
+
   function navigateToPage(pageId: string): void {
     if (onNavigate) {
       onNavigate(pageId)
-    } else {
-      const currentQuery = router.currentRoute.value.query
-      router.replace({ query: { ...currentQuery, pageId } })
+      return
     }
+    const currentQuery = router.currentRoute.value.query
+    router.replace({ query: { ...currentQuery, pageId } })
+  }
+
+  async function handleComponentEvent(payload: {
+    componentId: string
+    eventType: string
+    actions: unknown[]
+    event?: Event
+  }): Promise<void> {
+    const sourceNode = findComponentById(payload.componentId)
+    for (const actionLike of payload.actions) {
+      await executeActionLike(actionLike, sourceNode, payload.componentId, payload.event)
+    }
+  }
+
+  async function executeAction(actionLike: unknown, sourceNode?: NodeSchema): Promise<void> {
+    const fallbackNodeId =
+      (isRecord(actionLike) && typeof actionLike.targetId === 'string' && actionLike.targetId) ||
+      sourceNode?.id ||
+      ''
+    await executeActionLike(actionLike, sourceNode, fallbackNodeId)
   }
 
   return {
     handleComponentEvent,
     executeAction,
+    runtimeState,
   }
 }

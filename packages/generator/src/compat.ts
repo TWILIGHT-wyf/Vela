@@ -5,6 +5,16 @@
  * 新项目请使用 `@vela/generator` 主入口（协议驱动）。
  */
 
+const compatWarningFlag = '__vela_generator_compat_warned__'
+const compatGlobal = globalThis as Record<string, unknown>
+
+if (compatGlobal[compatWarningFlag] !== true) {
+  compatGlobal[compatWarningFlag] = true
+  console.warn(
+    '[vela-generator] `@vela/generator/compat` 已进入弃用阶段，请迁移到 `@vela/generator` 主入口。',
+  )
+}
+
 // 统一入口 API（旧组件模型）
 export {
   generateCode,

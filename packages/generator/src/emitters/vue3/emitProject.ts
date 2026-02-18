@@ -586,6 +586,25 @@ function toStringValue(value, fallback = '') {
   return String(value)
 }
 
+function normalizeActionType(type) {
+  const normalized = toStringValue(type).trim()
+  switch (normalized) {
+    case 'alert':
+      return 'showToast'
+    case 'show-tooltip':
+      return 'showToast'
+    case 'customScript':
+    case 'custom-script':
+      return 'runScript'
+    case 'updateState':
+      return 'setState'
+    case 'navigate-page':
+      return 'navigate'
+    default:
+      return normalized
+  }
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -667,6 +686,43 @@ function setByPath(target, path, value, merge) {
   current[lastSegment] = value
 }
 
+function getTargetElementById(targetId) {
+  if (!targetId || typeof document === 'undefined') {
+    return null
+  }
+  const selectors = [
+    '[data-node-id="' + targetId + '"]',
+    '[data-id="' + targetId + '"]',
+    '[data-component-id="' + targetId + '"]',
+    '#' + targetId,
+  ]
+  for (const selector of selectors) {
+    try {
+      const element = document.querySelector(selector)
+      if (element) {
+        return element
+      }
+    } catch {
+      // ignore invalid selector
+    }
+  }
+  return null
+}
+
+function ensureHighlightStyles() {
+  if (typeof document === 'undefined') {
+    return
+  }
+  const styleId = 'vela-generated-highlight-style'
+  if (document.getElementById(styleId)) {
+    return
+  }
+  const styleEl = document.createElement('style')
+  styleEl.id = styleId
+  styleEl.textContent = '.vela-generated-highlight{outline:3px solid rgba(64,158,255,.85);outline-offset:2px;border-radius:4px;box-shadow:0 0 0 8px rgba(64,158,255,.2)}'
+  document.head.appendChild(styleEl)
+}
+
 function findActionById(actions, actionId) {
   for (const action of asArray(actions)) {
     if (isRecord(action) && typeof action.id === 'string' && action.id === actionId) {
@@ -725,7 +781,7 @@ function resolveApiDefinition(options, apiId) {
 }
 
 async function executeBuiltInAction(action, scope, options, runtimeState, nodeId) {
-  const actionType = toStringValue(action.type)
+  const actionType = normalizeActionType(action.type)
   const payload = isRecord(action.payload) ? action.payload : {}
 
   switch (actionType) {
@@ -740,7 +796,10 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'navigate': {
-      const rawPath = resolveValue(payload.path !== undefined ? payload.path : action.path, scope)
+      const rawPath = resolveValue(
+        payload.path !== undefined ? payload.path : action.path !== undefined ? action.path : action.content,
+        scope,
+      )
       const targetPath = toStringValue(rawPath)
       if (!targetPath) {
         break
@@ -765,7 +824,10 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'openUrl': {
-      const rawUrl = resolveValue(payload.url !== undefined ? payload.url : action.url, scope)
+      const rawUrl = resolveValue(
+        payload.url !== undefined ? payload.url : action.url !== undefined ? action.url : action.content,
+        scope,
+      )
       const targetUrl = toStringValue(rawUrl)
       if (!targetUrl || typeof window === 'undefined' || typeof window.open !== 'function') {
         break
@@ -776,7 +838,14 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'showToast': {
-      const rawMessage = resolveValue(payload.message !== undefined ? payload.message : action.message, scope)
+      const rawMessage = resolveValue(
+        payload.message !== undefined
+          ? payload.message
+          : action.message !== undefined
+            ? action.message
+            : action.content,
+        scope,
+      )
       const message = toStringValue(rawMessage)
       if (!message) {
         break
@@ -825,7 +894,7 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'emit': {
-      const eventName = toStringValue(payload.event)
+      const eventName = toStringValue(payload.event !== undefined ? payload.event : action.eventName)
       if (!eventName || typeof window === 'undefined' || typeof window.dispatchEvent !== 'function' || typeof CustomEvent !== 'function') {
         break
       }
@@ -834,7 +903,15 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'runScript': {
-      const code = toStringValue(payload.code !== undefined ? payload.code : action.code)
+      const code = toStringValue(
+        payload.code !== undefined
+          ? payload.code
+          : action.code !== undefined
+            ? action.code
+            : action.script !== undefined
+              ? action.script
+              : action.content,
+      )
       if (!code) {
         break
       }
@@ -893,6 +970,83 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       if (resultPath) {
         setByPath(runtimeState, resultPath, result, false)
       }
+      break
+    }
+    case 'toggle-visibility': {
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId)
+      if (!target) {
+        break
+      }
+      const nextHidden = target.style.display !== 'none'
+      target.style.display = nextHidden ? 'none' : ''
+      break
+    }
+    case 'scroll-to': {
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId)
+      if (!target) {
+        break
+      }
+      try {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      } catch {
+        target.scrollIntoView(true)
+      }
+      break
+    }
+    case 'fullscreen': {
+      if (typeof document === 'undefined') {
+        break
+      }
+      if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+        await Promise.resolve(document.exitFullscreen())
+        break
+      }
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId) || document.documentElement
+      if (target && typeof target.requestFullscreen === 'function') {
+        await Promise.resolve(target.requestFullscreen())
+      }
+      break
+    }
+    case 'play-animation': {
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId)
+      if (!target) {
+        break
+      }
+      const animationName = toStringValue(payload.animationName, 'fadeIn')
+      const duration = Number(payload.duration)
+      const durationMs = Number.isFinite(duration) && duration > 0 ? duration : 1000
+      target.classList.remove('animate__animated', 'animate__' + animationName)
+      void target.offsetWidth
+      target.classList.add('animate__animated', 'animate__' + animationName)
+      target.style.setProperty('--animate-duration', String(durationMs) + 'ms')
+      break
+    }
+    case 'highlight': {
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId)
+      if (!target) {
+        break
+      }
+      ensureHighlightStyles()
+      target.classList.add('vela-generated-highlight')
+      const duration = Number(payload.duration !== undefined ? payload.duration : action.duration)
+      const ttl = Number.isFinite(duration) && duration > 0 ? duration : 2000
+      setTimeout(() => {
+        target.classList.remove('vela-generated-highlight')
+      }, ttl)
+      break
+    }
+    case 'refresh-data': {
+      const targetId = toStringValue(payload.targetId !== undefined ? payload.targetId : action.targetId)
+      const target = getTargetElementById(targetId)
+      if (!target) {
+        break
+      }
+      target.dispatchEvent(new CustomEvent('data-refresh', { bubbles: true }))
       break
     }
     default: {

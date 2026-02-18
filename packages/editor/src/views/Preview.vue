@@ -66,8 +66,11 @@
             <RuntimeRenderer
               v-if="rootNode"
               :root-node="rootNode"
+              :pages="runtimePages"
+              :is-project-mode="runtimeProjectMode"
               mode="preview"
               :plugins="runtimePlugins"
+              @navigate-page="handleRuntimeNavigate"
             />
             <div v-else class="empty-state">
               <div class="empty-icon">📄</div>
@@ -288,6 +291,18 @@ const sizeStore = useSizeStore()
 const { rootNode } = storeToRefs(compStore)
 const { currentPage } = storeToRefs(projectStore)
 const runtimePlugins = useRuntimePlugins()
+const runtimePages = computed(() =>
+  projectStore.project.pages
+    .filter((page) => page.type === 'page')
+    .map((page) => ({
+      id: page.id,
+      name: page.name,
+      route: page.path,
+      path: page.path,
+      actions: page.actions || [],
+    })),
+)
+const runtimeProjectMode = computed(() => runtimePages.value.length > 0)
 
 // 预览视口尺寸跟随画布设置
 const viewportStyle = computed(() => ({
@@ -625,6 +640,10 @@ watch(
 
 const handleBack = () => {
   router.push('/editor')
+}
+
+const handleRuntimeNavigate = (pageId: string) => {
+  projectStore.switchPage(pageId)
 }
 
 const handleRefresh = () => {

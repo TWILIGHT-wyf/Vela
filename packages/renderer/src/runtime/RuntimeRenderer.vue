@@ -129,7 +129,7 @@ const rendererStyle = computed(() => {
 
 // ========== Plugin System ==========
 const componentEventSubscribers = new Set<
-  (payload: { componentId: string; eventType: string; actions: unknown[] }) => void
+  (payload: { componentId: string; eventType: string; actions: unknown[]; event?: Event }) => void
 >()
 
 // Build node index for O(1) lookup
@@ -164,6 +164,9 @@ const context: RuntimeContext = {
   subscribeComponentEvent: (handler) => {
     componentEventSubscribers.add(handler)
   },
+  onNavigate: (pageId) => {
+    emit('navigate-page', pageId)
+  },
 }
 
 // Initialize plugins
@@ -174,6 +177,7 @@ function handleComponentEvent(payload: {
   componentId: string
   eventType: string
   actions: unknown[]
+  event?: Event
 }) {
   // Dispatch to all subscribed plugins
   componentEventSubscribers.forEach((handler) => handler(payload))

@@ -12,6 +12,70 @@
 
 import type { IRNode } from '../../pipeline/ir/ir'
 
+function normalizeGapValue(value: unknown): string | number | undefined {
+  if (typeof value === 'number') {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed) {
+      return trimmed
+    }
+  }
+  return undefined
+}
+
+function applyContainerStyle(node: IRNode, style: Record<string, string | number>): void {
+  const container = node.container
+  if (!container) {
+    return
+  }
+
+  if (container.mode === 'grid') {
+    if (style.display === undefined) {
+      style.display = 'grid'
+    }
+    if (style.gridTemplateColumns === undefined && container.columns) {
+      style.gridTemplateColumns = container.columns
+    }
+    if (style.gridTemplateRows === undefined && container.rows) {
+      style.gridTemplateRows = container.rows
+    }
+
+    const gap = normalizeGapValue(container.gap)
+    if (style.gap === undefined && gap !== undefined) {
+      style.gap = gap
+    }
+    return
+  }
+
+  if (container.mode === 'flow') {
+    if (style.display === undefined) {
+      style.display = 'flex'
+    }
+    if (style.flexDirection === undefined && container.direction) {
+      style.flexDirection = container.direction
+    }
+    if (style.flexWrap === undefined && container.wrap) {
+      style.flexWrap = container.wrap
+    }
+    if (style.justifyContent === undefined && container.justify) {
+      style.justifyContent = container.justify
+    }
+    if (style.alignItems === undefined && container.align) {
+      style.alignItems = container.align
+    }
+    if (style.alignContent === undefined && container.alignContent) {
+      style.alignContent = container.alignContent
+    }
+
+    const gap = normalizeGapValue(container.gap)
+    if (style.gap === undefined && gap !== undefined) {
+      style.gap = gap
+    }
+  }
+}
+
 /**
  * Build a flat style object from an IRNode's `style` and `layout` fields.
  *
@@ -30,6 +94,9 @@ export function buildNodeStyleFromIR(node: IRNode): Record<string, string | numb
       }
     }
   }
+
+  // 1.5. Overlay container semantics so emitted runtime keeps editor container behavior.
+  applyContainerStyle(node, style)
 
   const hasMargin =
     style.margin !== undefined ||

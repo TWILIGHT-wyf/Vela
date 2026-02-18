@@ -205,6 +205,12 @@ describe('generator emitters', () => {
 
     const runtimeSource = getFileContent(result.files, 'src/runtime/actionExecutor.ts')
     expect(runtimeSource).toContain('export function createActionExecutor(options)')
+    expect(runtimeSource).toContain('function normalizeActionType(type)')
+    expect(runtimeSource).toContain("case 'scroll-to'")
+    expect(runtimeSource).toContain("case 'highlight'")
+    expect(runtimeSource).toContain('function normalizeActionType(type)')
+    expect(runtimeSource).toContain("case 'scroll-to'")
+    expect(runtimeSource).toContain("case 'highlight'")
 
     const homePageSource = getFileContent(result.files, 'src/pages/Home.vue')
     expect(homePageSource).toContain('createActionExecutor')
@@ -260,6 +266,56 @@ describe('generator emitters', () => {
     expect(homePageSource).toContain('height:calc(100vh - 48px)')
     expect(homePageSource).not.toContain('width:100px')
     expect(homePageSource).not.toContain('height:calc(100vh - 48px)px')
+  })
+
+  it('Vue emitter: 容器语义应输出 grid/flex 容器样式', () => {
+    const project = createProjectFixture()
+    const homePage = project.pages.find((page) => page.id === 'home')
+    if (!homePage?.root) {
+      throw new Error('Missing home root node')
+    }
+
+    homePage.root.container = {
+      mode: 'grid',
+      columns: '2fr 1fr',
+      rows: 'auto 1fr',
+      gap: 12,
+    }
+
+    const nestedContainer: IRNode = {
+      id: 'nested_container',
+      component: 'Container',
+      layout: {
+        ...homePage.root.layout,
+        mode: 'flow',
+      },
+      container: {
+        mode: 'flow',
+        direction: 'column',
+        justify: 'space-between',
+        align: 'center',
+        gap: '16px',
+      },
+      children: [],
+      slots: {},
+    }
+
+    homePage.root.children.push(nestedContainer)
+
+    const result = emitVueProject(project, {
+      language: 'ts',
+      lint: false,
+    })
+
+    const homePageSource = getFileContent(result.files, 'src/pages/Home.vue')
+    expect(homePageSource).toContain('display:grid')
+    expect(homePageSource).toContain('grid-template-columns:2fr 1fr')
+    expect(homePageSource).toContain('grid-template-rows:auto 1fr')
+    expect(homePageSource).toContain('gap:12px')
+    expect(homePageSource).toContain('display:flex')
+    expect(homePageSource).toContain('flex-direction:column')
+    expect(homePageSource).toContain('justify-content:space-between')
+    expect(homePageSource).toContain('align-items:center')
   })
 
   it('Vue actionExecutor: 支持 confirm/throttle/debounce/handlers', async () => {
@@ -396,5 +452,75 @@ describe('generator emitters', () => {
     await executor.onNodeEvent('node_1', 'failEvent')
     expect(executor.runtimeState.failHookHit).toBe(1)
     expect(executor.runtimeState.completeHookHit).toBe(2)
+  })
+
+  it('Vue actionExecutor: 兼容旧动作别名与 legacy 交互动作', async () => {
+    const result = emitVueProject(createProjectFixture(), {
+      language: 'js',
+      lint: false,
+    })
+    const runtimeSource = getFileContent(result.files, 'src/runtime/actionExecutor.js')
+    const createActionExecutor = loadActionExecutorFactory(runtimeSource)
+
+    const push = vi.fn()
+    const replace = vi.fn()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const target = document.createElement('div')
+    target.dataset.nodeId = 'target_1'
+    const scrollSpy = vi.fn()
+    Object.defineProperty(target, 'scrollIntoView', {
+      value: scrollSpy,
+      configurable: true,
+      writable: true,
+    })
+    document.body.appendChild(target)
+
+    const executor = createActionExecutor({
+      pageId: 'home',
+      nodeEvents: {
+        node_1: {
+          click: ['aliasState', 'aliasScript', 'aliasToast', 'aliasNavigate', 'legacyScroll'],
+        },
+      },
+      nodeActions: {},
+      pageActions: [
+        { id: 'aliasState', type: 'updateState', path: 'aliasState', value: 123 },
+        {
+          id: 'aliasScript',
+          type: 'custom-script',
+          content: 'context.state.aliasScript = true',
+        },
+        { id: 'aliasToast', type: 'alert', message: 'hello-alias' },
+        {
+          id: 'aliasNavigate',
+          type: 'navigate-page',
+          payload: { path: '/next' },
+        },
+        {
+          id: 'legacyScroll',
+          type: 'scroll-to',
+          targetId: 'target_1',
+        },
+      ],
+      projectActions: [],
+      projectApis: [],
+      router: { push, replace },
+    })
+
+    await executor.onNodeEvent('node_1', 'click', new Event('click'))
+
+    expect(executor.runtimeState.aliasState).toBe(123)
+    expect(executor.runtimeState.aliasScript).toBe(true)
+    expect(push).toHaveBeenCalledWith('/next')
+    expect(scrollSpy).toHaveBeenCalled()
+    expect(
+      dispatchSpy.mock.calls.some(
+        (call) => call[0] instanceof Event && (call[0] as Event).type === 'vela:toast',
+      ),
+    ).toBe(true)
+
+    target.remove()
+    dispatchSpy.mockRestore()
   })
 })

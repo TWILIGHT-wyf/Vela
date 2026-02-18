@@ -1,13 +1,13 @@
 import type { Ref, ComputedRef } from 'vue'
 import type { Router } from 'vue-router'
-import type { NodeSchema } from '@vela/core'
+import type { AnyActionSchema, NodeSchema } from '@vela/core'
 
 export interface Page {
   id: string
   name: string
   route?: string
   path?: string
-  // Add other properties if needed
+  actions?: AnyActionSchema[]
 }
 
 /**
@@ -39,8 +39,19 @@ export interface RuntimeContext {
    * Subscribe to component events
    */
   subscribeComponentEvent: (
-    handler: (payload: { componentId: string; eventType: string; actions: unknown[] }) => void,
+    handler: (payload: {
+      componentId: string
+      eventType: string
+      actions: unknown[]
+      event?: Event
+    }) => void,
   ) => void
+
+  /**
+   * Optional page navigation callback for project-mode runtimes.
+   * When provided, navigate actions should use this callback first.
+   */
+  onNavigate?: (pageId: string) => void
 }
 
 /**

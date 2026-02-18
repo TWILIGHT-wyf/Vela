@@ -49,7 +49,6 @@ export function provideComponentEvents() {
         break
       case 'updateState':
         if ('stateName' in action && 'value' in action) {
-          // @ts-expect-error action narrowing incomplete for updateState
           console.log('Update state:', action.stateName, action.value)
         }
         break

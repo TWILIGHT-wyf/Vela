@@ -12,6 +12,7 @@ export function buildIRNode(node: NormalizedNode): IRNode {
     component: node.component,
     title: node.raw.title,
     layout: node.layout,
+    container: node.raw.container,
     props: node.raw.props,
     style: node.raw.style,
     dataSource: node.raw.dataSource,
@@ -28,4 +29,3 @@ export function buildIRNode(node: NormalizedNode): IRNode {
     slots,
   }
 }
-

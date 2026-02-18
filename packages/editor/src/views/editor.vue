@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useUIStore } from '@/stores/ui'
@@ -49,6 +49,18 @@ const { toggleSimulationMode } = uiStore
 const { canUndo, canRedo } = storeToRefs(historyStore)
 const { undo, redo, clear: resetHistory } = historyStore
 const runtimePlugins = useRuntimePlugins()
+const runtimePages = computed(() =>
+  projectStore.project.pages
+    .filter((page) => page.type === 'page')
+    .map((page) => ({
+      id: page.id,
+      name: page.name,
+      route: page.path,
+      path: page.path,
+      actions: page.actions || [],
+    })),
+)
+const runtimeProjectMode = computed(() => runtimePages.value.length > 0)
 
 // --- Panel States ---
 const showMaterials = ref(true)
@@ -159,6 +171,10 @@ async function switchCanvasMode(mode: LayoutMode) {
     switchingLayout.value = false
   }
 }
+
+function handleRuntimeNavigate(pageId: string) {
+  projectStore.switchPage(pageId)
+}
 </script>
 
 <template>
@@ -177,10 +193,11 @@ async function switchCanvasMode(mode: LayoutMode) {
         <RuntimeRenderer
           v-else
           :root-node="rootNode || undefined"
-          :pages="[]"
-          :is-project-mode="false"
+          :pages="runtimePages"
+          :is-project-mode="runtimeProjectMode"
           mode="simulation"
           :plugins="runtimePlugins"
+          @navigate-page="handleRuntimeNavigate"
         />
       </div>
 
