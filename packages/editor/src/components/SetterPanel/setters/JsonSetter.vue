@@ -39,7 +39,7 @@ watch(
     }
     try {
       localValue.value = JSON.stringify(val, null, 2)
-    } catch (e) {
+    } catch {
       localValue.value = String(val)
     }
   },
@@ -65,7 +65,7 @@ const handleBlur = () => {
     const parsed = JSON.parse(val)
     emit('update:modelValue', parsed)
     error.value = ''
-  } catch (e) {
+  } catch {
     error.value = '无效的 JSON 格式'
     // 不触发 update，保持原值，或者触发 null?
     // 保持原值会导致 props 不更新，但 UI 显示错误，这是合理的

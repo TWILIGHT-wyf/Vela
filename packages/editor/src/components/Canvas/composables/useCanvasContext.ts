@@ -1,4 +1,4 @@
-import { ref, computed, inject, provide, type Ref, type InjectionKey } from 'vue'
+import { ref, inject, provide, type Ref, type InjectionKey } from 'vue'
 
 /**
  * Canvas context interface

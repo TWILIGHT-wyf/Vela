@@ -45,7 +45,7 @@ export function createSandboxProxy(context: Record<string, unknown>): Record<str
   const globalObj = getGlobalThis()
 
   return new Proxy(context, {
-    has(_target, _key: string) {
+    has() {
       // 拦截所有属性检查，强制走 get
       return true
     },

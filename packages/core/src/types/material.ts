@@ -55,7 +55,7 @@ export interface PropSchema {
   setter: SetterType
   defaultValue?: unknown
   setterProps?: Record<string, unknown>
-  visible?: string | ((props: any) => boolean)
+  visible?: string | ((props: Record<string, unknown>) => boolean)
   description?: string
   group?: string
   required?: boolean

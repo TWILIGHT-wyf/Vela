@@ -84,7 +84,7 @@
               :max="3840"
               :step="10"
               controls-position="right"
-              @change="(val) => sizeStore.setSize(val || 1920, sizeStore.height)"
+              @change="(val: number | undefined) => sizeStore.setSize(val || 1920, sizeStore.height)"
             />
             <span class="size-separator">x</span>
             <el-input-number
@@ -93,7 +93,7 @@
               :max="3840"
               :step="10"
               controls-position="right"
-              @change="(val) => sizeStore.setSize(sizeStore.width, val || 1080)"
+              @change="(val: number | undefined) => sizeStore.setSize(sizeStore.width, val || 1080)"
             />
           </div>
         </el-form-item>

@@ -25,7 +25,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
-import { ElCheckboxGroup, ElCheckbox, ElCheckboxButton } from 'element-plus'
+import { ElCheckboxGroup } from 'element-plus'
 
 // 选项接口
 export interface CheckboxOption {

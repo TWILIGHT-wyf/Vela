@@ -6,7 +6,7 @@ export interface ContextMenuState {
   y: number
   targetId?: string
   // 额外数据，如 stage 坐标
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function useContextMenu() {
@@ -17,7 +17,11 @@ export function useContextMenu() {
     targetId: undefined,
   })
 
-  function openContextMenu(e: MouseEvent, targetId?: string, extraData: Record<string, any> = {}) {
+  function openContextMenu(
+    e: MouseEvent,
+    targetId?: string,
+    extraData: Record<string, unknown> = {},
+  ) {
     e.preventDefault()
     e.stopPropagation()
 

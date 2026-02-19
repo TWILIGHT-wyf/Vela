@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { DCaret, ArrowDown, FullScreen } from '@element-plus/icons-vue'
 
 const props = defineProps<{

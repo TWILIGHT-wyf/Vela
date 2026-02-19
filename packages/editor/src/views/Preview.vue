@@ -284,11 +284,11 @@ hljs.registerLanguage('typescript', typescript)
 hljs.registerLanguage('css', css)
 
 const router = useRouter()
-const compStore = useComponent()
+const componentStore = useComponent()
 const projectStore = useProjectStore()
 const sizeStore = useSizeStore()
 
-const { rootNode } = storeToRefs(compStore)
+const { rootNode } = storeToRefs(componentStore)
 const { currentPage } = storeToRefs(projectStore)
 const runtimePlugins = useRuntimePlugins()
 const runtimePages = computed(() =>
@@ -302,7 +302,7 @@ const runtimePages = computed(() =>
       actions: page.actions || [],
     })),
 )
-const runtimeProjectMode = computed(() => runtimePages.value.length > 0)
+const runtimeProjectMode = computed(() => runtimePages.value.length > 1)
 
 // 预览视口尺寸跟随画布设置
 const viewportStyle = computed(() => ({

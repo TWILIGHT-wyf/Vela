@@ -39,11 +39,11 @@ import {
 // --- Stores ---
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
-const compStore = useComponent()
+const componentStore = useComponent()
 const historyStore = useHistoryStore()
 const router = useRouter()
 
-const { rootNode } = storeToRefs(compStore)
+const { rootNode } = storeToRefs(componentStore)
 const { isSimulationMode, canvasMode } = storeToRefs(uiStore)
 const { toggleSimulationMode } = uiStore
 const { canUndo, canRedo } = storeToRefs(historyStore)
@@ -60,12 +60,11 @@ const runtimePages = computed(() =>
       actions: page.actions || [],
     })),
 )
-const runtimeProjectMode = computed(() => runtimePages.value.length > 0)
+const runtimeProjectMode = computed(() => runtimePages.value.length > 1)
 
 // --- Panel States ---
 const showMaterials = ref(true)
 const showSettings = ref(true)
-const showLayers = ref(false)
 const aiVisible = ref(false)
 const switchingLayout = ref(false)
 
@@ -102,10 +101,9 @@ onMounted(async () => {
 })
 
 // --- Handlers ---
-const togglePanel = (panel: 'materials' | 'settings' | 'layers') => {
+const togglePanel = (panel: 'materials' | 'settings') => {
   if (panel === 'materials') showMaterials.value = !showMaterials.value
   if (panel === 'settings') showSettings.value = !showSettings.value
-  if (panel === 'layers') showLayers.value = !showLayers.value
 }
 
 const handleOpenAIAssist = () => {
@@ -124,7 +122,7 @@ async function handleReset() {
     const currentPage = projectStore.currentPage
     if (currentPage && currentPage.children) {
       currentPage.children.children = []
-      compStore.loadTree(currentPage.children)
+      componentStore.loadTree(currentPage.children)
       resetHistory()
     }
     ElMessage.success('画布已清空')
@@ -157,8 +155,8 @@ async function switchCanvasMode(mode: LayoutMode) {
 
     switchingLayout.value = true
     const converted = convertLayout(rootNode.value, targetMode)
-    compStore.setTree(converted)
-    compStore.syncToProjectStore()
+    componentStore.setTree(converted)
+    componentStore.syncToProjectStore()
     projectStore.updatePageConfig({ defaultLayoutMode: targetMode })
     const successMap: Record<string, string> = {
       free: '已切换到自由布局',

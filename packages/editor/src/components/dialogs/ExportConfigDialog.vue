@@ -168,7 +168,7 @@ async function handleConfirm() {
     const { generateFromProject } = await import('@vela/generator')
     const result = generateFromProject(props.project, {
       framework: form.framework,
-      continueOnError: true,
+      continueOnError: false,
       vue: {
         language: form.language,
         lint: form.lint,
@@ -202,6 +202,18 @@ async function handleConfirm() {
     dialogVisible.value = false
   } catch (error) {
     console.error('导出失败', error)
+
+    const diagnostics = (error as { diagnostics?: unknown[] } | null)?.diagnostics
+    if (Array.isArray(diagnostics) && diagnostics.length > 0) {
+      const firstError = diagnostics.find((item) => {
+        const level = (item as { level?: unknown })?.level
+        return level === 'error'
+      }) as { message?: string } | undefined
+
+      ElMessage.error(firstError?.message || '导出失败：请先修复校验错误')
+      return
+    }
+
     ElMessage.error('导出失败，请重试')
   } finally {
     isExporting.value = false

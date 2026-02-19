@@ -20,7 +20,6 @@ export const Map = forwardRef<HTMLDivElement, MapProps>(
     center = [0, 0],
     zoom = 10,
     markers = [],
-    tileUrl,
     style,
     children,
     ...props

@@ -4,7 +4,7 @@ import { generateId } from './id'
 /**
  * 比较两个值是否相等 (深度比较)
  */
-export function isEqual(a: any, b: any): boolean {
+export function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
 
   if (a && b && typeof a === 'object' && typeof b === 'object') {
@@ -14,7 +14,7 @@ export function isEqual(a: any, b: any): boolean {
       return a.getTime() === (b as Date).getTime()
     }
 
-    if (Array.isArray(a)) {
+    if (Array.isArray(a) && Array.isArray(b)) {
       if (a.length !== b.length) return false
       for (let i = 0; i < a.length; i++) {
         if (!isEqual(a[i], b[i])) return false
@@ -22,14 +22,16 @@ export function isEqual(a: any, b: any): boolean {
       return true
     }
 
-    const keysA = Object.keys(a)
-    const keysB = Object.keys(b)
+    const objA = a as Record<string, unknown>
+    const objB = b as Record<string, unknown>
+    const keysA = Object.keys(objA)
+    const keysB = Object.keys(objB)
 
     if (keysA.length !== keysB.length) return false
 
     for (const key of keysA) {
-      if (!Object.prototype.hasOwnProperty.call(b, key)) return false
-      if (!isEqual(a[key], b[key])) return false
+      if (!Object.prototype.hasOwnProperty.call(objB, key)) return false
+      if (!isEqual(objA[key], objB[key])) return false
     }
 
     return true
@@ -46,8 +48,8 @@ export function isEqual(a: any, b: any): boolean {
  * @param basePath 基础路径
  */
 export function diff(
-  original: Record<string, any>,
-  modified: Record<string, any>,
+  original: Record<string, unknown>,
+  modified: Record<string, unknown>,
   nodeId: string,
   basePath: string = 'props',
 ): UpdateOp[] {
@@ -72,7 +74,14 @@ export function diff(
       !Array.isArray(valB) &&
       !(valA instanceof Date)
     ) {
-      ops.push(...diff(valA, valB, nodeId, path))
+      ops.push(
+        ...diff(
+          valA as Record<string, unknown>,
+          valB as Record<string, unknown>,
+          nodeId,
+          path,
+        ),
+      )
     } else {
       // 否则直接生成 Update 操作
       ops.push({

@@ -81,10 +81,7 @@ import BooleanSetter from '../setters/BooleanSetter.vue'
 import JsonSetter from '../setters/JsonSetter.vue'
 import ObjectSetter from '../setters/ObjectSetter.vue'
 
-// Extended prop config with name field for iteration
-interface NamedPropConfig extends PropConfig {
-  // name is already in PropConfig
-}
+type NamedPropConfig = PropConfig
 
 interface Props {
   node?: NodeSchema | null
@@ -119,12 +116,11 @@ const metaProps = computed<NamedPropConfig[]>(() => {
   const meta = materialList.find((m) => m.name === nodeName || m.componentName === nodeName)
   if (!meta?.props) return []
   return Object.entries(meta.props)
-    .filter(([_, config]) => config.group !== '样式')
+    .filter((entry) => entry[1].group !== '样式')
     .map(([name, config]) => {
-      const { name: _n, ...rest } = config
       return {
+        ...config,
         name,
-        ...rest,
       }
     })
 })
@@ -159,7 +155,7 @@ function getPropValue(propName: string, defaultValue?: unknown): unknown {
   if (!props.node) return defaultValue
 
   // 订阅版本号变化以触发响应式更新
-  const _v = componentStore.styleVersion[props.node.id]
+  void componentStore.styleVersion[props.node.id]
 
   const nodeProps = props.node.props || {}
   const value = nodeProps[propName]

@@ -15,7 +15,7 @@
             :model-value="internalValue[key]"
             v-bind="propSchema.setterProps || {}"
             :properties="propSchema.properties"
-            @update:model-value="(val: any) => updateProperty(key, val)"
+            @update:model-value="(val: unknown) => updateProperty(key, val)"
           />
         </div>
 
@@ -29,11 +29,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, type Component } from 'vue'
 import type { PropSchema } from '@vela/core'
 
 const props = defineProps<{
-  modelValue?: Record<string, any>
+  modelValue?: Record<string, unknown>
   properties?: Record<string, PropSchema>
 }>()
 
@@ -45,7 +45,7 @@ const internalValue = computed({
 })
 
 // 更新单个属性，触发整体更新（不可变更新）
-const updateProperty = (key: string, value: any) => {
+const updateProperty = (key: string, value: unknown) => {
   const newValue = {
     ...internalValue.value,
     [key]: value,
@@ -64,7 +64,7 @@ import JsonSetter from './JsonSetter.vue'
 // 自引用
 import ObjectSetter from './ObjectSetter.vue'
 
-const setterMap: Record<string, any> = {
+const setterMap: Record<string, Component> = {
   StringSetter,
   NumberSetter,
   BooleanSetter,

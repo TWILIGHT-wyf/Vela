@@ -8,7 +8,7 @@
  * 4. 框架特定规则验证
  */
 
-import { parse as babelParse } from '@babel/parser'
+import { parse as babelParse, type ParserOptions } from '@babel/parser'
 
 /**
  * 验证结果
@@ -77,25 +77,26 @@ const QUALITY_PATTERNS = [
  * 验证 JavaScript/TypeScript 代码
  */
 export function validateCode(code: string, options: ValidatorOptions = {}): ValidationResult {
-  const { framework, strict = false, checkSecurity = true, checkQuality = true } = options
+  const { framework, checkSecurity = true, checkQuality = true } = options
   const errors: ValidationError[] = []
   const warnings: ValidationWarning[] = []
 
   // 1. AST 语法验证
   try {
-    const parserOptions: any = {
+    const parserOptions: ParserOptions = {
       sourceType: 'module',
       plugins: ['jsx', 'typescript'],
     }
 
     babelParse(code, parserOptions)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const parseError = error as { message?: string; loc?: { line?: number; column?: number } }
     errors.push({
       type: 'syntax',
-      message: error.message,
-      line: error.loc?.line,
-      column: error.loc?.column,
-      code: extractCodeSnippet(code, error.loc?.line),
+      message: parseError.message || 'Failed to parse code',
+      line: parseError.loc?.line,
+      column: parseError.loc?.column,
+      code: extractCodeSnippet(code, parseError.loc?.line),
     })
     // 语法错误直接返回
     return { valid: false, errors, warnings }
@@ -115,11 +116,11 @@ export function validateCode(code: string, options: ValidatorOptions = {}): Vali
 
   // 4. 框架特定验证
   if (framework === 'vue') {
-    const vueIssues = validateVueCode(code, strict)
+    const vueIssues = validateVueCode(code)
     errors.push(...vueIssues.errors)
     warnings.push(...vueIssues.warnings)
   } else if (framework === 'react') {
-    const reactIssues = validateReactCode(code, strict)
+    const reactIssues = validateReactCode(code)
     errors.push(...reactIssues.errors)
     warnings.push(...reactIssues.warnings)
   }
@@ -204,8 +205,6 @@ export function validateVueSFC(content: string): ValidationResult {
   // 提取各部分
   const templateMatch = content.match(/<template[^>]*>([\s\S]*?)<\/template>/)
   const scriptMatch = content.match(/<script[^>]*>([\s\S]*?)<\/script>/)
-  const styleMatch = content.match(/<style[^>]*>([\s\S]*?)<\/style>/)
-
   // 验证 template
   if (templateMatch) {
     const templateResult = validateVueTemplate(templateMatch[1])
@@ -279,7 +278,7 @@ function checkQualityPatterns(code: string): ValidationWarning[] {
 /**
  * Vue 特定验证
  */
-function validateVueCode(code: string, strict: boolean): { errors: ValidationError[]; warnings: ValidationWarning[] } {
+function validateVueCode(code: string): { errors: ValidationError[]; warnings: ValidationWarning[] } {
   const errors: ValidationError[] = []
   const warnings: ValidationWarning[] = []
 
@@ -310,12 +309,11 @@ function validateVueCode(code: string, strict: boolean): { errors: ValidationErr
 /**
  * React 特定验证
  */
-function validateReactCode(code: string, strict: boolean): { errors: ValidationError[]; warnings: ValidationWarning[] } {
+function validateReactCode(code: string): { errors: ValidationError[]; warnings: ValidationWarning[] } {
   const errors: ValidationError[] = []
   const warnings: ValidationWarning[] = []
 
   // 检查 hooks 规则
-  const hookCalls = code.match(/\buse[A-Z]\w*\s*\(/g) || []
   const conditionalHooks = code.match(/if\s*\([^)]*\)\s*\{[^}]*\buse[A-Z]\w*\s*\(/g)
 
   if (conditionalHooks) {

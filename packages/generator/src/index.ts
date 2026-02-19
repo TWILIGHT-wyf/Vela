@@ -2,7 +2,6 @@
  * @vela/generator - 协议驱动代码生成器
  *
  * 主入口仅导出 ProjectSchema 驱动的新架构 API。
- * 旧版兼容 API 已迁移至 `@vela/generator/compat`。
  *
  * @example
  * ```ts

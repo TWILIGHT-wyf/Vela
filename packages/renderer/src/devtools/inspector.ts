@@ -1,4 +1,4 @@
-import { ref, reactive, computed, type Ref } from 'vue'
+import { reactive, computed, type Ref } from 'vue'
 import { getNodeComponent, type NodeSchema } from '@vela/core'
 
 /**
@@ -42,7 +42,7 @@ export function createInspector() {
   })
 
   // 组件树引用
-  let rootNode: Ref<NodeSchema | null> = ref(null)
+  let rootNode: Ref<NodeSchema | null> | null = null
 
   // 组件索引
   const nodeIndex = new Map<string, NodeSchema>()
@@ -74,7 +74,7 @@ export function createInspector() {
     parentIndex.clear()
     depthIndex.clear()
 
-    if (!rootNode.value) return
+    if (!rootNode?.value) return
 
     function traverse(node: NodeSchema, parentId: string | null, depth: number) {
       nodeIndex.set(node.id, node)
@@ -190,7 +190,7 @@ export function createInspector() {
    * 获取组件树结构
    */
   function getTreeStructure(): object | null {
-    if (!rootNode.value) return null
+    if (!rootNode?.value) return null
 
     function buildTree(node: NodeSchema): object {
       return {
@@ -228,7 +228,7 @@ export function createInspector() {
    * 导出组件树为 JSON
    */
   function exportTree(): string {
-    return JSON.stringify(rootNode.value, null, 2)
+    return JSON.stringify(rootNode?.value ?? null, null, 2)
   }
 
   /**

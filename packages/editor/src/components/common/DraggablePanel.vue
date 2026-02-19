@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed } from 'vue'
 import { Close } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -37,7 +37,7 @@ const props = defineProps({
   zIndex: { type: Number, default: 10 },
 })
 
-const emit = defineEmits(['update:visible'])
+defineEmits(['update:visible'])
 
 // Position State
 const x = ref(props.initialX)

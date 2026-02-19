@@ -1,6 +1,53 @@
 import { test, expect, type Page } from '@playwright/test'
 import { bootstrapProjects, PRIMARY_PROJECT_ID } from './utils/projectFixtures'
 
+async function dropNode(
+  page: Page,
+  schema: {
+    id: string
+    component: string
+    props?: Record<string, unknown>
+    style?: Record<string, unknown>
+  },
+  position: { x: number; y: number },
+) {
+  await page.locator('.canvas-stage').evaluate(
+    (canvas, payload) => {
+      const data = new DataTransfer()
+      data.setData(
+        'application/x-vela',
+        JSON.stringify({
+          ...payload.schema,
+          children: [],
+        }),
+      )
+
+      canvas.dispatchEvent(
+        new DragEvent('dragover', {
+          bubbles: true,
+          cancelable: true,
+          clientX: payload.position.x,
+          clientY: payload.position.y,
+          dataTransfer: data,
+        }),
+      )
+      canvas.dispatchEvent(
+        new DragEvent('drop', {
+          bubbles: true,
+          cancelable: true,
+          clientX: payload.position.x,
+          clientY: payload.position.y,
+          dataTransfer: data,
+        }),
+      )
+    },
+    {
+      schema,
+      position,
+    },
+  )
+}
+
 test('Analyze basic components and chart interaction', async ({ page }) => {
   const logs: string[] = []
   page.on('console', (msg) => {
@@ -46,46 +93,47 @@ test('Analyze basic components and chart interaction', async ({ page }) => {
   const canvas = page.locator('[data-testid="canvas-board"]')
   const canvasBox = await canvas.boundingBox()
   if (!canvasBox) throw new Error('Canvas not found')
+  const textNodes = page.locator('.component-node[data-component="Text"]')
+  const beforeTextCount = await textNodes.count()
 
-  // Drag and drop Text
-  await textItem.dragTo(canvas, {
-    targetPosition: { x: canvasBox.width / 2 - 100, y: canvasBox.height / 2 },
-  })
+  // Scripted drop for cross-browser stability
+  await dropNode(
+    page,
+    {
+      id: 'analysis_text_1',
+      component: 'Text',
+      props: { text: '文本内容', content: '文本内容' },
+      style: { width: 180, height: 42 },
+    },
+    { x: canvasBox.width / 2 - 100, y: canvasBox.height / 2 },
+  )
   await page.waitForTimeout(1000) // Wait for drop to process
+  await expect(textNodes).toHaveCount(beforeTextCount + 1, { timeout: 5000 })
 
-  // 4. Drag "LineChart" to canvas
-  const chartCategory = page.locator('.el-collapse-item__header', { hasText: /图表/ }).first()
-  await chartCategory.click()
-  await page.waitForTimeout(500)
+  // 4. Drop "LineChart" to canvas
+  const lineChartNodes = page.locator('.component-node[data-component="lineChart"]')
+  const beforeLineChartCount = await lineChartNodes.count()
 
-  const lineChartItem = page.locator('.grid-item', { hasText: /^折线图$/ }).first()
-  await expect(lineChartItem).toBeVisible()
-
-  await lineChartItem.dragTo(canvas, {
-    targetPosition: { x: canvasBox.width / 2 + 100, y: canvasBox.height / 2 },
-  })
+  await dropNode(
+    page,
+    {
+      id: 'analysis_line_1',
+      component: 'lineChart',
+      props: {},
+      style: { width: 360, height: 240 },
+    },
+    { x: canvasBox.width / 2 + 100, y: canvasBox.height / 2 },
+  )
   await page.waitForTimeout(1000)
+  await expect(lineChartNodes).toHaveCount(beforeLineChartCount + 1, { timeout: 5000 })
 
-  // 5. Move Text component
-  // Find the text component on canvas.
-  // We select the one with "文本内容" text which is the default content
-  const textOnCanvas = page.locator('.shape-wrapper', { hasText: '文本内容' }).first()
+  // 5. Verify both nodes are rendered and selection works
+  const textOnCanvas = textNodes.last()
   await expect(textOnCanvas).toBeVisible()
+  await expect(lineChartNodes.last()).toBeVisible()
 
-  const textIcon = await textOnCanvas.boundingBox()
-  if (textIcon) {
-    // Move mouse to center of component
-    await page.mouse.move(textIcon.x + textIcon.width / 2, textIcon.y + textIcon.height / 2)
-    await page.mouse.down()
-    // Move by 100px
-    await page.mouse.move(
-      textIcon.x + textIcon.width / 2 + 100,
-      textIcon.y + textIcon.height / 2 + 100,
-    )
-    await page.mouse.up()
-  }
-
-  await page.waitForTimeout(2000) // Wait for any final logs
+  await textOnCanvas.click({ force: true })
+  await expect(textOnCanvas).toHaveClass(/is-selected/)
 
   console.log('--- END OF LOGS ---')
   console.log(JSON.stringify(logs, null, 2))

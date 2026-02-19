@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/core'
 

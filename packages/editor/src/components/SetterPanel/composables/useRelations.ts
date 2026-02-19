@@ -1,6 +1,14 @@
 import { computed, ref } from 'vue'
+import type { NodeSchema } from '@vela/core'
 import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
+
+interface TreeNodeData {
+  id: string
+  label: string
+  type: string
+  children: TreeNodeData[]
+}
 
 export function useComponentHierarchy() {
   const componentStore = useComponent()
@@ -10,7 +18,7 @@ export function useComponentHierarchy() {
     const selectedId = componentStore.selectedId
     if (!selectedId || !rootNode.value) return []
 
-    const findChildren = (node: any, targetId: string): any[] => {
+    const findChildren = (node: NodeSchema, targetId: string): NodeSchema[] => {
       if (node.id === targetId) {
         return node.children || []
       }
@@ -34,7 +42,7 @@ export function useComponentHierarchy() {
     return []
   })
 
-  function addChildToComponent(childId: string) {}
+  function addChildToComponent() {}
 
   function removeFromGroup() {}
 
@@ -75,21 +83,21 @@ export function useTreeOperations() {
   const treeData = computed(() => {
     if (!rootNode.value) return []
 
-    const buildTree = (node: any) => ({
+    const buildTree = (node: NodeSchema): TreeNodeData => ({
       id: node.id,
-      label: node.component || node.componentName,
-      type: node.component || node.componentName,
+      label: node.component || node.componentName || '',
+      type: node.component || node.componentName || '',
       children: node.children?.map(buildTree) || [],
     })
 
     return [buildTree(rootNode.value)]
   })
 
-  function handleNodeClick(data: any) {
+  function handleNodeClick(data: { id: string }) {
     componentStore.selectComponent(data.id)
   }
 
-  function getAllNodeKeys(nodes: any[]): string[] {
+  function getAllNodeKeys(nodes: TreeNodeData[]): string[] {
     const keys: string[] = []
     nodes.forEach((node) => {
       keys.push(node.id)
@@ -100,7 +108,7 @@ export function useTreeOperations() {
     return keys
   }
 
-  function removeParentFromTree(childId: string) {}
+  function removeParentFromTree() {}
 
   function allowDrop() {
     return true

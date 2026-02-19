@@ -1,7 +1,7 @@
-import { ref, reactive, computed, watch, type Ref } from 'vue'
+import { reactive, computed, type Ref } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { inspector } from './inspector'
-import { logger, type LogEntry } from './logger'
+import { logger } from './logger'
 import { performanceMonitor } from './performance'
 
 /**

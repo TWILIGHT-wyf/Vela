@@ -7,42 +7,19 @@ import type {
   SuggestionRequest,
   SuggestionResult,
   DiffItem,
+  LegacySuggestionComponent,
   WhitelistConfig,
 } from '@/types/suggestion'
 import { nanoid } from 'nanoid'
 import http from '@/services/http'
-// import { getAllSchemas, type ComponentSchema } from '@/components/siderBar/properties/schema/types'
-// import '@/components/siderBar/properties/schema/index'
 
-// TODO: 使用统一 NodeSchema 后替换为明确组件类型
-type Component = any
+type ComponentLike = LegacySuggestionComponent & { id?: string }
 
 /**
  * 构建组件能力文档（基于 Schema）
  */
-// TODO: 重构组件Schema系统后恢复此功能
 function buildComponentCapabilityDoc(): string {
-  // const schemas = getAllSchemas()
-  // const capabilities: string[] = []
-
-  // schemas.forEach((schema: ComponentSchema, type: string) => {
-  //   const mainType = schema.types[0] || type
-  //   const props: string[] = []
-
-  //   // 提取组件属性
-  //   if (schema.componentSchema) {
-  //     props.push(...schema.componentSchema.map((f) => `${f.key}(${f.type})`))
-  //   }
-
-  //   // 数据源支持
-  //   const hasDataSource = schema.dataSourceSchema && schema.dataSourceSchema.length > 0
-
-  //   capabilities.push(
-  //     `- ${mainType}: ${props.slice(0, 8).join(', ')}${props.length > 8 ? '...' : ''} ${hasDataSource ? '[支持数据源]' : ''}`,
-  //   )
-  // })
-
-  // return capabilities.join('\n')
+  // Keep the capability list explicit until schema metadata is fully normalized.
   return '- base: 地图基础图层\n- lineChart: 折线图[支持数据源]\n- barChart: 柱状图[支持数据源]\n- stat: KPI统计\n- table: 数据表[支持数据源]'
 }
 
@@ -123,20 +100,21 @@ const DEFAULT_WHITELIST: WhitelistConfig = {
 /**
  * JSON Schema 校验（简化版）
  */
-function validateComponentSchema(component: Partial<Component>): {
+function validateComponentSchema(component: LegacySuggestionComponent): {
   valid: boolean
   errors: string[]
 } {
   const errors: string[] = []
+  const componentType = typeof component.type === 'string' ? component.type : ''
 
   // 必需字段
-  if (!component.type) {
+  if (!componentType) {
     errors.push('组件缺少必需字段: type')
   }
 
   // 检查组件类型是否在白名单内
-  if (component.type && !DEFAULT_WHITELIST.allowedComponents.includes(component.type)) {
-    errors.push(`组件类型 "${component.type}" 不在白名单内`)
+  if (componentType && !DEFAULT_WHITELIST.allowedComponents.includes(componentType)) {
+    errors.push(`组件类型 "${componentType}" 不在白名单内`)
   }
 
   // 检查尺寸
@@ -244,7 +222,7 @@ function validateDiff(diff: DiffItem): { valid: boolean; errors: string[] } {
   }
 
   if (diff.component) {
-    diff.component = sanitizeValue(diff.component) as Partial<Component>
+    diff.component = sanitizeValue(diff.component) as LegacySuggestionComponent
   }
 
   return {
@@ -260,8 +238,6 @@ function validateDiff(diff: DiffItem): { valid: boolean; errors: string[] } {
 const AGENT_CONFIG = {
   endpoint: '/ai/generate',
   timeout: 60000,
-  maxRetries: 2, // 最大重试次数
-  retryDelay: 2000, // 重试延迟(毫秒)
 }
 
 /**
@@ -489,7 +465,7 @@ async function callAgent(request: SuggestionRequest): Promise<Omit<SuggestionRes
     const canvasWidth = request.context?.canvasSize?.width || 1920
     const canvasHeight = request.context?.canvasSize?.height || 1080
 
-    const resp = await http.post(
+    const response = await http.post(
       AGENT_CONFIG.endpoint,
       {
         messages: [
@@ -513,7 +489,7 @@ async function callAgent(request: SuggestionRequest): Promise<Omit<SuggestionRes
       timeoutId = null
     }
 
-    const data = resp.data
+    const data = response.data
     const content = data.choices?.[0]?.message?.content || data.content || ''
     return parseAgentResponse(content, request)
   } catch (err: unknown) {
@@ -625,10 +601,10 @@ export async function generateSuggestion(request: SuggestionRequest): Promise<Su
 /**
  * 应用差异到组件树
  */
-export function applyDiffs(
-  components: Component[],
+export function applyDiffs<T extends ComponentLike>(
+  components: T[],
   diffs: DiffItem[],
-): { components: Component[]; appliedCount: number } {
+): { components: T[]; appliedCount: number } {
   const newComponents = [...components]
   let appliedCount = 0
 
@@ -639,7 +615,7 @@ export function applyDiffs(
         const newComponent = {
           id: nanoid(),
           ...diff.component,
-        } as Component
+        } as T
         newComponents.push(newComponent)
         appliedCount++
       } else if (diff.action === 'modify' && diff.componentId && diff.path && diff.newValue) {

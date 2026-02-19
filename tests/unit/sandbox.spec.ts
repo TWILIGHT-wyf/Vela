@@ -9,7 +9,7 @@ const createMockContext = (): RuntimeContext => ({
   pages: ref([]),
   isProjectMode: ref(false),
   router: {} as unknown as Router,
-  subscribeComponentEvent: () => {},
+  subscribeComponentEvent: () => () => {},
 })
 
 describe('useEventExecutor Sandbox', () => {

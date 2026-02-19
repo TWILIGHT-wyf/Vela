@@ -14,7 +14,7 @@
 import type { CSSProperties } from 'vue'
 import type { SnapLine } from '../composables/useSnapping'
 
-const props = defineProps<{
+defineProps<{
   lines: SnapLine[]
 }>()
 

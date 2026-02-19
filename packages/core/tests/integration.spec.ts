@@ -68,7 +68,7 @@ describe('Core Integration & Consistency', () => {
           const idx = createdIds.indexOf(targetId)
           if (idx > -1) createdIds.splice(idx, 1)
         }
-      } catch (e) {
+      } catch {
         // Ignore invalid moves (e.g. move to descendant) as they are expected to fail safely
       }
 

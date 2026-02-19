@@ -1,25 +1,21 @@
-import { onMounted, onBeforeUnmount } from 'vue'
-import type { RuntimePlugin, RuntimeContext } from '../types'
+import type { RuntimeContext, RuntimePlugin } from '../types'
 import { useDataBindingEngine } from './useDataBindingEngine'
 import { useEventExecutor } from './useEventExecutor'
 
 /**
- * 数据联动插件
+ * Data binding runtime plugin.
  */
 export const DataBindingPlugin: RuntimePlugin = (context: RuntimeContext) => {
   const engine = useDataBindingEngine(context.components)
+  engine.start()
 
-  onMounted(() => {
-    engine.start()
-  })
-
-  onBeforeUnmount(() => {
+  return () => {
     engine.stop()
-  })
+  }
 }
 
 /**
- * 事件执行器插件
+ * Event executor runtime plugin.
  */
 export const EventExecutorPlugin: RuntimePlugin = (context: RuntimeContext) => {
   const { handleComponentEvent } = useEventExecutor({
@@ -30,13 +26,16 @@ export const EventExecutorPlugin: RuntimePlugin = (context: RuntimeContext) => {
     onNavigate: context.onNavigate,
   })
 
-  // 订阅组件事件
-  context.subscribeComponentEvent((payload) => {
-    handleComponentEvent({
+  const unsubscribe = context.subscribeComponentEvent((payload) => {
+    void handleComponentEvent({
       componentId: payload.componentId,
       eventType: payload.eventType,
       actions: payload.actions,
       event: payload.event,
     })
   })
+
+  return () => {
+    unsubscribe()
+  }
 }

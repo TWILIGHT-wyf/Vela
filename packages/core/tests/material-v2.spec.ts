@@ -77,7 +77,14 @@ describe('Core: Material V2 Architecture', () => {
         },
       }
 
-      const serialized = serialize(v2Props) as any
+      const serialized = serialize(v2Props) as {
+        config: {
+          style: {
+            width: number
+            color: { type: string; value: string }
+          }
+        }
+      }
       expect(serialized.config.style.width).toBe(100)
       expect(serialized.config.style.color).toEqual({
         type: 'JSExpression',
@@ -85,7 +92,7 @@ describe('Core: Material V2 Architecture', () => {
       })
 
       // 反序列化验证
-      const deserialized = deserialize(serialized) as any
+      const deserialized = deserialize<typeof serialized>(serialized)
       expect(deserialized.config.style.color.value).toBe('state.theme.primaryColor')
     })
   })

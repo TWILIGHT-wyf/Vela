@@ -182,11 +182,13 @@ export function createPerformanceMonitor() {
   /**
    * 获取内存使用
    */
-  function getMemoryUsage(): number | undefined {
-    // @ts-ignore - performance.memory is Chrome-only
-    if (performance.memory) {
-      // @ts-ignore
-      return performance.memory.usedJSHeapSize / 1024 / 1024 // MB
+function getMemoryUsage(): number | undefined {
+    const perfWithMemory = performance as Performance & {
+      memory?: { usedJSHeapSize?: number }
+    }
+    const usedHeapSize = perfWithMemory.memory?.usedJSHeapSize
+    if (typeof usedHeapSize === 'number') {
+      return usedHeapSize / 1024 / 1024 // MB
     }
     return undefined
   }

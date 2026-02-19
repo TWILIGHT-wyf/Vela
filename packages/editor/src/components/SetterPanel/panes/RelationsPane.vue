@@ -100,25 +100,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { Document, FolderOpened, InfoFilled } from '@element-plus/icons-vue'
 import type { ElTree } from 'element-plus'
 import {
-  useComponentHierarchy,
   useTreeOperations,
   useLayoutConfig,
 } from '../composables/useRelations'
-import { useComponent } from '@/stores/component'
-
-const componentStore = useComponent()
-
-const { childrenComponents, selectComponentById } = useComponentHierarchy()
 
 const { treeData, handleNodeClick, getAllNodeKeys, allowDrop, allowDrag, handleNodeDrop } =
   useTreeOperations()
 
-const { isContainer, layoutMode, layoutGap, layoutColumns, layoutAlign, layoutPadding } =
-  useLayoutConfig()
+const { isContainer, layoutMode, layoutGap, layoutAlign, layoutPadding } = useLayoutConfig()
 
 const treeRef = ref<InstanceType<typeof ElTree> | null>(null)
 const allExpanded = ref(false)

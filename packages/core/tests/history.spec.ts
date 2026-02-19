@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { HistoryManager } from '../src/model/history'
 import { TreeModel } from '../src/model/tree'
 import { NodeSchema } from '../src/types/schema'

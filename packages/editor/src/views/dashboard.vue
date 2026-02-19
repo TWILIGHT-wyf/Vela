@@ -206,12 +206,10 @@ import {
   Files,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useProjectStore } from '@/stores/project'
 import * as projectService from '@/services/projects'
 import { generateId } from '@vela/core'
 
 const router = useRouter()
-const projectStore = useProjectStore()
 const searchText = ref('')
 const loading = ref(false)
 

@@ -55,7 +55,7 @@
         split-button
         type="default"
         class="vela-dropdown"
-        @click="openPreview('page')"
+        @click="openPreview"
         @command="handlePreviewCommand"
       >
         <span class="dropdown-label">
@@ -157,7 +157,7 @@ function exportJSON() {
 }
 
 // 预览
-function openPreview(_scope?: 'page' | 'project') {
+function openPreview() {
   router.push('/preview')
 }
 

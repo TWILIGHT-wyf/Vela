@@ -8,7 +8,6 @@
  * ALL other mapping tables in the codebase should derive from this registry:
  * - packages/generator/src/emitters/vue3/emitProject.ts   → VUE_COMPONENT_MAP
  * - packages/generator/src/emitters/react/emitProject.ts  → REACT_COMPONENT_MAP
- * - packages/generator/src/generators/react-generator.ts   → REACT_COMPONENT_MAP
  * - packages/materials/src/registry.ts                     → ALIAS_MAP
  * - packages/materials/src/metadata-registry.ts            → aliases
  * - packages/renderer/src/runtime/RuntimeComponent.vue     → typeMap

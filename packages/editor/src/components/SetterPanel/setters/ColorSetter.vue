@@ -1,7 +1,7 @@
 <template>
   <el-color-picker
     :model-value="modelValue"
-    @update:model-value="(val) => $emit('update:modelValue', val || '')"
+    @update:model-value="(val: string | null | undefined) => $emit('update:modelValue', val || '')"
     v-bind="$attrs"
     show-alpha
     style="width: 100%"

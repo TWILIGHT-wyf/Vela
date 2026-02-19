@@ -1,4 +1,4 @@
-import { describe, it, expect, bench } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { TreeModel } from '../src/model/tree'
 import { NodeSchema } from '../src/types/schema'
 import { generateId } from '../src/utils/id'

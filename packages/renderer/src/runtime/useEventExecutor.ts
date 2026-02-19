@@ -1,7 +1,18 @@
 import { type Ref, type ComputedRef, onUnmounted } from 'vue'
 import { type Router } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { AnyActionSchema, NodeSchema } from '@vela/core'
+import {
+  createSandboxProxy,
+  evaluate as evaluateSandboxExpression,
+  type AnyActionSchema,
+  type NodeSchema,
+  validateCode,
+} from '@vela/core'
+import {
+  normalizeActionType,
+  ACTION_TARGET_DATA_ATTRIBUTES,
+  ACTION_CONFIRM_DEFAULT_MESSAGE,
+} from '@vela/core/contracts'
 import type { Page } from '../types'
 
 type UnknownRecord = Record<string, unknown>
@@ -13,6 +24,11 @@ interface RuntimePage extends Page {
 interface ActionRecord extends UnknownRecord {
   id?: string
   type: string
+}
+
+interface RuntimeMetaRecord extends UnknownRecord {
+  throttleMap: Record<string, number>
+  debounceMap: Record<string, { timerId: ReturnType<typeof setTimeout>; resolve?: () => void }>
 }
 
 interface RefActionRecord extends UnknownRecord {
@@ -39,6 +55,7 @@ export interface EventExecutorContext {
 const HIGHLIGHT_CLASS = 'editor-highlight-active'
 const HIGHLIGHT_DURATION = 2000
 const STYLE_ID = 'editor-event-executor-styles'
+const SCRIPT_TIMEOUT = 2000
 
 const HIGHLIGHT_STYLES = `
   @keyframes editor-highlight-pulse {
@@ -104,25 +121,6 @@ function toStringValue(value: unknown, fallback = ''): string {
   return String(value)
 }
 
-function normalizeActionType(type: string): string {
-  const normalized = type.trim()
-  switch (normalized) {
-    case 'alert':
-      return 'showToast'
-    case 'show-tooltip':
-      return 'showToast'
-    case 'customScript':
-    case 'custom-script':
-      return 'runScript'
-    case 'updateState':
-      return 'setState'
-    case 'navigate-page':
-      return 'navigate'
-    default:
-      return normalized
-  }
-}
-
 function resolveExpression(
   input: { value: string; mock?: unknown },
   scope: UnknownRecord,
@@ -131,15 +129,7 @@ function resolveExpression(
     return input.mock
   }
 
-  try {
-    const keys = Object.keys(scope)
-    const values = keys.map((key) => scope[key])
-    const evaluator = new Function(...keys, `return (${input.value})`)
-    return evaluator(...values)
-  } catch (error) {
-    console.warn('[RuntimeEventExecutor] expression evaluation failed', error)
-    return undefined
-  }
+  return evaluateSandboxExpression(input.value, scope)
 }
 
 function resolveValue(input: unknown, scope: UnknownRecord): unknown {
@@ -218,12 +208,9 @@ function removeHighlightStyles(): void {
 function getNodeElement(componentId: string): HTMLElement | null {
   if (!componentId || typeof document === 'undefined') return null
 
-  const selectors = [
-    `[data-component-id="${componentId}"]`,
-    `[data-id="${componentId}"]`,
-    `[data-node-id="${componentId}"]`,
-    `#${componentId}`,
-  ]
+  const selectors = ACTION_TARGET_DATA_ATTRIBUTES
+    .map((attr) => `[${attr}="${componentId}"]`)
+    .concat(`#${componentId}`)
 
   for (const selector of selectors) {
     try {
@@ -236,16 +223,55 @@ function getNodeElement(componentId: string): HTMLElement | null {
   return null
 }
 
-function executeScript(code: string, scope: UnknownRecord): Promise<void> {
+function executeScript(
+  code: string,
+  scope: UnknownRecord,
+  options: { throwOnError?: boolean } = {},
+): Promise<void> {
+  const throwOnError = options.throwOnError === true
+
+  if (!validateCode(code)) {
+    console.warn('[RuntimeEventExecutor] blocked unsafe script')
+    if (throwOnError) {
+      return Promise.reject(new Error('Unsafe script is blocked'))
+    }
+    return Promise.resolve()
+  }
+
   try {
-    const runner = new Function('context', code)
-    const result = runner(scope) as unknown
+    const scriptScope: UnknownRecord = { ...scope }
+    scriptScope.context = scriptScope
+    const sandbox = createSandboxProxy(scriptScope)
+    const runner = new Function(
+      'sandbox',
+      `with (sandbox) { return (async () => { ${code}\n })(); }`,
+    )
+    const result = runner(sandbox) as unknown
     if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
-      return Promise.resolve(result as PromiseLike<unknown>).then(() => undefined)
+      const promise = Promise.resolve(result as PromiseLike<unknown>).then(() => undefined)
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const timeoutPromise = new Promise<void>((resolve, reject) => {
+        timer = setTimeout(() => {
+          console.warn('[RuntimeEventExecutor] script execution timed out')
+          if (throwOnError) {
+            reject(new Error('Script execution timed out'))
+            return
+          }
+          resolve()
+        }, SCRIPT_TIMEOUT)
+      })
+      return Promise.race([promise, timeoutPromise]).finally(() => {
+        if (timer) {
+          clearTimeout(timer)
+        }
+      })
     }
     return Promise.resolve()
   } catch (error) {
     console.warn('[RuntimeEventExecutor] script execution failed', error)
+    if (throwOnError) {
+      return Promise.reject(error)
+    }
     return Promise.resolve()
   }
 }
@@ -261,6 +287,10 @@ function findActionById(actions: unknown[], actionId: string): ActionRecord | nu
 
 function extractPayload(action: ActionRecord): UnknownRecord {
   return isRecord(action.payload) ? (action.payload as UnknownRecord) : {}
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export function useEventExecutor(context: EventExecutorContext) {
@@ -341,7 +371,6 @@ export function useEventExecutor(context: EventExecutorContext) {
       pages: pages.value,
       event,
       timestamp: Date.now(),
-      window: typeof window !== 'undefined' ? window : undefined,
     }
   }
 
@@ -358,22 +387,130 @@ export function useEventExecutor(context: EventExecutorContext) {
     await executeResolvedAction(resolved, sourceNode, nodeId, event)
   }
 
-  async function executeResolvedAction(
-    action: ActionRecord | InlineActionRecord,
+  function toActionArray(value: unknown): unknown[] {
+    if (value === undefined || value === null) {
+      return []
+    }
+    return Array.isArray(value) ? value : [value]
+  }
+
+  async function executeActionCallbacks(
+    callbackRef: unknown,
     sourceNode: NodeSchema | undefined,
     nodeId: string,
     event?: Event,
   ): Promise<void> {
-    if (isInlineAction(action)) {
-      await executeScript(action.code, createScope(sourceNode, event))
-      return
+    const callbackActions = toActionArray(callbackRef)
+    for (const callbackAction of callbackActions) {
+      await executeActionLike(callbackAction, sourceNode, nodeId, event)
+    }
+  }
+
+  function getRuntimeMeta(): RuntimeMetaRecord {
+    if (!isRecord(runtimeState.__actionRuntimeMeta)) {
+      runtimeState.__actionRuntimeMeta = {
+        throttleMap: {},
+        debounceMap: {},
+      }
+    }
+    return runtimeState.__actionRuntimeMeta as RuntimeMetaRecord
+  }
+
+  function resolveActionKey(action: ActionRecord, nodeId: string): string {
+    const actionId = typeof action.id === 'string' && action.id ? action.id : 'anonymous'
+    return `${nodeId}:${actionId}`
+  }
+
+  function shouldSkipByThrottle(
+    action: ActionRecord,
+    actionKey: string,
+    runtimeMeta: RuntimeMetaRecord,
+  ): boolean {
+    const throttleMs = Number(action.throttle)
+    if (!Number.isFinite(throttleMs) || throttleMs <= 0) {
+      return false
     }
 
-    const delay = Number(action.delay)
-    if (Number.isFinite(delay) && delay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delay))
+    const now = Date.now()
+    const lastTime = Number(runtimeMeta.throttleMap[actionKey] || 0)
+    if (now - lastTime < throttleMs) {
+      return true
     }
 
+    runtimeMeta.throttleMap[actionKey] = now
+    return false
+  }
+
+  function scheduleDebouncedAction(
+    actionKey: string,
+    debounceMs: number,
+    runtimeMeta: RuntimeMetaRecord,
+    task: () => Promise<void>,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const pending = runtimeMeta.debounceMap[actionKey]
+      if (pending?.timerId !== undefined) {
+        clearTimeout(pending.timerId)
+        pending.resolve?.()
+      }
+
+      let settled = false
+      const safeResolve = () => {
+        if (!settled) {
+          settled = true
+          resolve()
+        }
+      }
+      const safeReject = (error: unknown) => {
+        if (!settled) {
+          settled = true
+          reject(error)
+        }
+      }
+
+      const timerId = setTimeout(async () => {
+        delete runtimeMeta.debounceMap[actionKey]
+        try {
+          await task()
+          safeResolve()
+        } catch (error) {
+          safeReject(error)
+        }
+      }, debounceMs)
+
+      runtimeMeta.debounceMap[actionKey] = {
+        timerId,
+        resolve: safeResolve,
+      }
+    })
+  }
+
+  function shouldExecuteByConfirm(action: ActionRecord, scope: UnknownRecord): boolean {
+    const confirmConfig = isRecord(action.confirm) ? action.confirm : null
+    if (!confirmConfig) {
+      return true
+    }
+
+    const defaultMessage = ACTION_CONFIRM_DEFAULT_MESSAGE
+    const messageValue = resolveValue(
+      confirmConfig.message !== undefined ? confirmConfig.message : defaultMessage,
+      scope,
+    )
+    const message = toStringValue(messageValue, defaultMessage)
+
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      return Boolean(window.confirm(message))
+    }
+
+    return true
+  }
+
+  async function executeBuiltInAction(
+    action: ActionRecord,
+    sourceNode: NodeSchema | undefined,
+    nodeId: string,
+    event?: Event,
+  ): Promise<void> {
     const actionType = normalizeActionType(action.type)
 
     switch (actionType) {
@@ -444,6 +581,66 @@ export function useEventExecutor(context: EventExecutorContext) {
     if (action.next !== undefined) {
       await executeActionLike(action.next, sourceNode, nodeId, event)
     }
+  }
+
+  async function executeResolvedAction(
+    action: ActionRecord | InlineActionRecord,
+    sourceNode: NodeSchema | undefined,
+    nodeId: string,
+    event?: Event,
+  ): Promise<void> {
+    if (isInlineAction(action)) {
+      await executeScript(action.code, createScope(sourceNode, event))
+      return
+    }
+
+    const scope = createScope(sourceNode, event)
+    if (action.condition !== undefined && !resolveValue(action.condition, scope)) {
+      return
+    }
+
+    if (!shouldExecuteByConfirm(action, scope)) {
+      return
+    }
+
+    const delayMs = Number(action.delay)
+    if (Number.isFinite(delayMs) && delayMs > 0) {
+      await wait(delayMs)
+    }
+
+    const runtimeMeta = getRuntimeMeta()
+    const actionKey = resolveActionKey(action, nodeId)
+    if (shouldSkipByThrottle(action, actionKey, runtimeMeta)) {
+      return
+    }
+
+    const handlers = isRecord(action.handlers) ? action.handlers : {}
+    const runWithHandlers = async () => {
+      await executeActionCallbacks(handlers.loading, sourceNode, nodeId, event)
+
+      let actionError: unknown
+      try {
+        await executeBuiltInAction(action, sourceNode, nodeId, event)
+        await executeActionCallbacks(handlers.success, sourceNode, nodeId, event)
+      } catch (error) {
+        actionError = error
+        await executeActionCallbacks(handlers.fail, sourceNode, nodeId, event)
+      } finally {
+        await executeActionCallbacks(handlers.complete, sourceNode, nodeId, event)
+      }
+
+      if (actionError) {
+        console.error('[RuntimeEventExecutor] action failed', actionError)
+      }
+    }
+
+    const debounceMs = Number(action.debounce)
+    if (Number.isFinite(debounceMs) && debounceMs > 0) {
+      await scheduleDebouncedAction(actionKey, debounceMs, runtimeMeta, runWithHandlers)
+      return
+    }
+
+    await runWithHandlers()
   }
 
   function getTargetNode(action: ActionRecord, sourceNode?: NodeSchema): NodeSchema | undefined {
@@ -590,7 +787,7 @@ export function useEventExecutor(context: EventExecutorContext) {
     if (!code) {
       return
     }
-    await executeScript(code, createScope(sourceNode, event))
+    await executeScript(code, createScope(sourceNode, event), { throwOnError: true })
   }
 
   async function handleCallApi(
@@ -634,6 +831,7 @@ export function useEventExecutor(context: EventExecutorContext) {
       }
     } catch (error) {
       console.warn('[RuntimeEventExecutor] callApi failed:', error)
+      throw error
     }
   }
 

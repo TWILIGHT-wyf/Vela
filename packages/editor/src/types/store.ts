@@ -14,7 +14,7 @@ export interface GroupingApi {
 }
 
 export interface ClipboardApi<C> {
-  clipboard: Ref<C[] | any>
+  clipboard: Ref<C[] | unknown>
   copy: (id: string) => void
   cut: (id: string) => void
   copyMultiple: (ids: string[]) => void

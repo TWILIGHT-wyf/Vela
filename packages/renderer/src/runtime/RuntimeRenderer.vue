@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, provide, type Ref } from 'vue'
+import { ref, computed, watch, provide, onBeforeUnmount, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
 import RuntimeComponent from './RuntimeComponent.vue'
@@ -131,6 +131,7 @@ const rendererStyle = computed(() => {
 const componentEventSubscribers = new Set<
   (payload: { componentId: string; eventType: string; actions: unknown[]; event?: Event }) => void
 >()
+const pluginCleanups: Array<() => void> = []
 
 // Build node index for O(1) lookup
 const nodeIndex = computed(() => {
@@ -163,14 +164,52 @@ const context: RuntimeContext = {
   router,
   subscribeComponentEvent: (handler) => {
     componentEventSubscribers.add(handler)
+    return () => {
+      componentEventSubscribers.delete(handler)
+    }
   },
   onNavigate: (pageId) => {
     emit('navigate-page', pageId)
   },
 }
 
-// Initialize plugins
-props.plugins?.forEach((plugin) => plugin(context))
+function cleanupPlugins(): void {
+  while (pluginCleanups.length > 0) {
+    const cleanup = pluginCleanups.pop()
+    if (!cleanup) {
+      continue
+    }
+    try {
+      cleanup()
+    } catch (error) {
+      console.warn('[RuntimeRenderer] plugin cleanup failed', error)
+    }
+  }
+}
+
+function setupPlugins(plugins: RuntimePlugin[]): void {
+  cleanupPlugins()
+
+  for (const plugin of plugins) {
+    const cleanup = plugin(context)
+    if (typeof cleanup === 'function') {
+      pluginCleanups.push(cleanup)
+    }
+  }
+}
+
+watch(
+  () => props.plugins,
+  (plugins) => {
+    setupPlugins(plugins ?? [])
+  },
+  { immediate: true, deep: false },
+)
+
+onBeforeUnmount(() => {
+  cleanupPlugins()
+  componentEventSubscribers.clear()
+})
 
 // ========== Event Handling ==========
 function handleComponentEvent(payload: {

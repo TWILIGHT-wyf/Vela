@@ -34,7 +34,7 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
    * 获取当前选中的组件节点
    */
   const selectedNode = computed<NodeSchema | null>(() => {
-    indexVersion.value
+    void indexVersion.value
     if (!selectedId.value) return null
     return nodeIndex.get(selectedId.value) || null
   })
@@ -43,7 +43,7 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
    * 获取所有选中的组件节点
    */
   const selectedNodes = computed<NodeSchema[]>(() => {
-    indexVersion.value
+    void indexVersion.value
     if (selectedIds.value.length === 0) return []
     return selectedIds.value
       .map((id) => nodeIndex.get(id))
@@ -54,7 +54,7 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
    * 获取 hover 的组件节点
    */
   const hoveredNode = computed<NodeSchema | null>(() => {
-    indexVersion.value
+    void indexVersion.value
     if (!hoveredId.value) return null
     return nodeIndex.get(hoveredId.value) || null
   })

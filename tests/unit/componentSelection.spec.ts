@@ -23,20 +23,34 @@ function createIndexCtx(
     parentIndex,
     indexVersion: ref(0),
     traverse: (
-      _node: NodeSchema,
-      _callback: (node: NodeSchema, parent: NodeSchema | null) => void,
-      _parent: NodeSchema | null = null,
-    ) => {},
-    rebuildIndex: (_rootNode: NodeSchema | null) => {},
-    indexNode: (_node: NodeSchema, _parentId?: string) => {},
-    unindexNode: (_id: string) => {},
+      node: NodeSchema,
+      callback: (node: NodeSchema, parent: NodeSchema | null) => void,
+      parent: NodeSchema | null = null,
+    ) => {
+      void node
+      void callback
+      void parent
+    },
+    rebuildIndex: (rootNode: NodeSchema | null) => {
+      void rootNode
+    },
+    indexNode: (node: NodeSchema, parentId?: string) => {
+      void node
+      void parentId
+    },
+    unindexNode: (id: string) => {
+      void id
+    },
     findNodeById: (id: string) => nodeIndex.get(id) || null,
     findParentNode: (id: string) => {
       const parentId = parentIndex.get(id)
       if (!parentId) return null
       return nodeIndex.get(parentId) || null
     },
-    getNodeIndex: (_id: string) => -1,
+    getNodeIndex: (id: string) => {
+      void id
+      return -1
+    },
     getParentId: (id: string) => parentIndex.get(id) || null,
   }
 }

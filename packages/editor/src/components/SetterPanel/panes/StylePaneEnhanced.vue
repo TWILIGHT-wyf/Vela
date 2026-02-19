@@ -26,7 +26,7 @@
                   :is="getSetterComponent(style.setter)"
                   :model-value="getMetaStyleValue(style)"
                   v-bind="style.setterProps || {}"
-                  @update:model-value="(val: any) => setMetaStyleValue(style, val)"
+                  @update:model-value="(val: unknown) => setMetaStyleValue(style, val)"
                 />
                 <div v-if="style.description" class="style-description">
                   {{ style.description }}
@@ -47,7 +47,9 @@
             <el-form-item label="子节点布局">
               <el-radio-group
                 :model-value="layoutModeValue"
-                @update:model-value="(val) => setLayoutMode((val as 'grid' | 'free') || 'grid')"
+                @update:model-value="
+                  (val: 'grid' | 'free' | undefined) => setLayoutMode((val as 'grid' | 'free') || 'grid')
+                "
               >
                 <el-radio-button label="grid">网格编排</el-radio-button>
                 <el-radio-button label="free">自由布局</el-radio-button>
@@ -63,14 +65,14 @@
           >
             <el-form-item label="宽度" v-if="!hasCustomStyle('width')">
               <SizeInput
-                :model-value="getStyleValue('width')"
+                :model-value="getSizeValue('width')"
                 @update:model-value="(val) => setStyleValue('width', val)"
               />
             </el-form-item>
 
             <el-form-item label="高度" v-if="!hasCustomStyle('height')">
               <SizeInput
-                :model-value="getStyleValue('height')"
+                :model-value="getSizeValue('height')"
                 @update:model-value="(val) => setStyleValue('height', val)"
               />
             </el-form-item>
@@ -477,7 +479,7 @@ const groupedStyles = computed(() => {
  * 获取样式值（响应式读取）
  * 通过订阅 styleVersion 实现响应式更新
  */
-function getStyleValue(styleName: string, defaultValue?: unknown): any {
+function getStyleValue(styleName: string, defaultValue?: unknown): unknown {
   if (!props.node) return defaultValue
 
   // 订阅版本号变化以触发响应式更新
@@ -504,6 +506,11 @@ function setStyleValue(styleName: string, value: unknown): void {
     return
   }
   componentStore.updateStyle(props.node.id, { [styleName]: value })
+}
+
+function getSizeValue(styleName: 'width' | 'height'): string | number | undefined {
+  const value = getStyleValue(styleName)
+  return typeof value === 'string' || typeof value === 'number' ? value : undefined
 }
 
 type SpacingKind = 'margin' | 'padding'
@@ -583,7 +590,7 @@ function setSpacingSideValue(kind: SpacingKind, side: SpacingSide, value: number
 /**
  * 获取 Meta 定义的样式/属性值
  */
-function getMetaStyleValue(style: NamedStyleConfig): any {
+function getMetaStyleValue(style: NamedStyleConfig): unknown {
   if (!props.node) return style.defaultValue
 
   // 订阅版本号变化以触发响应式更新

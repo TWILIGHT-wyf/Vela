@@ -17,29 +17,25 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 ): DebouncedFunction<T> {
   let timeout: ReturnType<typeof setTimeout> | null = null
   let lastArgs: Parameters<T> | null = null
-  let lastContext: unknown = null
 
   const later = function () {
     timeout = null
     if (!immediate && lastArgs) {
-      func.apply(lastContext, lastArgs)
+      func(...lastArgs)
       lastArgs = null
-      lastContext = null
     }
   }
 
-  const debounced = function (this: unknown, ...args: Parameters<T>) {
+  const debounced = function (...args: Parameters<T>) {
     lastArgs = args
-    lastContext = this
 
     const callNow = immediate && !timeout
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(later, wait)
 
     if (callNow) {
-      func.apply(this, args)
+      func(...args)
       lastArgs = null
-      lastContext = null
     }
   } as DebouncedFunction<T>
 
@@ -49,16 +45,14 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
       timeout = null
     }
     lastArgs = null
-    lastContext = null
   }
 
   debounced.flush = function () {
     if (timeout && lastArgs) {
       clearTimeout(timeout)
       timeout = null
-      func.apply(lastContext, lastArgs)
+      func(...lastArgs)
       lastArgs = null
-      lastContext = null
     }
   }
 
@@ -84,10 +78,9 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
   let lastFunc: ReturnType<typeof setTimeout> | null = null
   let lastRan = 0
 
-  const throttled = function (this: unknown, ...args: Parameters<T>) {
-    const context = this
+  const throttled = function (...args: Parameters<T>) {
     if (!inThrottle) {
-      func.apply(context, args)
+      func(...args)
       lastRan = Date.now()
       inThrottle = true
       setTimeout(() => {
@@ -98,7 +91,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
       lastFunc = setTimeout(
         function () {
           if (Date.now() - lastRan >= limit) {
-            func.apply(context, args)
+            func(...args)
             lastRan = Date.now()
           }
         },

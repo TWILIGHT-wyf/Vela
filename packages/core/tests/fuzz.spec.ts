@@ -11,7 +11,7 @@ import { deepClone } from '../src/utils/clone'
 describe('Diff Fuzzer', () => {
   const ITERATIONS = 100
 
-  function generateRandomObject(depth = 0, maxDepth = 3): any {
+  function generateRandomObject(depth = 0, maxDepth = 3): unknown {
     if (depth > maxDepth) return Math.random()
 
     const type = Math.floor(Math.random() * 4)
@@ -20,7 +20,7 @@ describe('Diff Fuzzer', () => {
     if (type === 2) return Math.random() > 0.5
 
     // Object
-    const obj: any = {}
+    const obj: Record<string, unknown> = {}
     const keysCount = Math.floor(Math.random() * 5)
     for (let i = 0; i < keysCount; i++) {
       // Use valid prop names (no dots to avoid path issues for now)
@@ -38,14 +38,15 @@ describe('Diff Fuzzer', () => {
 
       // Mutate B randomly
       // Ensure objB is an object before mutation
-      if (typeof objB === 'object' && objB !== null) {
-        const keys = Object.keys(objB)
+      if (typeof objB === 'object' && objB !== null && !Array.isArray(objB)) {
+        const mutableObjB = objB as Record<string, unknown>
+        const keys = Object.keys(mutableObjB)
         if (keys.length > 0) {
           const key = keys[Math.floor(Math.random() * keys.length)]
-          objB[key] = generateRandomObject() // Change value
+          mutableObjB[key] = generateRandomObject() // Change value
         }
         // Add new key
-        objB[`new_${i}`] = 'new'
+        mutableObjB[`new_${i}`] = 'new'
       } else {
         // If objA was primitive, objB is primitive.
         // We can't mutate primitive like objB[key] = val.
@@ -57,14 +58,20 @@ describe('Diff Fuzzer', () => {
       }
 
       // Calculate Diff
-      const ops = diff(objA, objB, 'root', 'props')
+      const normalizedA = (typeof objA === 'object' && objA !== null
+        ? objA
+        : {}) as Record<string, unknown>
+      const normalizedB = (typeof objB === 'object' && objB !== null
+        ? objB
+        : {}) as Record<string, unknown>
+      const ops = diff(normalizedA, normalizedB, 'root', 'props')
 
       // Apply Diff
       // We use a dummy model to apply ops
-      const root: NodeSchema = {
+      const root: NodeSchema<Record<string, unknown>> = {
         id: 'root',
         componentName: 'Page',
-        props: deepClone(objA),
+        props: deepClone(normalizedA) as Record<string, unknown>,
       }
       const model = new TreeModel(root)
 
@@ -74,12 +81,12 @@ describe('Diff Fuzzer', () => {
 
       // Assert
       try {
-        expect(root.props).toEqual(objB)
+        expect(root.props).toEqual(normalizedB)
       } catch (e) {
         console.error('Fuzz Failure!', {
           iteration: i,
-          objA,
-          objB,
+          objA: normalizedA,
+          objB: normalizedB,
           ops,
           result: root.props,
         })

@@ -52,7 +52,7 @@ export const Html = forwardRef<HTMLDivElement, HtmlProps>(
           } else if (ref) {
             ref.current = node
           }
-          (containerRef as any).current = node
+          containerRef.current = node
         }}
         className={`vela-html ${className || ''}`}
         style={{

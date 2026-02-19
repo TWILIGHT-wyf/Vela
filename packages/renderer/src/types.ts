@@ -45,7 +45,7 @@ export interface RuntimeContext {
       actions: unknown[]
       event?: Event
     }) => void,
-  ) => void
+  ) => () => void
 
   /**
    * Optional page navigation callback for project-mode runtimes.
@@ -57,7 +57,7 @@ export interface RuntimeContext {
 /**
  * Runtime plugin function type
  */
-export type RuntimePlugin = (context: RuntimeContext) => void
+export type RuntimePlugin = (context: RuntimeContext) => void | (() => void)
 
 /**
  * Operating mode for runtime components

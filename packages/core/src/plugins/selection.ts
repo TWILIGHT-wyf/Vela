@@ -1,4 +1,5 @@
 import { Plugin, PluginContext } from '../runtime/plugin'
+import type { Operation } from '../runtime/operation'
 import { TypedEmitter } from '../utils/events'
 
 export interface SelectionEvents {
@@ -10,7 +11,7 @@ export class SelectionPlugin extends TypedEmitter<SelectionEvents> implements Pl
   name = 'selection'
   private selectedIds = new Set<string>()
   private ctx!: PluginContext
-  private opHandler: ((op: any) => void) | null = null
+  private opHandler: ((op: Operation) => void) | null = null
 
   init(ctx: PluginContext) {
     this.ctx = ctx
