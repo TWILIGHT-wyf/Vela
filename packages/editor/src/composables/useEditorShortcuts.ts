@@ -1,7 +1,12 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
+import { countTracks, type GridNodeGeometry } from '@vela/core'
 import { useComponent } from '@/stores/component'
-import type { NodeStyle } from '@vela/core'
+import { nodeToPlacement } from '@/utils/gridPlacement'
+
+function clampInt(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
 
 export function useEditorShortcuts(
   options: {
@@ -26,7 +31,6 @@ export function useEditorShortcuts(
     findParentNode,
     getParentId,
     updateGeometry,
-    updateStyle,
     selectComponent,
     clearSelection,
   } = compStore
@@ -42,17 +46,35 @@ export function useEditorShortcuts(
     return !parent || parent.container?.mode !== 'free'
   }
 
-  const parseMarginNumber = (val: unknown): number => {
-    if (typeof val === 'number' && Number.isFinite(val)) return val
-    if (typeof val === 'string') {
-      const num = Number.parseFloat(val)
-      return Number.isFinite(num) ? num : 0
+  const resolveGridColumnCount = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
+    const parent = findParentNode(node.id)
+    if (!parent || parent.container?.mode !== 'grid') return 12
+    if (Array.isArray(parent.container.columnTracks) && parent.container.columnTracks.length > 0) {
+      return parent.container.columnTracks.length
     }
-    return 0
+    return Math.max(1, countTracks(parent.container.columns || '1fr'))
+  }
+
+  const resolveGridGeometry = (
+    node: NonNullable<(typeof selectedNodes.value)[number]>,
+  ): GridNodeGeometry => {
+    const colCount = resolveGridColumnCount(node)
+    const placement = nodeToPlacement(node, colCount, {
+      colStart: 1,
+      colSpan: 3,
+      rowStart: 1,
+      rowSpan: 2,
+    })
+    return {
+      mode: 'grid',
+      gridColumnStart: placement.colStart,
+      gridColumnEnd: placement.colStart + placement.colSpan,
+      gridRowStart: placement.rowStart,
+      gridRowEnd: placement.rowStart + placement.rowSpan,
+    }
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Ignore if user is typing in an input
     const target = e.target as HTMLElement
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
       return
@@ -61,7 +83,6 @@ export function useEditorShortcuts(
     const isMac = navigator.platform.toUpperCase().includes('MAC')
     const ctrlKey = isMac ? e.metaKey : e.ctrlKey
 
-    // Delete - 删除选中组件
     if ((options.enableDelete ?? true) && (e.key === 'Delete' || e.key === 'Backspace')) {
       if (selectedIds.value.length > 1) {
         e.preventDefault()
@@ -76,7 +97,6 @@ export function useEditorShortcuts(
       return
     }
 
-    // Ctrl+C - 复制
     if ((options.enableClipboard ?? true) && ctrlKey && e.key === 'c') {
       if (selectedId.value || selectedIds.value.length > 0) {
         e.preventDefault()
@@ -85,7 +105,6 @@ export function useEditorShortcuts(
       return
     }
 
-    // Ctrl+X - 剪切
     if ((options.enableClipboard ?? true) && ctrlKey && e.key === 'x') {
       if (selectedId.value || selectedIds.value.length > 0) {
         e.preventDefault()
@@ -94,14 +113,12 @@ export function useEditorShortcuts(
       return
     }
 
-    // Ctrl+V - 粘贴
     if ((options.enableClipboard ?? true) && ctrlKey && e.key === 'v') {
       e.preventDefault()
       pasteNodes()
       return
     }
 
-    // Ctrl+A - 全选 (选中所有顶层组件)
     if ((options.enableSelectAll ?? true) && ctrlKey && e.key === 'a') {
       if (rootNode.value?.children && rootNode.value.children.length > 0) {
         e.preventDefault()
@@ -111,7 +128,6 @@ export function useEditorShortcuts(
       return
     }
 
-    // Arrow Keys - 自由布局精确微调
     if ((options.enableNudge ?? true) && !ctrlKey && !e.altKey) {
       let dx = 0
       let dy = 0
@@ -121,7 +137,6 @@ export function useEditorShortcuts(
       if (e.key === 'ArrowDown') dy = 1
 
       if (dx !== 0 || dy !== 0) {
-        // Free mode: nudge position
         const movableNodes = selectedNodes.value.filter((node) => isNodeFreeMovable(node))
         if (movableNodes.length > 0) {
           e.preventDefault()
@@ -139,27 +154,40 @@ export function useEditorShortcuts(
           return
         }
 
-        // Grid mode: nudge margin
         const gridNodes = selectedNodes.value.filter((node) => isNodeGridLayout(node))
         if (gridNodes.length > 0) {
           e.preventDefault()
-          const step = e.shiftKey ? (options.nudgeLargeStep ?? 10) : (options.nudgeStep ?? 1)
+          const moveStep = e.shiftKey ? 1 : (options.nudgeStep ?? 1)
           gridNodes.forEach((node) => {
-            const style = node.style || {}
-            const patch: Partial<NodeStyle> = {}
+            const geo = resolveGridGeometry(node)
+            const colCount = resolveGridColumnCount(node)
+            const colSpan = Math.max(1, geo.gridColumnEnd - geo.gridColumnStart)
+            const rowSpan = Math.max(1, geo.gridRowEnd - geo.gridRowStart)
 
-            if (dy !== 0) {
-              const currentMarginTop = parseMarginNumber(style.marginTop)
-              patch.marginTop = Math.round(currentMarginTop + dy * step)
-            }
-            if (dx !== 0) {
-              const currentMarginLeft = parseMarginNumber(style.marginLeft)
-              patch.marginLeft = Math.round(currentMarginLeft + dx * step)
+            let colStart = geo.gridColumnStart
+            let rowStart = geo.gridRowStart
+            let nextColSpan = colSpan
+            let nextRowSpan = rowSpan
+
+            if (e.shiftKey) {
+              if (dx !== 0) {
+                nextColSpan = clampInt(colSpan + dx * moveStep, 1, colCount - colStart + 1)
+              }
+              if (dy !== 0) {
+                nextRowSpan = clampInt(rowSpan + dy * moveStep, 1, 48)
+              }
+            } else {
+              colStart = clampInt(colStart + dx * moveStep, 1, colCount - colSpan + 1)
+              rowStart = clampInt(rowStart + dy * moveStep, 1, 4096)
             }
 
-            if (Object.keys(patch).length > 0) {
-              updateStyle(node.id, patch)
-            }
+            updateGeometry(node.id, {
+              mode: 'grid',
+              gridColumnStart: colStart,
+              gridColumnEnd: colStart + nextColSpan,
+              gridRowStart: rowStart,
+              gridRowEnd: rowStart + nextRowSpan,
+            })
           })
           return
         }
@@ -167,7 +195,6 @@ export function useEditorShortcuts(
       }
     }
 
-    // Escape - 取消选中 / 关闭菜单
     if (e.key === 'Escape') {
       const currentId = selectedId.value ?? selectedIds.value[0]
       if (currentId && selectedIds.value.length === 1) {

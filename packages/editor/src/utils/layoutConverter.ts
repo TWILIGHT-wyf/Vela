@@ -1,8 +1,16 @@
-import type { LayoutMode, GridNodeGeometry, NodeSchema } from '@vela/core'
+import type { LayoutMode, NodeSchema } from '@vela/core'
+import { countTracks, type GridContainerLayout } from '@vela/core'
 import { cloneDeep } from 'lodash-es'
+import {
+  maxOccupiedRow,
+  nodeToPlacement,
+  resolveGridPlacements,
+  writePlacementToNode,
+  type GridPlacement,
+} from './gridPlacement'
 
 /**
- * 需要从 Flow 模式中移除的样式属性
+ * 需要从自由布局中移除的样式属性
  */
 const FREE_ONLY_STYLES = [
   'position',
@@ -15,14 +23,20 @@ const FREE_ONLY_STYLES = [
 ] as const
 
 /**
- * 块级组件列表 - 这些组件在 Flow 模式下应该是 width: 100%
+ * 块级组件列表 - 在网格模式下默认占满整行
  */
 const BLOCK_COMPONENTS = ['Container', 'Page', 'Row', 'Col', 'Panel', 'Card', 'Form', 'Table']
+
 const DEFAULT_GRID_COLUMNS = 12
 const DEFAULT_GRID_COL_SPAN = 3
-const DEFAULT_GRID_ROW_SPAN = 4
+const DEFAULT_GRID_ROW_SPAN = 2
 const GRID_COL_PIXEL = 160
 const GRID_ROW_PIXEL = 36
+const GRID_GAP = 8
+
+function buildDefaultColumnTemplate(colCount: number = DEFAULT_GRID_COLUMNS): string {
+  return Array(Math.max(1, colCount)).fill('1fr').join(' ')
+}
 
 /**
  * 从 style 字符串中提取数值（如 "100px" -> 100）
@@ -30,8 +44,8 @@ const GRID_ROW_PIXEL = 36
 function parseStyleValue(value: string | number | undefined): number {
   if (value === undefined || value === null) return 0
   if (typeof value === 'number') return value
-  const num = parseFloat(value)
-  return isNaN(num) ? 0 : num
+  const num = Number.parseFloat(value)
+  return Number.isFinite(num) ? num : 0
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -75,6 +89,109 @@ function getContainerMode(node: NodeSchema, parentMode: LayoutMode): LayoutMode 
   return node.container?.mode || parentMode
 }
 
+function getGeometryAsPlacement(
+  node: NodeSchema,
+  colCount: number,
+  fallbackRow: number,
+): Partial<GridPlacement> {
+  if (node.layoutItem?.mode === 'grid') {
+    return nodeToPlacement(node, colCount)
+  }
+
+  if (node.geometry?.mode === 'grid') {
+    return nodeToPlacement(node, colCount)
+  }
+
+  if (node.geometry?.mode === 'free') {
+    const free = node.geometry
+    const colStart = Math.max(1, Math.round((free.x ?? 0) / GRID_COL_PIXEL) + 1)
+    const rowStart = Math.max(1, Math.round((free.y ?? 0) / GRID_ROW_PIXEL) + 1)
+    const width = (free.width ?? node.style?.width) as number | string | undefined
+    const height = (free.height ?? node.style?.height) as number | string | undefined
+    const colSpan = toGridSpan(width, DEFAULT_GRID_COL_SPAN, GRID_COL_PIXEL, colCount)
+    const rowSpan = toGridSpan(height, DEFAULT_GRID_ROW_SPAN, GRID_ROW_PIXEL, 48)
+    return { colStart, colSpan, rowStart, rowSpan }
+  }
+
+  const style = node.style || {}
+  const width = style.width as string | number | undefined
+  const height = (style.height ?? style.minHeight) as string | number | undefined
+  const defaultColSpan = BLOCK_COMPONENTS.includes(getNodeComponentName(node))
+    ? colCount
+    : toGridSpan(width, DEFAULT_GRID_COL_SPAN, GRID_COL_PIXEL, colCount)
+  const colSpan = parseGridSpanValue(style.gridColumn, defaultColSpan)
+  const rowSpan = parseGridSpanValue(
+    style.gridRow,
+    toGridSpan(height, DEFAULT_GRID_ROW_SPAN, GRID_ROW_PIXEL, 48),
+  )
+  return {
+    colStart: 1,
+    colSpan,
+    rowStart: fallbackRow,
+    rowSpan,
+  }
+}
+
+function normalizeGridChildren(node: NodeSchema, parentLayout: LayoutMode): void {
+  if (!node.style) node.style = {}
+
+  const childLayout = getContainerMode(node, parentLayout)
+  if (!node.children || node.children.length === 0) return
+
+  if (childLayout === 'grid') {
+    const container = (node.container || {}) as GridContainerLayout
+    const columns =
+      typeof container.columns === 'string' && container.columns.trim().length > 0
+        ? container.columns
+        : buildDefaultColumnTemplate()
+    const colCount = Math.max(1, countTracks(columns))
+
+    node.container = {
+      ...container,
+      mode: 'grid',
+      columns,
+      gap: typeof container.gap === 'number' ? container.gap : GRID_GAP,
+      autoFlow: container.autoFlow || 'row',
+      dense: container.dense ?? true,
+      autoRowsMin: container.autoRowsMin ?? 24,
+      rows: container.rows || '1fr',
+    }
+
+    const placementMap = resolveGridPlacements(
+      node.children.map((child, index) => ({
+        id: child.id,
+        placement: getGeometryAsPlacement(child, colCount, index + 1),
+      })),
+      colCount,
+    )
+
+    for (const child of node.children) {
+      const placement = placementMap.get(child.id)
+      if (placement) {
+        writePlacementToNode(child, placement)
+      }
+
+      if (!child.style) child.style = {}
+      for (const prop of FREE_ONLY_STYLES) {
+        delete child.style[prop]
+      }
+      delete child.style.gridColumn
+      delete child.style.gridRow
+
+      normalizeGridChildren(child, childLayout)
+    }
+
+    const maxRow = maxOccupiedRow(placementMap.values())
+    const gridContainer = node.container as GridContainerLayout
+    gridContainer.rows = Array(maxRow).fill('1fr').join(' ')
+    return
+  }
+
+  for (const child of node.children) {
+    normalizeGridChildren(child, childLayout)
+  }
+}
+
 /**
  * 将组件树转换为流式布局（Flow）
  */
@@ -104,7 +221,6 @@ export function convertToFlow(root: NodeSchema): NodeSchema {
           ? node.geometry.height
           : ((node.style.height ?? node.style.minHeight) as string | number | undefined)
 
-      // Grid composition defaults: every node has explicit span metadata.
       if (!node.style.gridColumn) {
         const defaultColSpan = BLOCK_COMPONENTS.includes(getNodeComponentName(node))
           ? DEFAULT_GRID_COLUMNS
@@ -114,13 +230,6 @@ export function convertToFlow(root: NodeSchema): NodeSchema {
       if (!node.style.gridRow) {
         node.style.gridRow = `span ${toGridSpan(heightSource, DEFAULT_GRID_ROW_SPAN, GRID_ROW_PIXEL, 24)}`
       }
-
-      // In grid mode, nodes fill their allocated cells.
-      node.style.width = '100%'
-      if (node.style.height && node.style.minHeight === undefined) {
-        node.style.minHeight = node.style.height
-      }
-      delete node.style.height
     }
 
     if (node.geometry?.mode === 'free') {
@@ -197,28 +306,44 @@ export function convertToFree(root: NodeSchema): NodeSchema {
         if (childLayout === 'free') {
           const prevGeometry = child.geometry
           const existingFree = prevGeometry?.mode === 'free' ? prevGeometry : undefined
-          const gridColSpan = parseGridSpanValue(child.style?.gridColumn, DEFAULT_GRID_COL_SPAN)
-          const gridRowSpan = parseGridSpanValue(child.style?.gridRow, DEFAULT_GRID_ROW_SPAN)
-          const widthRaw = child.style?.width
-          const heightRaw = child.style?.height
+          const styleWidthRaw = child.style?.width
+          const styleHeightRaw = child.style?.height
           const styleWidth =
-            typeof widthRaw === 'number'
-              ? widthRaw
-              : typeof widthRaw === 'string' && /^\d+(\.\d+)?px$/.test(widthRaw.trim())
-                ? parseStyleValue(widthRaw)
+            typeof styleWidthRaw === 'number'
+              ? styleWidthRaw
+              : typeof styleWidthRaw === 'string' && /^\d+(\.\d+)?px$/.test(styleWidthRaw.trim())
+                ? parseStyleValue(styleWidthRaw)
                 : 0
           const styleHeight =
-            typeof heightRaw === 'number'
-              ? heightRaw
-              : typeof heightRaw === 'string' && /^\d+(\.\d+)?px$/.test(heightRaw.trim())
-                ? parseStyleValue(heightRaw)
+            typeof styleHeightRaw === 'number'
+              ? styleHeightRaw
+              : typeof styleHeightRaw === 'string' && /^\d+(\.\d+)?px$/.test(styleHeightRaw.trim())
+                ? parseStyleValue(styleHeightRaw)
                 : 0
+
+          let gridColSpan = parseGridSpanValue(child.style?.gridColumn, DEFAULT_GRID_COL_SPAN)
+          let gridRowSpan = parseGridSpanValue(child.style?.gridRow, DEFAULT_GRID_ROW_SPAN)
+          let x = OFFSET_X + index * OFFSET_X
+          let y = OFFSET_Y + index * OFFSET_Y
+
+          if (prevGeometry?.mode === 'grid') {
+            const placement = nodeToPlacement(
+              { geometry: prevGeometry, layoutItem: child.layoutItem },
+              DEFAULT_GRID_COLUMNS,
+            )
+            gridColSpan = placement.colSpan
+            gridRowSpan = placement.rowSpan
+            x = (placement.colStart - 1) * GRID_COL_PIXEL + OFFSET_X
+            y = (placement.rowStart - 1) * GRID_ROW_PIXEL + OFFSET_Y
+          }
+
           const inferredWidth = styleWidth > 0 ? styleWidth : gridColSpan * GRID_COL_PIXEL
           const inferredHeight = styleHeight > 0 ? styleHeight : gridRowSpan * GRID_ROW_PIXEL
+
           child.geometry = {
             mode: 'free',
-            x: existingFree?.x ?? OFFSET_X + index * OFFSET_X,
-            y: existingFree?.y ?? OFFSET_Y + index * OFFSET_Y,
+            x: existingFree?.x ?? x,
+            y: existingFree?.y ?? y,
             width: existingFree?.width ?? inferredWidth ?? DEFAULT_WIDTH,
             height: existingFree?.height ?? inferredHeight ?? DEFAULT_HEIGHT,
             minWidth: existingFree?.minWidth,
@@ -233,10 +358,8 @@ export function convertToFree(root: NodeSchema): NodeSchema {
             hidden: existingFree?.hidden,
           }
 
-          if (child.style) {
-            delete child.style.gridColumn
-            delete child.style.gridRow
-          }
+          delete child.style.gridColumn
+          delete child.style.gridRow
         }
 
         processNode(child, childLayout)
@@ -250,63 +373,10 @@ export function convertToFree(root: NodeSchema): NodeSchema {
 
 /**
  * 将组件树转换为自适应网格布局（Grid）
- * 组件以 fr 比例填满画布，支持嵌套子网格
  */
 export function convertToGrid(root: NodeSchema): NodeSchema {
   const cloned = cloneDeep(root)
 
-  function processNode(node: NodeSchema, parentLayout: LayoutMode = 'grid'): void {
-    if (!node.style) node.style = {}
-
-    const childLayout = getContainerMode(node, parentLayout)
-    const children = node.children ?? []
-
-    if (childLayout === 'grid') {
-      // Set this node as a grid container
-      const rowCount = Math.max(children.length, 1)
-      node.container = {
-        mode: 'grid',
-        columns: '1fr',
-        rows: Array(rowCount).fill('1fr').join(' '),
-        gap: 8,
-      } as NodeSchema['container']
-
-      children.forEach((child, index) => {
-        if (!child.style) child.style = {}
-
-        // Strip free-only and flow-span styles
-        for (const prop of FREE_ONLY_STYLES) {
-          delete child.style[prop]
-        }
-        delete child.style.gridColumn
-        delete child.style.gridRow
-
-        // Size fills the cell
-        child.style.width = '100%'
-        if (child.style.height && child.style.minHeight === undefined) {
-          child.style.minHeight = child.style.height
-        }
-        delete child.style.height
-
-        // Assign grid geometry: single column, one row per child
-        child.geometry = {
-          mode: 'grid',
-          gridColumnStart: 1,
-          gridColumnEnd: 2,
-          gridRowStart: index + 1,
-          gridRowEnd: index + 2,
-        } as GridNodeGeometry
-
-        processNode(child, childLayout)
-      })
-    } else {
-      for (const child of children) {
-        processNode(child, childLayout)
-      }
-    }
-  }
-
-  // Sort children by Y coordinate before converting (same as convertToFlow)
   if (cloned.children && Array.isArray(cloned.children) && cloned.children.length > 0) {
     cloned.children.sort((a, b) => {
       const topA =
@@ -317,20 +387,32 @@ export function convertToGrid(root: NodeSchema): NodeSchema {
         b.geometry?.mode === 'free'
           ? (b.geometry.y ?? 0)
           : parseStyleValue(b.style?.top as string | number | undefined)
-      return topA - topB
+      if (topA !== topB) return topA - topB
+
+      const leftA =
+        a.geometry?.mode === 'free'
+          ? (a.geometry.x ?? 0)
+          : parseStyleValue(a.style?.left as string | number | undefined)
+      const leftB =
+        b.geometry?.mode === 'free'
+          ? (b.geometry.x ?? 0)
+          : parseStyleValue(b.style?.left as string | number | undefined)
+      return leftA - leftB
     })
   }
 
-  // Set root as grid container
-  const rootRowCount = Math.max(cloned.children?.length ?? 0, 1)
   cloned.container = {
+    ...(cloned.container || {}),
     mode: 'grid',
-    columns: '1fr',
-    rows: Array(rootRowCount).fill('1fr').join(' '),
-    gap: 8,
-  } as NodeSchema['container']
+    columns: buildDefaultColumnTemplate(),
+    rows: '1fr',
+    gap: GRID_GAP,
+    autoFlow: 'row',
+    dense: true,
+    autoRowsMin: 24,
+  }
 
-  processNode(cloned, 'grid')
+  normalizeGridChildren(cloned, 'grid')
   return cloned
 }
 

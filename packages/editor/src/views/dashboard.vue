@@ -368,7 +368,12 @@ const submitCreate = async () => {
             children: {
               id: generateId('root'),
               component: 'Page',
-              container: { mode: 'grid', columns: '1fr', rows: '1fr', gap: 8 },
+              container: {
+                mode: 'grid',
+                columns: Array(12).fill('1fr').join(' '),
+                rows: '1fr',
+                gap: 8,
+              },
               props: {},
               style: {
                 width: '100%',

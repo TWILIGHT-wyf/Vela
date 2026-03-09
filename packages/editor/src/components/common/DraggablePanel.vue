@@ -20,12 +20,29 @@
     <div class="panel-content">
       <slot />
     </div>
+
+    <template v-if="resizable">
+      <div
+        class="panel-resize-handle panel-resize-handle--right"
+        @mousedown="onResizeStart($event, 'right')"
+      />
+      <div
+        class="panel-resize-handle panel-resize-handle--bottom"
+        @mousedown="onResizeStart($event, 'bottom')"
+      />
+      <div
+        class="panel-resize-handle panel-resize-handle--corner"
+        @mousedown="onResizeStart($event, 'corner')"
+      />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Close } from '@element-plus/icons-vue'
+
+type ResizeDirection = 'right' | 'bottom' | 'corner'
 
 const props = defineProps({
   visible: { type: Boolean, default: true },
@@ -35,6 +52,11 @@ const props = defineProps({
   width: { type: String, default: '320px' },
   height: { type: String, default: '600px' },
   zIndex: { type: Number, default: 10 },
+  resizable: { type: Boolean, default: true },
+  minWidth: { type: Number, default: 240 },
+  minHeight: { type: Number, default: 220 },
+  maxWidth: { type: Number, default: 1200 },
+  maxHeight: { type: Number, default: 1000 },
 })
 
 defineEmits(['update:visible'])
@@ -43,12 +65,15 @@ defineEmits(['update:visible'])
 const x = ref(props.initialX)
 const y = ref(props.initialY)
 const currentZIndex = ref(props.zIndex)
+const panelRef = ref<HTMLElement | null>(null)
+const currentWidth = ref<number | null>(null)
+const currentHeight = ref<number | null>(null)
 
 const styleObject = computed(() => ({
   left: `${x.value}px`,
   top: `${y.value}px`,
-  width: props.width,
-  height: props.height,
+  width: currentWidth.value !== null ? `${currentWidth.value}px` : props.width,
+  height: currentHeight.value !== null ? `${currentHeight.value}px` : props.height,
   zIndex: currentZIndex.value,
 }))
 
@@ -57,10 +82,51 @@ let startX = 0
 let startY = 0
 let initialLeft = 0
 let initialTop = 0
+let isResizing = false
+
+// Resize Logic
+let resizeDirection: ResizeDirection | null = null
+let resizeStartX = 0
+let resizeStartY = 0
+let resizeInitialWidth = 0
+let resizeInitialHeight = 0
+
+function parsePxSize(value: string): number | null {
+  const trimmed = value.trim().toLowerCase()
+  if (!trimmed.endsWith('px')) return null
+  const parsed = Number.parseFloat(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+function syncSizeFromElement() {
+  if (!panelRef.value) return
+  const rect = panelRef.value.getBoundingClientRect()
+  currentWidth.value = Math.round(rect.width)
+  currentHeight.value = Math.round(rect.height)
+}
+
+onMounted(() => {
+  const widthFromProp = parsePxSize(props.width)
+  const heightFromProp = parsePxSize(props.height)
+  if (widthFromProp !== null) currentWidth.value = widthFromProp
+  if (heightFromProp !== null) currentHeight.value = heightFromProp
+
+  nextTick(() => {
+    if (currentWidth.value === null || currentHeight.value === null) {
+      syncSizeFromElement()
+    }
+  })
+})
 
 const onDragStart = (e: MouseEvent) => {
   // Prevent drag if clicking close button
   if ((e.target as HTMLElement).closest('.control-dot')) return
+  if ((e.target as HTMLElement).closest('.panel-resize-handle')) return
+  if (isResizing) return
 
   startX = e.clientX
   startY = e.clientY
@@ -86,10 +152,63 @@ const onDragEnd = () => {
   document.removeEventListener('mouseup', onDragEnd)
 }
 
+const onResizeStart = (e: MouseEvent, direction: ResizeDirection) => {
+  if (!props.resizable) return
+  e.preventDefault()
+  e.stopPropagation()
+
+  if (!panelRef.value) return
+  syncSizeFromElement()
+
+  isResizing = true
+  resizeDirection = direction
+  resizeStartX = e.clientX
+  resizeStartY = e.clientY
+  resizeInitialWidth = currentWidth.value || panelRef.value.getBoundingClientRect().width
+  resizeInitialHeight = currentHeight.value || panelRef.value.getBoundingClientRect().height
+
+  document.addEventListener('mousemove', onResizeMove)
+  document.addEventListener('mouseup', onResizeEnd)
+  bringToFront()
+}
+
+const onResizeMove = (e: MouseEvent) => {
+  if (!resizeDirection) return
+
+  const dx = e.clientX - resizeStartX
+  const dy = e.clientY - resizeStartY
+  const maxAllowedWidth = Math.min(props.maxWidth, window.innerWidth - x.value - 16)
+  const maxAllowedHeight = Math.min(props.maxHeight, window.innerHeight - y.value - 16)
+  const widthMax = Math.max(props.minWidth, maxAllowedWidth)
+  const heightMax = Math.max(props.minHeight, maxAllowedHeight)
+
+  if (resizeDirection === 'right' || resizeDirection === 'corner') {
+    currentWidth.value = clamp(resizeInitialWidth + dx, props.minWidth, widthMax)
+  }
+
+  if (resizeDirection === 'bottom' || resizeDirection === 'corner') {
+    currentHeight.value = clamp(resizeInitialHeight + dy, props.minHeight, heightMax)
+  }
+}
+
+const onResizeEnd = () => {
+  isResizing = false
+  resizeDirection = null
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+}
+
 const bringToFront = () => {
   // Simple z-index bump (in a real app, use a store to manage global stacking order)
   currentZIndex.value = props.zIndex + 1
 }
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDragMove)
+  document.removeEventListener('mouseup', onDragEnd)
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+})
 </script>
 
 <style scoped>
@@ -163,5 +282,34 @@ const bringToFront = () => {
   flex: 1;
   overflow: hidden;
   position: relative;
+}
+
+.panel-resize-handle {
+  position: absolute;
+  z-index: 3;
+}
+
+.panel-resize-handle--right {
+  top: 44px;
+  right: 0;
+  width: 10px;
+  height: calc(100% - 44px);
+  cursor: ew-resize;
+}
+
+.panel-resize-handle--bottom {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.panel-resize-handle--corner {
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
 }
 </style>

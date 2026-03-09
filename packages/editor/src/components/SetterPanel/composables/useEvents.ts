@@ -3,123 +3,102 @@ import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
 import { nanoid } from 'nanoid'
 import type { ActionSchema } from '@vela/core/types/action'
-import { isNodeEventActionLinkRef, type NodeEventAction } from '@vela/core/types/schema'
+import type { NodeEventAction } from '@vela/core/types/schema'
 
-type EditableAction = ActionSchema<string> & {
-  content?: string
-  blank?: boolean
-  stateName?: string
+export type SupportedEventName = 'click' | 'hover' | 'doubleClick'
+
+const SUPPORTED_EVENT_NAMES: SupportedEventName[] = ['click', 'hover', 'doubleClick']
+
+function cloneEvents(
+  events: Record<string, NodeEventAction[]> | undefined,
+): Record<string, NodeEventAction[]> {
+  if (!events) return {}
+  return JSON.parse(JSON.stringify(events))
 }
 
-function toEditableActions(actions?: NodeEventAction[]): EditableAction[] {
-  if (!actions) return []
-  return actions.filter((action): action is EditableAction => !isNodeEventActionLinkRef(action))
+function toEventActions(actions: NodeEventAction[] | undefined): NodeEventAction[] {
+  return Array.isArray(actions) ? actions : []
 }
 
-function mergeEditableActions(
-  existing: NodeEventAction[] | undefined,
-  editableActions: EditableAction[],
-): NodeEventAction[] {
-  if (!existing || existing.length === 0) {
-    return editableActions as NodeEventAction[]
+function createDefaultAction(): ActionSchema<string> {
+  return {
+    id: nanoid(),
+    type: 'showToast',
+    payload: {
+      message: '提示消息',
+      type: 'info',
+    },
   }
-
-  const queue = [...editableActions]
-  const merged: NodeEventAction[] = []
-
-  for (const action of existing) {
-    if (isNodeEventActionLinkRef(action)) {
-      merged.push(action)
-      continue
-    }
-
-    const next = queue.shift()
-    if (next) {
-      merged.push(next as NodeEventAction)
-    }
-  }
-
-  for (const action of queue) {
-    merged.push(action as NodeEventAction)
-  }
-
-  return merged
 }
 
 export function useEventConfiguration() {
   const componentStore = useComponent()
   const { selectedNode } = storeToRefs(componentStore)
 
-  function commitEventActions(type: 'click' | 'hover', editableActions: EditableAction[]) {
+  function commitEvents(updater: (events: Record<string, NodeEventAction[]>) => void) {
     const node = selectedNode.value
     if (!node) return
 
-    const existing = node.events?.[type]
-    const merged = mergeEditableActions(existing, editableActions)
-    const nextEvents = {
-      ...(node.events || {}),
-      [type]: merged,
-    }
-
-    componentStore.updateEvents(node.id, nextEvents as Record<string, unknown[]>)
+    const events = cloneEvents(node.events as Record<string, NodeEventAction[]> | undefined)
+    updater(events)
+    componentStore.updateEvents(node.id, events as Record<string, unknown[]>)
   }
 
-  const clickActions = computed<EditableAction[]>({
-    get: () => {
-      return toEditableActions(selectedNode.value?.events?.click)
-    },
-    set: (value: EditableAction[]) => {
-      commitEventActions('click', value)
-    },
-  })
-
-  const hoverActions = computed<EditableAction[]>({
-    get: () => {
-      return toEditableActions(selectedNode.value?.events?.hover)
-    },
-    set: (value: EditableAction[]) => {
-      commitEventActions('hover', value)
-    },
-  })
-
-  function addClickAction() {
-    const next = [...clickActions.value]
-    next.push({
-      id: nanoid(),
-      type: 'alert',
-    } as EditableAction)
-    commitEventActions('click', next)
+  function getActions(eventName: SupportedEventName): NodeEventAction[] {
+    return toEventActions(selectedNode.value?.events?.[eventName])
   }
 
-  function removeClickAction(index: number) {
-    const next = [...clickActions.value]
+  function setActions(eventName: SupportedEventName, actions: NodeEventAction[]) {
+    commitEvents((events) => {
+      if (!actions.length) {
+        delete events[eventName]
+        return
+      }
+      events[eventName] = actions
+    })
+  }
+
+  function addAction(eventName: SupportedEventName, action?: NodeEventAction) {
+    const next = [...getActions(eventName), action ?? createDefaultAction()]
+    setActions(eventName, next)
+  }
+
+  function removeAction(eventName: SupportedEventName, index: number) {
+    const next = [...getActions(eventName)]
     if (index < 0 || index >= next.length) return
     next.splice(index, 1)
-    commitEventActions('click', next)
+    setActions(eventName, next)
   }
 
-  function addHoverAction() {
-    const next = [...hoverActions.value]
-    next.push({
-      id: nanoid(),
-      type: 'alert',
-    } as EditableAction)
-    commitEventActions('hover', next)
-  }
-
-  function removeHoverAction(index: number) {
-    const next = [...hoverActions.value]
+  function updateAction(eventName: SupportedEventName, index: number, action: NodeEventAction) {
+    const next = [...getActions(eventName)]
     if (index < 0 || index >= next.length) return
-    next.splice(index, 1)
-    commitEventActions('hover', next)
+    next[index] = action
+    setActions(eventName, next)
   }
+
+  const clickActions = computed<NodeEventAction[]>({
+    get: () => getActions('click'),
+    set: (actions) => setActions('click', actions),
+  })
+
+  const hoverActions = computed<NodeEventAction[]>({
+    get: () => getActions('hover'),
+    set: (actions) => setActions('hover', actions),
+  })
+
+  const doubleClickActions = computed<NodeEventAction[]>({
+    get: () => getActions('doubleClick'),
+    set: (actions) => setActions('doubleClick', actions),
+  })
 
   return {
+    eventNames: SUPPORTED_EVENT_NAMES,
     clickActions,
     hoverActions,
-    addClickAction,
-    removeClickAction,
-    addHoverAction,
-    removeHoverAction,
+    doubleClickActions,
+    addAction,
+    removeAction,
+    updateAction,
   }
 }

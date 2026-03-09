@@ -20,6 +20,18 @@
               "icon": "lucide-file",
               "title": "Core"
             }
+          },
+          {
+            "id": "cce75ab6e66c6238",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.11.7"
+              },
+              "icon": "lucide-book-up",
+              "title": "版本说明 1.11.7"
+            }
           }
         ]
       }
@@ -185,9 +197,5 @@
     }
   },
   "active": "0406f96ecb4dd24c",
-  "lastOpenFiles": [
-    "ARCHITECTURE_DEEP_DIVE.md",
-    "Core.md",
-    "欢迎.md"
-  ]
+  "lastOpenFiles": ["ARCHITECTURE_DEEP_DIVE.md", "Core.md", "欢迎.md"]
 }

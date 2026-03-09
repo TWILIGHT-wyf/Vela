@@ -44,13 +44,30 @@
       </el-tab-pane>
 
       <el-tab-pane label="页面模板" name="templates">
-        <div class="templates-placeholder">
-          <el-empty description="模板功能升级中，敬请期待...">
-            <template #image>
-              <el-icon :size="64"><DocumentCopy /></el-icon>
-            </template>
-          </el-empty>
+        <div class="template-list" v-if="filteredTemplates.length > 0">
+          <div class="template-card" v-for="tpl in filteredTemplates" :key="tpl.id">
+            <div
+              class="template-preview"
+              :style="{
+                background: `linear-gradient(135deg, ${tpl.preview[0]}, ${tpl.preview[1]})`,
+              }"
+            >
+              <span class="template-category">{{ getTemplateCategoryLabel(tpl.category) }}</span>
+            </div>
+            <div class="template-content">
+              <div class="template-name">{{ tpl.name }}</div>
+              <div class="template-desc">{{ tpl.description }}</div>
+            </div>
+            <el-button
+              type="primary"
+              size="small"
+              class="template-action"
+              @click="applyTemplate(tpl.id)"
+              >应用模板</el-button
+            >
+          </div>
         </div>
+        <el-empty v-else description="没有匹配的模板" :image-size="72" />
       </el-tab-pane>
 
       <el-tab-pane label="自定义" name="custom">
@@ -71,9 +88,11 @@
 import { ref, computed, watch } from 'vue'
 import type { Component } from 'vue'
 import type { MaterialMeta, NodeSchema } from '@vela/core'
-import { DocumentCopy, Search, Upload, Box } from '@element-plus/icons-vue'
+import { Search, Upload, Box } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { generateId } from '@vela/core'
 import type { PropValue } from '@vela/core/types/expression'
+import { cloneDeep } from 'lodash-es'
 import {
   getMaterialsByCategory,
   extractDefaultProps,
@@ -82,6 +101,15 @@ import {
   getComponentIcon,
   resolveCanonicalMaterialName,
 } from '@vela/materials'
+import { useComponent } from '@/stores/component'
+import { useProjectStore } from '@/stores/project'
+import { useHistoryStore } from '@/stores/history'
+import {
+  templates as pageTemplates,
+  getTemplateById,
+  instantiateTemplate,
+  type PageTemplate,
+} from '@/templates'
 
 type PanelCategoryConfig = {
   order: number
@@ -119,6 +147,9 @@ function resolveMaterialLabel(meta: MaterialMeta): string {
 const activeTab = ref('components')
 const activeNames = ref<string[]>([])
 const searchQuery = ref('')
+const componentStore = useComponent()
+const projectStore = useProjectStore()
+const historyStore = useHistoryStore()
 
 // --- 从物料包生成组件分类 ---
 const categories = computed<Category[]>(() => {
@@ -175,6 +206,98 @@ const filteredCategories = computed(() => {
 
   return filtered
 })
+
+const TEMPLATE_CATEGORY_LABELS: Record<PageTemplate['category'], string> = {
+  dashboard: '数据大屏',
+  analysis: '分析报表',
+  form: '查询表单',
+  management: '项目管理',
+}
+
+const filteredTemplates = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return pageTemplates
+
+  return pageTemplates.filter((tpl) =>
+    `${tpl.name} ${tpl.description} ${TEMPLATE_CATEGORY_LABELS[tpl.category]}`
+      .toLowerCase()
+      .includes(query),
+  )
+})
+
+function getTemplateCategoryLabel(category: PageTemplate['category']): string {
+  return TEMPLATE_CATEGORY_LABELS[category] || '页面模板'
+}
+
+async function applyTemplate(templateId: string): Promise<void> {
+  const selectedTemplate = getTemplateById(templateId)
+  if (!selectedTemplate) {
+    ElMessage.error('模板不存在')
+    return
+  }
+
+  const rootNode = componentStore.rootNode
+  if (!rootNode) {
+    ElMessage.error('当前页面未初始化，无法应用模板')
+    return
+  }
+
+  try {
+    if ((rootNode.children?.length || 0) > 0) {
+      await ElMessageBox.confirm('应用模板将覆盖当前页面组件，是否继续？', '确认应用模板', {
+        type: 'warning',
+        confirmButtonText: '覆盖并应用',
+        cancelButtonText: '取消',
+      })
+    }
+
+    const templateInstance = instantiateTemplate(templateId)
+    if (!templateInstance) {
+      ElMessage.error('模板实例生成失败')
+      return
+    }
+
+    const nextRoot = cloneDeep(rootNode)
+    nextRoot.container = {
+      mode: 'grid',
+      columns: templateInstance.root.columns,
+      rows: templateInstance.root.rows,
+      gap: templateInstance.root.gap ?? 12,
+    }
+    nextRoot.style = {
+      ...(nextRoot.style || {}),
+      ...(templateInstance.root.style || {}),
+    }
+    nextRoot.children = templateInstance.nodes
+
+    componentStore.setTree(nextRoot)
+    componentStore.clearSelection()
+    componentStore.syncToProjectStore()
+
+    const currentPage = projectStore.currentPage
+    if (currentPage && templateInstance.pageActions !== undefined) {
+      currentPage.actions = cloneDeep(templateInstance.pageActions)
+    }
+
+    if (templateInstance.globalActions !== undefined) {
+      if (!projectStore.project.logic) {
+        projectStore.project.logic = {}
+      }
+      projectStore.project.logic.actions = cloneDeep(templateInstance.globalActions)
+    }
+
+    projectStore.updatePageConfig({ defaultLayoutMode: 'grid' })
+    historyStore.clear()
+
+    ElMessage.success(`已应用模板: ${selectedTemplate.name}`)
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    console.error('[MaterialPanel] Failed to apply template:', error)
+    ElMessage.error('模板应用失败')
+  }
+}
 
 watch(
   categories,
@@ -378,10 +501,65 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
   line-height: 1.4;
 }
 
-/* 模板占位符 */
-.templates-placeholder {
-  padding: 60px 20px;
-  text-align: center;
+/* 页面模板 */
+.template-list {
+  padding: 10px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-card {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--el-fill-color-blank);
+  transition: all 0.2s ease;
+}
+
+.template-card:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.template-preview {
+  height: 58px;
+  position: relative;
+}
+
+.template-category {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.template-content {
+  padding: 10px 10px 6px;
+}
+
+.template-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  margin-bottom: 4px;
+}
+
+.template-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--el-text-color-secondary);
+}
+
+.template-action {
+  margin: 0 10px 10px;
+  width: calc(100% - 20px);
 }
 
 /* 自定义组件占位符 */

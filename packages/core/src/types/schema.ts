@@ -7,7 +7,7 @@ import {
   type AnyActionSchema,
 } from './action'
 import type { VariableSchema } from './data'
-import type { LayoutMode, NodeContainerLayout, NodeGeometry } from './layout'
+import type { GridItemLayout, LayoutMode, NodeContainerLayout, NodeGeometry } from './layout'
 
 // 重新导出 Expression 类型
 export type { Expression, ValueOrExpression } from './expression'
@@ -252,7 +252,7 @@ export interface NodeActionRefValidationContext {
  *   },
  *   renderIf: { $expr: 'state.showButton' },
  *   events: {
- *     click: [{ type: 'updateState', payload: { count: { $expr: 'state.count + 1' } } }]
+ *     click: [{ type: 'setState', payload: { path: 'count', value: { $expr: 'state.count + 1' } } }]
  *   }
  * }
  */
@@ -293,8 +293,15 @@ export interface NodeSchema<P = Record<string, PropValue>> {
    * 编辑器画布几何信息
    * - free: 使用 x/y/zIndex/rotate 等绝对定位参数
    * - flow: 使用顺序与尺寸约束参数
+   * - grid: 历史兼容字段（新网格项推荐使用 layoutItem）
    */
   geometry?: NodeGeometry
+
+  /**
+   * 网格项布局（V2）
+   * 用于 grid 容器子项的 line/span 与尺寸模式描述
+   */
+  layoutItem?: GridItemLayout
 
   // ========== 样式 ==========
   /** 节点样式 (纯 CSS) */

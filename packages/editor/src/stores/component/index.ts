@@ -8,6 +8,7 @@ import { useHistoryStore } from '../history'
 import {
   setStoreAccessor,
   AddComponentCommand,
+  BatchCommand,
   DeleteComponentCommand,
   MoveComponentCommand,
   UpdateStyleCommand,
@@ -50,6 +51,8 @@ export const useComponent = defineStore('component', () => {
       currentPage.children = cloneDeep(treeCtx.rootNode.value)
       const rootMode = treeCtx.rootNode.value.container?.mode
       if (rootMode === 'free' || rootMode === 'flow' || rootMode === 'grid') {
+        // @deprecated flow 模式已弃用，统一映射为 grid 模式。
+        // 存量 flow 数据在加载时自动升级为 grid。
         const normalizedMode = rootMode === 'free' ? 'free' : 'grid'
         if (!currentPage.config) {
           currentPage.config = {}
@@ -234,6 +237,33 @@ export const useComponent = defineStore('component', () => {
     console.log(
       `[ComponentStore] Moved component ${id} via command to parent ${newParentId} at index ${newIndex}`,
     )
+  }
+
+  /**
+   * 原子化移动 + 几何更新（一个历史记录步骤）
+   */
+  function moveComponentWithGeometry(
+    id: string,
+    newParentId: string,
+    newIndex: number,
+    geometry: Partial<NodeGeometry>,
+  ) {
+    if (!treeCtx.rootNode.value) return
+
+    if (id === treeCtx.rootNode.value.id) {
+      ElMessage.warning('不能移动根节点')
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const batch = new BatchCommand(
+      [
+        new MoveComponentCommand(id, newParentId, newIndex),
+        new UpdateGeometryCommand(id, geometry),
+      ],
+      `Move and update geometry of ${id}`,
+    )
+    historyStore.executeCommand(batch, true)
   }
 
   // ========== 剪贴板 ==========
@@ -452,6 +482,7 @@ export const useComponent = defineStore('component', () => {
     deleteComponent,
     deleteComponents,
     moveComponent,
+    moveComponentWithGeometry,
     selectComponent: selectionCtx.selectComponent,
     selectComponents: selectionCtx.selectComponents,
     selectByHitPath: selectionCtx.selectByHitPath,

@@ -1,5 +1,5 @@
 <template>
-  <div class="style-pane-enhanced">
+  <div class="style-pane-enhanced" data-testid="style-pane">
     <el-empty v-if="!node" description="请选择一个组件" :image-size="80">
       <template #image>
         <el-icon :size="64"><Select /></el-icon>
@@ -21,12 +21,14 @@
                 v-for="style in group.styles"
                 :key="style.name"
                 :label="translate(style.title) || style.label || style.name"
+                :data-testid="`style-item-${style.name}`"
               >
                 <component
                   :is="getSetterComponent(style.setter)"
                   :model-value="getMetaStyleValue(style)"
                   v-bind="style.setterProps || {}"
                   @update:model-value="(val: unknown) => setMetaStyleValue(style, val)"
+                  :data-testid="`style-input-${style.name}`"
                 />
                 <div v-if="style.description" class="style-description">
                   {{ style.description }}
@@ -48,10 +50,12 @@
               <el-radio-group
                 :model-value="layoutModeValue"
                 @update:model-value="
-                  (val: 'grid' | 'free' | undefined) => setLayoutMode((val as 'grid' | 'free') || 'grid')
+                  (val: 'grid' | 'flow' | 'free' | undefined) =>
+                    setLayoutMode((val as 'grid' | 'flow' | 'free') || 'grid')
                 "
               >
                 <el-radio-button label="grid">网格编排</el-radio-button>
+                <el-radio-button label="flow">流式布局</el-radio-button>
                 <el-radio-button label="free">自由布局</el-radio-button>
               </el-radio-group>
             </el-form-item>
@@ -67,6 +71,7 @@
               <SizeInput
                 :model-value="getSizeValue('width')"
                 @update:model-value="(val) => setStyleValue('width', val)"
+                data-testid="style-input-width"
               />
             </el-form-item>
 
@@ -74,6 +79,7 @@
               <SizeInput
                 :model-value="getSizeValue('height')"
                 @update:model-value="(val) => setStyleValue('height', val)"
+                data-testid="style-input-height"
               />
             </el-form-item>
           </el-collapse-item>
@@ -89,6 +95,7 @@
                 :model-value="getStyleValue('position')"
                 @update:model-value="(val: string) => setStyleValue('position', val)"
                 clearable
+                data-testid="style-input-position"
               >
                 <el-option label="相对定位" value="relative" />
                 <el-option label="绝对定位" value="absolute" />
@@ -103,6 +110,7 @@
                   :model-value="getStyleValue('left')"
                   placeholder="0px"
                   @update:model-value="(val: string) => setStyleValue('left', val)"
+                  data-testid="style-input-left"
                 />
               </el-form-item>
               <el-form-item label="Top" v-if="!hasCustomStyle('top')">
@@ -110,6 +118,7 @@
                   :model-value="getStyleValue('top')"
                   placeholder="0px"
                   @update:model-value="(val: string) => setStyleValue('top', val)"
+                  data-testid="style-input-top"
                 />
               </el-form-item>
             </template>
@@ -199,6 +208,7 @@
                       :min="-500"
                       :max="1000"
                       controls-position="right"
+                      data-testid="style-input-margin-top"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('margin', 'top', val)
                       "
@@ -212,6 +222,7 @@
                       :min="-500"
                       :max="1000"
                       controls-position="right"
+                      data-testid="style-input-margin-right"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('margin', 'right', val)
                       "
@@ -225,6 +236,7 @@
                       :min="-500"
                       :max="1000"
                       controls-position="right"
+                      data-testid="style-input-margin-bottom"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('margin', 'bottom', val)
                       "
@@ -238,6 +250,7 @@
                       :min="-500"
                       :max="1000"
                       controls-position="right"
+                      data-testid="style-input-margin-left"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('margin', 'left', val)
                       "
@@ -257,6 +270,7 @@
                       :min="0"
                       :max="500"
                       controls-position="right"
+                      data-testid="style-input-padding-top"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('padding', 'top', val)
                       "
@@ -270,6 +284,7 @@
                       :min="0"
                       :max="500"
                       controls-position="right"
+                      data-testid="style-input-padding-right"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('padding', 'right', val)
                       "
@@ -283,6 +298,7 @@
                       :min="0"
                       :max="500"
                       controls-position="right"
+                      data-testid="style-input-padding-bottom"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('padding', 'bottom', val)
                       "
@@ -296,6 +312,7 @@
                       :min="0"
                       :max="500"
                       controls-position="right"
+                      data-testid="style-input-padding-left"
                       @update:model-value="
                         (val: number | undefined) => setSpacingSideValue('padding', 'left', val)
                       "
@@ -410,10 +427,14 @@ const isContainer = computed(() => {
 })
 
 const layoutModeValue = computed(() => {
-  return (props.node?.container?.mode === 'free' ? 'free' : 'grid') as 'grid' | 'free'
+  const mode = props.node?.container?.mode
+  if (mode === 'free' || mode === 'flow') {
+    return mode
+  }
+  return 'grid'
 })
 
-function setLayoutMode(mode: 'grid' | 'free') {
+function setLayoutMode(mode: 'grid' | 'flow' | 'free') {
   if (!props.node) return
   componentStore.updateContainerLayout(props.node.id, mode)
 }
@@ -576,7 +597,11 @@ function getSpacingSideValue(kind: SpacingKind, side: SpacingSide): number {
   return 0
 }
 
-function setSpacingSideValue(kind: SpacingKind, side: SpacingSide, value: number | undefined): void {
+function setSpacingSideValue(
+  kind: SpacingKind,
+  side: SpacingSide,
+  value: number | undefined,
+): void {
   if (!props.node) return
   const sideKey = spacingStyleKeyMap[kind][side]
   const numeric = Number.isFinite(value) ? Math.round(value as number) : 0

@@ -25,7 +25,7 @@
             <div style="max-width: 240px">
               <p><strong>自由布局:</strong> 组件使用绝对定位，可自由拖拽、调整大小和层级</p>
               <p style="margin-top: 8px">
-                <strong>网格编排:</strong> 组件以 fr 比例自动填满画布，拖拽边缘调整比例
+                <strong>网格编排:</strong> 组件按网格单元落位，方向键移动占位，Shift 调整跨度
               </p>
             </div>
           </template>
@@ -55,7 +55,7 @@
             <el-icon :size="32"><Grid /></el-icon>
           </div>
           <div class="layout-label">网格编排</div>
-          <div class="layout-desc">fr 比例</div>
+          <div class="layout-desc">可视化栅格</div>
         </div>
       </div>
 
@@ -67,7 +67,7 @@
         show-icon
         class="layout-alert"
       >
-        组件以 fr 比例自动填满画布，拖拽边缘手柄调整比例，支持嵌套子网格
+        组件将映射为网格占位，支持拖拽落格、方向键移动占位与 Shift 调整跨度
       </el-alert>
     </div>
 
@@ -84,7 +84,9 @@
               :max="3840"
               :step="10"
               controls-position="right"
-              @change="(val: number | undefined) => sizeStore.setSize(val || 1920, sizeStore.height)"
+              @change="
+                (val: number | undefined) => sizeStore.setSize(val || 1920, sizeStore.height)
+              "
             />
             <span class="size-separator">x</span>
             <el-input-number
@@ -135,34 +137,27 @@ const sizeStore = useSizeStore()
 const { currentPage } = storeToRefs(projectStore)
 const { rootNode } = storeToRefs(componentStore)
 
-// 本地状态
 const pageName = ref('')
 const pagePath = ref('')
 
-// 当前布局模式
 const currentLayout = computed<LayoutMode>(() => {
   const rootMode = rootNode.value?.container?.mode as LayoutMode | undefined
-  if (rootMode === 'free' || rootMode === 'grid') {
-    return rootMode
-  }
+  if (rootMode === 'free' || rootMode === 'grid') return rootMode
 
   const pageMode = currentPage.value?.config?.defaultLayoutMode as LayoutMode | undefined
   return pageMode === 'free' ? 'free' : 'grid'
 })
 
-// 同步页面信息
 watch(
   currentPage,
   (page) => {
-    if (page) {
-      pageName.value = page.name
-      pagePath.value = page.type === 'page' ? page.path.replace(/^\//, '') : ''
-    }
+    if (!page) return
+    pageName.value = page.name
+    pagePath.value = page.type === 'page' ? page.path.replace(/^\//, '') : ''
   },
   { immediate: true },
 )
 
-// 确保根节点布局模式与页面配置一致
 watch(
   [currentPage, rootNode],
   ([page, root]) => {
@@ -175,23 +170,18 @@ watch(
   { immediate: true },
 )
 
-// 处理名称变更
 function handleNameChange(value: string) {
-  if (currentPage.value) {
-    currentPage.value.name = value
-    projectStore.saveStatus = 'unsaved'
-  }
+  if (!currentPage.value) return
+  currentPage.value.name = value
+  projectStore.saveStatus = 'unsaved'
 }
 
-// 处理路径变更
 function handlePathChange(value: string) {
-  if (currentPage.value && currentPage.value.type === 'page') {
-    currentPage.value.path = value.startsWith('/') ? value : `/${value}`
-    projectStore.saveStatus = 'unsaved'
-  }
+  if (!currentPage.value || currentPage.value.type !== 'page') return
+  currentPage.value.path = value.startsWith('/') ? value : `/${value}`
+  projectStore.saveStatus = 'unsaved'
 }
 
-// 处理布局模式切换
 async function handleLayoutChange(mode: LayoutMode) {
   const targetMode: LayoutMode = mode === 'free' ? 'free' : 'grid'
   if (targetMode === currentLayout.value) return
@@ -199,17 +189,13 @@ async function handleLayoutChange(mode: LayoutMode) {
   try {
     const confirmMessages: Record<string, string> = {
       free: '切换到自由布局将为所有组件添加绝对定位，并设置初始坐标。此操作可能导致布局变化，是否继续？',
-      grid: '切换到网格编排将把组件转换为 fr 比例布局，组件将自动填满画布。此操作可能导致布局变化，是否继续？',
+      grid: '切换到网格编排将把组件转换为网格占位布局。组件会保留相对位置并映射为栅格跨度，是否继续？',
     }
-    await ElMessageBox.confirm(
-      confirmMessages[targetMode] || '是否切换布局模式？',
-      '切换布局模式',
-      {
-        confirmButtonText: '确认切换',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
+    await ElMessageBox.confirm(confirmMessages[targetMode], '切换布局模式', {
+      confirmButtonText: '确认切换',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
     if (rootNode.value) {
       const converted = convertLayout(rootNode.value, targetMode)
@@ -224,7 +210,6 @@ async function handleLayoutChange(mode: LayoutMode) {
   }
 }
 
-// 处理预设选择
 function handlePresetChange(key: string) {
   sizeStore.setPreset(key)
 }
@@ -232,6 +217,10 @@ function handlePresetChange(key: string) {
 
 <style scoped>
 .page-setting-pane {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: 16px;
 }
 
@@ -254,7 +243,6 @@ function handlePresetChange(key: string) {
   cursor: help;
 }
 
-/* 布局选项卡片 */
 .layout-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -307,7 +295,6 @@ function handlePresetChange(key: string) {
   margin-top: 8px;
 }
 
-/* 尺寸输入 */
 .size-inputs {
   display: flex;
   align-items: center;
@@ -320,10 +307,9 @@ function handlePresetChange(key: string) {
 }
 
 .size-inputs :deep(.el-input-number) {
-  width: 130px; /* Wider for 4 digits */
+  width: 130px;
 }
 
-/* Element Plus 表单微调 */
 :deep(.el-form-item) {
   margin-bottom: 16px;
 }

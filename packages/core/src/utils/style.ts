@@ -295,6 +295,26 @@ export function generateVisualCSS(style: NodeStyle | undefined): ComponentCSSSty
   if (style.padding !== undefined) {
     css.padding = typeof style.padding === 'number' ? `${style.padding}px` : String(style.padding)
   }
+  if (style.paddingTop !== undefined) {
+    css.paddingTop =
+      typeof style.paddingTop === 'number' ? `${style.paddingTop}px` : String(style.paddingTop)
+  }
+  if (style.paddingRight !== undefined) {
+    css.paddingRight =
+      typeof style.paddingRight === 'number'
+        ? `${style.paddingRight}px`
+        : String(style.paddingRight)
+  }
+  if (style.paddingBottom !== undefined) {
+    css.paddingBottom =
+      typeof style.paddingBottom === 'number'
+        ? `${style.paddingBottom}px`
+        : String(style.paddingBottom)
+  }
+  if (style.paddingLeft !== undefined) {
+    css.paddingLeft =
+      typeof style.paddingLeft === 'number' ? `${style.paddingLeft}px` : String(style.paddingLeft)
+  }
 
   // Text styles
   if (style.color) css.color = String(style.color)

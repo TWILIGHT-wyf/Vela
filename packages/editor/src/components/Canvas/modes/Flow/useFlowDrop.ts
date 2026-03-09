@@ -1,6 +1,6 @@
 import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
-import type { NodeSchema, GridNodeGeometry } from '@vela/core'
+import type { GridContainerLayout, NodeSchema } from '@vela/core'
 import { countTracks } from '@vela/core'
 import {
   COMPONENT_REGISTRY,
@@ -9,6 +9,13 @@ import {
 } from '@vela/core/contracts'
 import { materialList } from '@vela/materials'
 import { useComponent } from '@/stores/component'
+import {
+  findFirstFitPlacement,
+  nodeToPlacement,
+  placementToLayoutItem,
+  placementToGeometry,
+  type GridPlacement,
+} from '@/utils/gridPlacement'
 import { useCanvasContext } from '../../composables/useCanvasContext'
 import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
 
@@ -50,6 +57,8 @@ for (const meta of materialList) {
  * 防止过深嵌套导致性能问题
  */
 const MAX_NESTING_DEPTH = 10
+const DEFAULT_GRID_ITEM_SPAN = { colSpan: 3, rowSpan: 2 }
+const DEFAULT_GRID_CONTAINER_SPAN = { colSpan: 6, rowSpan: 4 }
 
 /**
  * 检查节点是否为容器类型
@@ -70,10 +79,14 @@ function isContainerNode(node: NodeSchema): boolean {
 }
 
 type FlowDirection = 'row' | 'column'
-type EditorLayoutMode = 'free' | 'grid'
+type EditorLayoutMode = 'free' | 'flow' | 'grid'
 
 export function inferDropDirectionForParent(node: NodeSchema | null | undefined): FlowDirection {
   if (!node) return 'column'
+
+  if (node.container?.mode === 'flow') {
+    return node.container.direction === 'column' ? 'column' : 'row'
+  }
 
   const style = node.style || {}
   const display = String(style.display || '').toLowerCase()
@@ -96,7 +109,16 @@ export function inferDropDirectionForParent(node: NodeSchema | null | undefined)
 }
 
 function normalizeLayoutMode(mode: 'free' | 'flow' | 'grid' | undefined): EditorLayoutMode {
-  return mode === 'free' ? 'free' : 'grid'
+  if (mode === 'free') return 'free'
+  if (mode === 'flow') return 'flow'
+  return 'grid'
+}
+
+function escapeCssAttrValue(value: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value)
+  }
+  return value.replace(/["\\]/g, '\\$&')
 }
 
 /**
@@ -220,6 +242,221 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       cursorId = componentStore.getParentId(cursorId)
     }
     return normalizeLayoutMode(rootNode.container?.mode)
+  }
+
+  function resolveGridColumnCount(node: NodeSchema): number {
+    if (node.container?.mode !== 'grid') return 1
+    const container = node.container as GridContainerLayout
+    if (Array.isArray(container.columnTracks) && container.columnTracks.length > 0) {
+      return container.columnTracks.length
+    }
+    if (container.templateMode === 'autoFit') return 12
+    return Math.max(1, countTracks(container.columns || '1fr'))
+  }
+
+  function resolveGridRowCount(node: NodeSchema): number {
+    if (node.container?.mode !== 'grid') return 1
+    const container = node.container as GridContainerLayout
+    if (container.templateMode === 'autoFit') return 1
+    if (container.rowTracks === 'auto') return 1
+    if (Array.isArray(container.rowTracks) && container.rowTracks.length > 0) {
+      return container.rowTracks.length
+    }
+    return Math.max(1, countTracks(container.rows || '1fr'))
+  }
+
+  function resolveGridGapPx(node: NodeSchema, axis: 'x' | 'y'): number {
+    if (node.container?.mode !== 'grid') return 8
+    const container = node.container as GridContainerLayout
+    const candidate =
+      axis === 'x' ? (container.gapX ?? container.gap ?? 8) : (container.gapY ?? container.gap ?? 8)
+    const parsed = Number(candidate)
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed)
+    }
+    return 8
+  }
+
+  function toDomRect(rect: DropIndicatorState['rect'] | null): DOMRect | null {
+    if (!rect) return null
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => ({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        right: rect.left + rect.width,
+        bottom: rect.top + rect.height,
+        x: rect.left,
+        y: rect.top,
+      }),
+    } as DOMRect
+  }
+
+  function resolveGridParentRect(
+    parentId: string,
+    fallbackRect: DropIndicatorState['rect'] | null,
+  ): DOMRect | null {
+    const escapedId = escapeCssAttrValue(parentId)
+    const parentEl = document.querySelector(`[data-id="${escapedId}"]`) as HTMLElement | null
+    if (parentEl) {
+      return parentEl.getBoundingClientRect()
+    }
+    const rootNode = getRootNode()
+    if (rootNode?.id === parentId) {
+      const stageEl = document.querySelector('.simulation-page.canvas-stage') as HTMLElement | null
+      if (stageEl) {
+        return stageEl.getBoundingClientRect()
+      }
+    }
+    return toDomRect(fallbackRect)
+  }
+
+  function resolveDefaultGridSpan(
+    columnCount: number,
+    isContainerComponent: boolean,
+  ): { colSpan: number; rowSpan: number } {
+    if (!isContainerComponent) {
+      return {
+        colSpan: Math.min(DEFAULT_GRID_ITEM_SPAN.colSpan, Math.max(1, columnCount)),
+        rowSpan: DEFAULT_GRID_ITEM_SPAN.rowSpan,
+      }
+    }
+
+    return {
+      colSpan: Math.max(1, Math.min(columnCount, Math.ceil(columnCount / 2))),
+      rowSpan: DEFAULT_GRID_CONTAINER_SPAN.rowSpan,
+    }
+  }
+
+  function resolveMovingNodeSpan(
+    node: NodeSchema,
+    colCount: number,
+  ): { colSpan: number; rowSpan: number } {
+    const isContainerComponent = isContainerNode(node)
+    const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+    const placement = nodeToPlacement(node, colCount, {
+      colStart: 1,
+      rowStart: 1,
+      colSpan: defaultSpan.colSpan,
+      rowSpan: defaultSpan.rowSpan,
+    })
+
+    return {
+      colSpan: placement.colSpan,
+      rowSpan: placement.rowSpan,
+    }
+  }
+
+  function buildGridPointerPlacement(
+    parent: NodeSchema,
+    nodeRect: DOMRect | null,
+    clientX: number,
+    clientY: number,
+    span: { colSpan: number; rowSpan: number },
+  ): GridPlacement {
+    const colCount = resolveGridColumnCount(parent)
+    const safeColSpan = Math.min(Math.max(1, span.colSpan), colCount)
+    const safeRowSpan = Math.min(Math.max(1, span.rowSpan), 48)
+    const fallback: GridPlacement = {
+      colStart: 1,
+      colSpan: safeColSpan,
+      rowStart: 1,
+      rowSpan: safeRowSpan,
+    }
+
+    if (!nodeRect || nodeRect.width <= 0 || nodeRect.height <= 0) {
+      return fallback
+    }
+
+    const gridContainer =
+      parent.container?.mode === 'grid' ? (parent.container as GridContainerLayout) : undefined
+    const colGapPx = resolveGridGapPx(parent, 'x')
+    const rowGapPx = resolveGridGapPx(parent, 'y')
+    const colWidth = Math.max(
+      1,
+      (nodeRect.width - Math.max(0, colGapPx * (colCount - 1))) / colCount,
+    )
+    const relX = Math.max(0, clientX - nodeRect.left)
+    const relY = Math.max(0, clientY - nodeRect.top)
+    const colStep = colWidth + colGapPx
+    const colStart = Math.max(
+      1,
+      Math.min(colCount - safeColSpan + 1, Math.floor(relX / colStep) + 1),
+    )
+    const rowCount = resolveGridRowCount(parent)
+    const rowHeight =
+      gridContainer?.templateMode === 'autoFit' || gridContainer?.rowTracks === 'auto'
+        ? Math.max(12, Number(gridContainer.autoRowsMin ?? 24))
+        : Math.max(
+            1,
+            (nodeRect.height - Math.max(0, rowGapPx * (rowCount - 1))) / Math.max(1, rowCount),
+          )
+    const rowStep = rowHeight + rowGapPx
+    const rowStart = Math.max(1, Math.floor(relY / rowStep) + 1)
+
+    return {
+      colStart,
+      colSpan: safeColSpan,
+      rowStart,
+      rowSpan: safeRowSpan,
+    }
+  }
+
+  function collectSiblingPlacements(parent: NodeSchema, excludeId?: string): GridPlacement[] {
+    const colCount = resolveGridColumnCount(parent)
+    const children = parent.children || []
+    const placements: GridPlacement[] = []
+    for (const child of children) {
+      if (excludeId && child.id === excludeId) continue
+      const hasGridPlacement = child.layoutItem?.mode === 'grid'
+      if (!hasGridPlacement) continue
+      placements.push(nodeToPlacement(child, colCount))
+    }
+    return placements
+  }
+
+  function resolveDesiredPlacementFromTarget(
+    target: NodeSchema,
+    position: DropPosition,
+    parentColCount: number,
+    span: { colSpan: number; rowSpan: number },
+  ): GridPlacement {
+    const safeColSpan = Math.min(Math.max(1, span.colSpan), parentColCount)
+    const safeRowSpan = Math.min(Math.max(1, span.rowSpan), 48)
+    const fallback: GridPlacement = {
+      colStart: 1,
+      colSpan: safeColSpan,
+      rowStart: 1,
+      rowSpan: safeRowSpan,
+    }
+    const targetHasGridPlacement = target.layoutItem?.mode === 'grid'
+    if (!targetHasGridPlacement) return fallback
+    const targetPlacement = nodeToPlacement(target, parentColCount)
+    if (position === 'before') {
+      return { ...fallback, colStart: targetPlacement.colStart, rowStart: targetPlacement.rowStart }
+    }
+    if (position === 'after') {
+      return {
+        ...fallback,
+        colStart: targetPlacement.colStart,
+        rowStart: targetPlacement.rowStart + targetPlacement.rowSpan,
+      }
+    }
+    return {
+      ...fallback,
+      colStart: targetPlacement.colStart,
+      rowStart: targetPlacement.rowStart,
+      colSpan: Math.min(targetPlacement.colSpan, safeColSpan),
+    }
   }
 
   /**
@@ -459,7 +696,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     if (isMove) {
       // 移动现有组件
-      return handleMoveComponent(dropData.nodeId!, state)
+      return handleMoveComponent(dropData.nodeId!, state, clientX, clientY)
     } else {
       // 添加新组件
       return handleAddComponent(dropData, state, clientX, clientY)
@@ -469,11 +706,21 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   /**
    * 处理组件移动
    */
-  function handleMoveComponent(nodeId: string, state: DropIndicatorState): boolean {
+  function handleMoveComponent(
+    nodeId: string,
+    state: DropIndicatorState,
+    clientX: number,
+    clientY: number,
+  ): boolean {
     const rootNode = getRootNode()
     if (!rootNode || !state.targetId) return false
 
     const { position, targetId, targetParentId } = state
+    const movingNode = componentStore.findNodeById(rootNode, nodeId)
+    if (!movingNode) {
+      console.warn('[useFlowDrop] Moving node not found')
+      return false
+    }
 
     // 计算新的父节点和索引
     let newParentId: string
@@ -495,6 +742,10 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       }
 
       const targetIndex = parent.children.findIndex((c) => c.id === targetId)
+      if (targetIndex < 0) {
+        console.warn('[useFlowDrop] Target index not found in parent')
+        return false
+      }
       newIndex = position === 'before' ? targetIndex : targetIndex + 1
 
       // 如果是同一个父节点内的移动，需要调整索引
@@ -505,6 +756,53 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
           newIndex -= 1
         }
       }
+    }
+
+    const newParentNode = componentStore.findNodeById(rootNode, newParentId)
+    const newParentMode = resolveLayoutMode(rootNode, newParentId)
+    if (newParentMode === 'grid' && newParentNode) {
+      if (newParentNode.container?.mode !== 'grid') {
+        componentStore.updateContainerLayout(newParentNode.id, 'grid')
+      }
+
+      const colCount = resolveGridColumnCount(newParentNode)
+      const movingSpan = resolveMovingNodeSpan(movingNode, colCount)
+      const targetNode = componentStore.findNodeById(rootNode, targetId)
+      const desiredFromTarget = resolveDesiredPlacementFromTarget(
+        targetNode || newParentNode,
+        position,
+        colCount,
+        movingSpan,
+      )
+      const parentRect = resolveGridParentRect(newParentNode.id, state.rect)
+      const desiredFromPointer = buildGridPointerPlacement(
+        newParentNode,
+        parentRect,
+        clientX,
+        clientY,
+        movingSpan,
+      )
+      const desiredPlacement = parentRect ? desiredFromPointer : desiredFromTarget
+      const existingPlacements = collectSiblingPlacements(newParentNode, nodeId)
+      const resolvedPlacement = findFirstFitPlacement(
+        existingPlacements,
+        desiredPlacement,
+        colCount,
+      )
+
+      const oldParentId = componentStore.getParentId(nodeId)
+      const oldParentNode = oldParentId ? componentStore.findNodeById(rootNode, oldParentId) : null
+      const oldIndex = oldParentNode?.children?.findIndex((c) => c.id === nodeId) ?? -1
+      const nextGeometry = placementToGeometry(
+        resolvedPlacement,
+        movingNode.geometry?.mode === 'grid' ? movingNode.geometry : undefined,
+      )
+      if (oldParentId !== newParentId || oldIndex !== newIndex) {
+        componentStore.moveComponentWithGeometry(nodeId, newParentId, newIndex, nextGeometry)
+      } else {
+        componentStore.updateGeometry(nodeId, nextGeometry)
+      }
+      return true
     }
 
     console.log(`[useFlowDrop] Moving ${nodeId} to ${newParentId} at index ${newIndex}`)
@@ -530,6 +828,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     const effectiveParent = componentStore.findNodeById(rootNode, effectiveParentId)
     const effectiveParentMode = resolveLayoutMode(rootNode, effectiveParentId)
     const isFreeContainer = position === 'inside' && effectiveParentMode === 'free'
+    const isFlowContainer = position === 'inside' && effectiveParentMode === 'flow'
 
     const componentName = dropData.component || dropData.componentName
     if (!componentName) {
@@ -547,21 +846,52 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       if (gridParentNode.container?.mode !== 'grid') {
         componentStore.updateContainerLayout(gridParentNode.id, 'grid')
       }
-      const gridContainer = gridParentNode.container as { columns?: string }
-      const colCount = countTracks(gridContainer.columns || '1fr')
+      const colCount = resolveGridColumnCount(gridParentNode)
+      const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+      const targetNode = componentStore.findNodeById(rootNode, targetId)
+      const desiredFromTarget = resolveDesiredPlacementFromTarget(
+        targetNode || gridParentNode,
+        position,
+        colCount,
+        defaultSpan,
+      )
+      const parentRect = resolveGridParentRect(gridParentNode.id, state.rect)
+      const desiredFromPointer = buildGridPointerPlacement(
+        gridParentNode,
+        parentRect,
+        clientX,
+        clientY,
+        defaultSpan,
+      )
+      const desiredPlacement = parentRect ? desiredFromPointer : desiredFromTarget
+      const existingPlacements = collectSiblingPlacements(gridParentNode)
+      const firstContainerPlacement =
+        isContainerComponent && existingPlacements.length === 0
+          ? {
+              ...desiredPlacement,
+              colStart: 1,
+              colSpan: colCount,
+              rowStart: 1,
+              rowSpan: Math.max(desiredPlacement.rowSpan, DEFAULT_GRID_CONTAINER_SPAN.rowSpan),
+            }
+          : desiredPlacement
+      const resolvedPlacement = findFirstFitPlacement(
+        existingPlacements,
+        desiredPlacement,
+        colCount,
+      )
+      const finalPlacement =
+        isContainerComponent && existingPlacements.length === 0
+          ? findFirstFitPlacement(existingPlacements, firstContainerPlacement, colCount)
+          : resolvedPlacement
 
       const newComponent: NodeSchema = {
         id: `comp_${crypto.randomUUID()}`,
         component: componentName,
         props: dropData.props ?? {},
-        style: { ...(dropData.style || {}), width: '100%', height: '100%' },
-        geometry: {
-          mode: 'grid',
-          gridColumnStart: 1,
-          gridColumnEnd: colCount + 1,
-          gridRowStart: 1,
-          gridRowEnd: 2,
-        } as GridNodeGeometry,
+        style: { ...(dropData.style || {}) },
+        layoutItem: placementToLayoutItem(finalPlacement),
+        geometry: placementToGeometry(finalPlacement),
         children: isContainerComponent ? [] : undefined,
       }
 
@@ -603,15 +933,22 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       component: componentName,
       props: dropData.props ?? {},
       style: {
-        width: isFreeContainer ? defaultW : '100%',
-        minHeight: isFreeContainer ? undefined : '100%',
+        width: isFreeContainer ? defaultW : isFlowContainer ? undefined : '100%',
+        minHeight: isFreeContainer ? undefined : isFlowContainer ? undefined : '100%',
         height: isFreeContainer ? defaultH : undefined,
+        flexBasis: isFlowContainer
+          ? ((dropData.style?.flexBasis as string | number | undefined) ?? '280px')
+          : undefined,
         gridColumn:
-          !isFreeContainer && (dropData.style?.gridColumn as string | undefined) === undefined
+          !isFreeContainer &&
+          !isFlowContainer &&
+          (dropData.style?.gridColumn as string | undefined) === undefined
             ? 'span 3'
             : (dropData.style?.gridColumn as string | undefined),
         gridRow:
-          !isFreeContainer && (dropData.style?.gridRow as string | undefined) === undefined
+          !isFreeContainer &&
+          !isFlowContainer &&
+          (dropData.style?.gridRow as string | undefined) === undefined
             ? 'span 4'
             : (dropData.style?.gridRow as string | undefined),
         ...(dropData.style || {}),
@@ -712,28 +1049,75 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       }
     }
 
-    // Grid composition mode: rely on tree-level normalization for row assignment
     if (rootLayoutMode === 'grid' && rootNode) {
-      const gridContainer = rootNode.container as { columns?: string } | undefined
-      const colCount = countTracks(gridContainer?.columns || '1fr')
+      const colCount = resolveGridColumnCount(rootNode)
+      const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+      const target = e.currentTarget as HTMLElement | null
+      const rootRect = target?.getBoundingClientRect() || null
 
       if (dropData.nodeId && draggingId.value === dropData.nodeId) {
-        componentStore.moveComponent(dropData.nodeId, rootNode.id, rootNode.children?.length || 0)
+        const movingNode = componentStore.findNodeById(rootNode, dropData.nodeId)
+        if (!movingNode) return false
+
+        const movingSpan = resolveMovingNodeSpan(movingNode, colCount)
+        const desired = buildGridPointerPlacement(
+          rootNode,
+          rootRect,
+          e.clientX,
+          e.clientY,
+          movingSpan,
+        )
+        const existingPlacements = collectSiblingPlacements(rootNode, dropData.nodeId)
+        const resolvedPlacement = findFirstFitPlacement(existingPlacements, desired, colCount)
+        const currentParentId = componentStore.getParentId(dropData.nodeId)
+        const nextGeometry = placementToGeometry(
+          resolvedPlacement,
+          movingNode.geometry?.mode === 'grid' ? movingNode.geometry : undefined,
+        )
+        if (currentParentId !== rootNode.id) {
+          componentStore.moveComponentWithGeometry(
+            dropData.nodeId,
+            rootNode.id,
+            rootNode.children?.length || 0,
+            nextGeometry,
+          )
+        } else {
+          componentStore.updateGeometry(dropData.nodeId, nextGeometry)
+        }
         return true
       }
+
+      const desired = buildGridPointerPlacement(
+        rootNode,
+        rootRect,
+        e.clientX,
+        e.clientY,
+        defaultSpan,
+      )
+      const existingPlacements = collectSiblingPlacements(rootNode)
+      const firstContainerPlacement =
+        isContainerComponent && existingPlacements.length === 0
+          ? {
+              ...desired,
+              colStart: 1,
+              colSpan: colCount,
+              rowStart: 1,
+              rowSpan: Math.max(desired.rowSpan, DEFAULT_GRID_CONTAINER_SPAN.rowSpan),
+            }
+          : desired
+      const resolvedPlacement = findFirstFitPlacement(
+        existingPlacements,
+        firstContainerPlacement,
+        colCount,
+      )
 
       const newComponent: NodeSchema = {
         id: `comp_${crypto.randomUUID()}`,
         component: componentName,
         props: dropData.props ?? {},
-        style: { ...(dropData.style || {}), width: '100%', height: '100%' },
-        geometry: {
-          mode: 'grid',
-          gridColumnStart: 1,
-          gridColumnEnd: colCount + 1,
-          gridRowStart: 1,
-          gridRowEnd: 2,
-        } as GridNodeGeometry,
+        style: { ...(dropData.style || {}) },
+        layoutItem: placementToLayoutItem(resolvedPlacement),
+        geometry: placementToGeometry(resolvedPlacement),
         children: isContainerComponent ? [] : undefined,
       }
 
@@ -765,11 +1149,21 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       component: componentName,
       props: dropData.props ?? {},
       style: {
-        width: rootLayoutMode === 'free' ? defaultW : '100%',
-        minHeight: rootLayoutMode === 'free' ? undefined : '100%',
+        width:
+          rootLayoutMode === 'free' ? defaultW : rootLayoutMode === 'flow' ? undefined : '100%',
+        minHeight:
+          rootLayoutMode === 'free' ? undefined : rootLayoutMode === 'flow' ? undefined : '100%',
         height: rootLayoutMode === 'free' ? defaultH : undefined,
-        gridColumn: dropData.style?.gridColumn as string | undefined,
-        gridRow: dropData.style?.gridRow as string | undefined,
+        flexBasis:
+          rootLayoutMode === 'flow'
+            ? ((dropData.style?.flexBasis as string | number | undefined) ?? '280px')
+            : undefined,
+        gridColumn:
+          rootLayoutMode === 'grid'
+            ? (dropData.style?.gridColumn as string | undefined)
+            : undefined,
+        gridRow:
+          rootLayoutMode === 'grid' ? (dropData.style?.gridRow as string | undefined) : undefined,
         ...(dropData.style || {}),
       },
       geometry:

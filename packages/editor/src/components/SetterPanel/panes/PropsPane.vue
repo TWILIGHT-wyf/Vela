@@ -1,5 +1,5 @@
 <template>
-  <div class="props-pane">
+  <div class="props-pane" data-testid="props-pane">
     <el-empty v-if="!node" description="请选择一个组件" :image-size="80">
       <template #image>
         <el-icon :size="64"><Select /></el-icon>
@@ -26,6 +26,7 @@
             v-for="prop in group.props"
             :key="prop.name"
             :label="translate(prop.title) || prop.label || prop.name"
+            :data-testid="`prop-item-${prop.name}`"
           >
             <component
               :is="getSetterComponent(prop.setter)"
@@ -33,6 +34,7 @@
               @update:model-value="setPropValue(prop.name, $event)"
               v-bind="prop.setterProps || {}"
               :properties="prop.properties"
+              :data-testid="`prop-input-${prop.name}`"
             />
             <div v-if="prop.description" class="prop-description">
               {{ prop.description }}
@@ -47,12 +49,14 @@
           v-for="prop in metaProps"
           :key="prop.name"
           :label="translate(prop.title) || prop.label || prop.name"
+          :data-testid="`prop-item-${prop.name}`"
         >
           <component
             :is="getSetterComponent(prop.setter)"
             :model-value="getPropValue(prop.name, prop.defaultValue)"
             @update:model-value="setPropValue(prop.name, $event)"
             v-bind="prop.setterProps || {}"
+            :data-testid="`prop-input-${prop.name}`"
           />
           <div v-if="prop.description" class="prop-description">
             {{ prop.description }}

@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, toRef, type Component, type CSSProperties } from 'vue'
-import type { NodeSchema, GridContainerLayout } from '@vela/core'
+import type { FlowContainerLayout, GridTrack, NodeSchema, GridContainerLayout } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
 import { useComponent } from '@/stores/component'
@@ -73,7 +73,7 @@ defineOptions({
 const props = defineProps<{
   node: NodeSchema
   wrapper: Component
-  parentLayoutMode?: 'free' | 'grid'
+  parentLayoutMode?: 'free' | 'flow' | 'grid'
 }>()
 
 const componentName = computed(() => props.node.component || props.node.componentName || '')
@@ -101,8 +101,13 @@ const { resolvedProps } = useDataSourceAdapter(nodeRef)
 
 const componentStore = useComponent()
 
-const normalizeLayoutMode = (mode: 'free' | 'flow' | 'grid' | undefined): 'free' | 'grid' =>
-  mode === 'free' ? 'free' : 'grid'
+const normalizeLayoutMode = (
+  mode: 'free' | 'flow' | 'grid' | undefined,
+): 'free' | 'flow' | 'grid' => {
+  if (mode === 'free') return 'free'
+  if (mode === 'flow') return 'flow'
+  return 'grid'
+}
 
 const effectiveParentLayoutMode = computed(() => normalizeLayoutMode(props.parentLayoutMode))
 const selfChildrenLayoutMode = computed(() => {
@@ -110,6 +115,35 @@ const selfChildrenLayoutMode = computed(() => {
   if (childMode === undefined) return effectiveParentLayoutMode.value
   return normalizeLayoutMode(childMode)
 })
+
+const trackToCss = (track: GridTrack): string => {
+  if (!track) return '1fr'
+  if (track.unit === 'auto') return 'auto'
+  if (track.unit === 'fr') {
+    const value = Number.isFinite(track.value) ? Number(track.value) : 1
+    return `${Math.max(0.1, Math.round(value * 100) / 100)}fr`
+  }
+  if (track.unit === 'px') {
+    const value = Number.isFinite(track.value) ? Number(track.value) : 1
+    return `${Math.max(1, Math.round(value))}px`
+  }
+  if (track.unit === 'minmax') {
+    const min = track.min === 'auto' ? 'auto' : `${Math.max(1, Number(track.min || 1))}px`
+    const max = track.max === 'auto' ? 'auto' : `${Math.max(1, Number(track.max || 1))}px`
+    return `minmax(${min}, ${max})`
+  }
+  return '1fr'
+}
+
+const tracksToTemplate = (tracks: GridTrack[] | undefined, fallback: string): string => {
+  if (!Array.isArray(tracks) || tracks.length === 0) return fallback
+  return tracks.map((track) => trackToCss(track)).join(' ')
+}
+
+const toAutoFitColumns = (minWidth?: number): string => {
+  const safeMinWidth = Math.max(120, Math.round(Number(minWidth ?? 280)))
+  return `repeat(auto-fit, minmax(${safeMinWidth}px, 1fr))`
+}
 
 // Style Logic: Only strip sizing properties managed by wrapper
 // With layout/style separation, free-mode geometry lives in node.geometry
@@ -134,15 +168,45 @@ const innerStyle = computed<CSSProperties>(() => {
     style.position = 'relative'
   }
 
+  if (props.node.container?.mode === 'flow') {
+    const flowContainer = props.node.container as FlowContainerLayout
+    style.display = 'flex'
+    style.flexDirection = flowContainer.direction || 'row'
+    style.flexWrap = flowContainer.wrap || 'wrap'
+    style.justifyContent = flowContainer.justify || 'flex-start'
+    style.alignItems = flowContainer.align || 'stretch'
+    style.alignContent = flowContainer.alignContent || 'stretch'
+    if (flowContainer.gap !== undefined) {
+      style.gap =
+        typeof flowContainer.gap === 'number' ? `${flowContainer.gap}px` : flowContainer.gap
+    } else {
+      style.gap = '8px'
+    }
+    style.width = '100%'
+    style.height = '100%'
+  }
+
   // Grid containers: apply the fr-based grid template on the inner component element.
   // This is the element that directly wraps the slot/children, so child NodeWrappers
   // become proper CSS grid items of this container (not of the outer NodeWrapper div).
   if (props.node.container?.mode === 'grid') {
     const gridContainer = props.node.container as GridContainerLayout
     style.display = 'grid'
-    style.gridTemplateColumns = gridContainer.columns || '1fr'
-    style.gridTemplateRows = gridContainer.rows || '1fr'
-    style.gap = `${gridContainer.gap ?? 8}px`
+    style.gridTemplateColumns =
+      gridContainer.templateMode === 'autoFit'
+        ? toAutoFitColumns(gridContainer.autoFitMinWidth)
+        : tracksToTemplate(gridContainer.columnTracks, gridContainer.columns || '1fr')
+    style.gridTemplateRows =
+      gridContainer.templateMode === 'autoFit' || gridContainer.rowTracks === 'auto'
+        ? 'none'
+        : tracksToTemplate(
+            Array.isArray(gridContainer.rowTracks) ? gridContainer.rowTracks : undefined,
+            gridContainer.rows || '1fr',
+          )
+    style.gap = `${gridContainer.gapY ?? gridContainer.gap ?? 8}px ${gridContainer.gapX ?? gridContainer.gap ?? 8}px`
+    if (gridContainer.templateMode === 'autoFit' || gridContainer.rowTracks === 'auto') {
+      style.gridAutoRows = `minmax(${gridContainer.autoRowsMin ?? 24}px, auto)`
+    }
     style.width = '100%'
     style.height = '100%'
   }

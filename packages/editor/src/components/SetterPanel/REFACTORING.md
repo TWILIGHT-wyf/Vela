@@ -89,7 +89,7 @@ export type ActionSchema =
 
 - `useEventConfiguration()` - 事件配置管理
 - 支持点击、悬停、双击事件
-- 支持多种动作类型（alert、openUrl、navigate、customScript）
+- 支持多种动作类型（showToast、openUrl、navigate、runScript）
 
 **useRelations.ts**
 

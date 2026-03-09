@@ -77,12 +77,14 @@
 
     <div class="interaction-hint">
       <span>Ctrl/Cmd/Shift + 点击：多选</span>
-      <span v-if="rootLayoutMode === 'grid'">拖拽边缘手柄：调整 fr 比例</span>
+      <span v-if="rootLayoutMode === 'grid'">拖拽组件：按网格单元落位</span>
       <span v-else>选中组件后拖拽边缘手柄：调整宽高</span>
       <span>选中节点可查看 margin / padding 标注</span>
       <span>拖拽橙色外侧线：调整 margin</span>
       <span>拖拽绿色内侧线：调整 padding</span>
-      <span>方向键微调（Shift 加速）</span>
+      <span v-if="rootLayoutMode === 'grid'">方向键：移动网格位置（Shift 调整跨度）</span>
+      <span v-else>方向键微调（Shift 加速）</span>
+      <span v-if="rootLayoutMode === 'grid'">Alt + 点击：快速选中父容器</span>
       <span v-if="rootLayoutMode === 'free'">Alt + 拖拽：临时关闭吸附</span>
       <button class="zoom-fit-btn" @click="handleZoomToFit" title="Ctrl+0: Zoom to Fit">Fit</button>
     </div>
@@ -92,7 +94,7 @@
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { GridContainerLayout } from '@vela/core'
+import type { FlowContainerLayout, GridContainerLayout, GridTrack } from '@vela/core'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
 import { useSizeStore } from '@/stores/size'
@@ -145,6 +147,7 @@ const isRootDragOver = ref(false)
 const rootLayoutMode = computed(() => {
   const mode = rootNode.value?.container?.mode
   if (mode === 'free') return 'free'
+  if (mode === 'flow') return 'flow'
   return 'grid'
 })
 
@@ -160,20 +163,69 @@ const showEmptyDropHint = computed(() => {
   return isRootDragOver.value && !flowDrop.indicator.value.visible
 })
 
+const trackToCss = (track: GridTrack): string => {
+  if (!track) return '1fr'
+  if (track.unit === 'auto') return 'auto'
+  if (track.unit === 'fr') {
+    const value = Number.isFinite(track.value) ? Number(track.value) : 1
+    return `${Math.max(0.1, Math.round(value * 100) / 100)}fr`
+  }
+  if (track.unit === 'px') {
+    const value = Number.isFinite(track.value) ? Number(track.value) : 1
+    return `${Math.max(1, Math.round(value))}px`
+  }
+  if (track.unit === 'minmax') {
+    const min = track.min === 'auto' ? 'auto' : `${Math.max(1, Number(track.min || 1))}px`
+    const max = track.max === 'auto' ? 'auto' : `${Math.max(1, Number(track.max || 1))}px`
+    return `minmax(${min}, ${max})`
+  }
+  return '1fr'
+}
+
+const tracksToTemplate = (tracks: GridTrack[] | undefined, fallback: string): string => {
+  if (!Array.isArray(tracks) || tracks.length === 0) return fallback
+  return tracks.map((track) => trackToCss(track)).join(' ')
+}
+
+const toAutoFitColumns = (minWidth?: number): string => {
+  const safeMinWidth = Math.max(120, Math.round(Number(minWidth ?? 280)))
+  return `repeat(auto-fit, minmax(${safeMinWidth}px, 1fr))`
+}
+
 // Adaptive grid (fr-based) properties
 const adaptiveGridColumns = computed(() => {
   const container = rootNode.value?.container
-  if (container?.mode === 'grid') return (container as GridContainerLayout).columns || '1fr'
-  return '1fr'
+  if (container?.mode === 'grid') {
+    const gridContainer = container as GridContainerLayout
+    if (gridContainer.templateMode === 'autoFit') {
+      return toAutoFitColumns(gridContainer.autoFitMinWidth)
+    }
+    return tracksToTemplate(
+      gridContainer.columnTracks,
+      gridContainer.columns || Array(12).fill('1fr').join(' '),
+    )
+  }
+  return Array(12).fill('1fr').join(' ')
 })
 const adaptiveGridRows = computed(() => {
   const container = rootNode.value?.container
-  if (container?.mode === 'grid') return (container as GridContainerLayout).rows || '1fr'
+  if (container?.mode === 'grid') {
+    const gridContainer = container as GridContainerLayout
+    if (gridContainer.templateMode === 'autoFit') return 'none'
+    if (gridContainer.rowTracks === 'auto') return 'none'
+    return tracksToTemplate(
+      Array.isArray(gridContainer.rowTracks) ? gridContainer.rowTracks : undefined,
+      gridContainer.rows || '1fr',
+    )
+  }
   return '1fr'
 })
 const adaptiveGridGap = computed(() => {
   const container = rootNode.value?.container
-  if (container?.mode === 'grid') return (container as GridContainerLayout).gap ?? 8
+  if (container?.mode === 'grid') {
+    const gridContainer = container as GridContainerLayout
+    return `${gridContainer.gapY ?? gridContainer.gap ?? 8}px ${gridContainer.gapX ?? gridContainer.gap ?? 8}px`
+  }
   return 8
 })
 
@@ -186,10 +238,30 @@ const pageStyle = computed(() => {
     minHeight: `${canvasHeight.value}px`,
   }
 
+  if (rootLayoutMode.value === 'flow') {
+    const flowContainer =
+      rootNode.value?.container?.mode === 'flow'
+        ? (rootNode.value.container as FlowContainerLayout)
+        : undefined
+    base.display = 'flex'
+    base.flexDirection = flowContainer?.direction || 'row'
+    base.flexWrap = flowContainer?.wrap || 'wrap'
+    base.justifyContent = flowContainer?.justify || 'flex-start'
+    base.alignItems = flowContainer?.align || 'stretch'
+    base.alignContent = flowContainer?.alignContent || 'stretch'
+    base.gap =
+      typeof flowContainer?.gap === 'number'
+        ? `${flowContainer.gap}px`
+        : (flowContainer?.gap ?? '8px').toString()
+  }
+
   if (rootLayoutMode.value === 'grid') {
     base['--vela-adaptive-columns'] = adaptiveGridColumns.value
     base['--vela-adaptive-rows'] = adaptiveGridRows.value
-    base['--vela-adaptive-gap'] = `${adaptiveGridGap.value}px`
+    base['--vela-adaptive-gap'] =
+      typeof adaptiveGridGap.value === 'number'
+        ? `${adaptiveGridGap.value}px`
+        : adaptiveGridGap.value
     base.height = `${canvasHeight.value}px`
     delete base.minHeight
   }
@@ -497,8 +569,10 @@ const handleRootDrop = (e: DragEvent) => {
 
 /* Hover feedback is rendered by NodeWrapper only to avoid duplicate overlays. */
 
-/* 选中状态 - Figma 风格蓝色实线 + 控制点效果 */
-.simulation-page :deep(.editor-node-wrapper.is-selected) {
+/* 选中状态：容器和特殊节点保留 wrapper 边框 */
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-container),
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty),
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-free-parent) {
   outline: 2px solid #0d99ff !important;
   outline-offset: 0px;
   box-shadow:
@@ -507,7 +581,9 @@ const handleRootDrop = (e: DragEvent) => {
 }
 
 /* 选中状态悬停 */
-.simulation-page :deep(.editor-node-wrapper.is-selected:hover) {
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-container:hover),
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty:hover),
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-free-parent:hover) {
   box-shadow:
     0 0 0 2px rgba(13, 153, 255, 0.2),
     inset 0 0 0 1px rgba(13, 153, 255, 0.1);

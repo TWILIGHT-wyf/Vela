@@ -11,153 +11,385 @@
         <div class="event-list">
           <div class="event-section">
             <div class="section-header">
-              <span>点击事件</span>
-              <el-button
-                type="primary"
-                size="small"
-                :icon="Plus"
-                @click="addClickAction"
-                data-testid="add-click-event"
-                circle
-              />
+              <span>节点动作注册 (node.actions)</span>
+              <el-button type="primary" size="small" :icon="Plus" @click="addNodeAction" circle />
             </div>
 
-            <el-empty v-if="clickActions.length === 0" description="暂无事件" :image-size="40" />
+            <el-empty v-if="nodeActions.length === 0" description="暂无节点动作" :image-size="40" />
 
             <div v-else class="action-list">
               <div
-                v-for="(action, index) in clickActions"
-                :key="action.id || index"
-                class="action-item action-card"
+                v-for="(action, index) in nodeActions"
+                :key="`node-action-${index}`"
+                class="action-item"
               >
                 <div class="action-header">
-                  <el-select
-                    v-model="action.type"
-                    placeholder="选择动作类型"
-                    size="small"
-                    @change="onActionTypeChange(action)"
-                  >
-                    <el-option label="弹窗提示" value="alert" />
-                    <el-option label="打开链接" value="openUrl" />
-                    <el-option label="页面跳转" value="navigate" />
-                    <el-option label="更新状态" value="updateState" />
-                    <el-option label="自定义脚本" value="customScript" />
-                  </el-select>
+                  <el-tag size="small" type="info">#{{ index + 1 }}</el-tag>
                   <el-button
                     type="danger"
                     size="small"
                     :icon="Delete"
                     circle
-                    @click="removeClickAction(index)"
+                    @click="removeNodeAction(index)"
                   />
                 </div>
 
-                <el-form-item v-if="action.type === 'alert'" label="提示内容" size="small">
+                <el-form-item label="动作 ID" size="small">
                   <el-input
-                    :model-value="getActionMessage(action)"
-                    @update:model-value="setActionMessage(action, $event as string)"
-                    placeholder="请输入提示内容"
+                    :model-value="action.id"
+                    @update:model-value="setNodeActionId(index, $event)"
                   />
                 </el-form-item>
 
-                <el-form-item v-if="action.type === 'openUrl'" label="URL" size="small">
-                  <el-input
-                    :model-value="getActionUrl(action)"
-                    @update:model-value="setActionUrl(action, $event as string)"
-                    placeholder="https://..."
-                  />
+                <el-form-item label="动作类型" size="small">
+                  <el-select
+                    :model-value="action.type"
+                    @change="setNodeActionType(index, $event as string)"
+                  >
+                    <el-option
+                      v-for="option in actionTypeOptions"
+                      :key="`node-${option.value}`"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
                 </el-form-item>
 
-                <el-form-item v-if="action.type === 'navigate'" label="路径" size="small">
+                <el-form-item label="payload(JSON)" size="small">
                   <el-input
-                    :model-value="getActionPath(action)"
-                    @update:model-value="setActionPath(action, $event as string)"
-                    placeholder="/path"
-                  />
-                </el-form-item>
-
-                <el-form-item v-if="action.type === 'customScript'" label="脚本代码" size="small">
-                  <el-input
-                    :model-value="getActionContent(action)"
-                    @update:model-value="setActionContent(action, $event as string)"
+                    :model-value="formatJson(asRecord(action).payload)"
                     type="textarea"
                     :rows="4"
-                    placeholder="输入 JavaScript 代码"
+                    @change="setNodeActionJsonField(index, 'payload', $event)"
+                  />
+                </el-form-item>
+
+                <el-form-item label="handlers(JSON)" size="small">
+                  <el-input
+                    :model-value="formatJson(asRecord(action).handlers)"
+                    type="textarea"
+                    :rows="3"
+                    placeholder='{"success":"a1","fail":"a2"}'
+                    @change="setNodeActionJsonField(index, 'handlers', $event)"
+                  />
+                </el-form-item>
+
+                <el-form-item label="next(JSON: string/ref)" size="small">
+                  <el-input
+                    :model-value="formatJson(asRecord(action).next)"
+                    type="textarea"
+                    :rows="2"
+                    placeholder='"next_action" 或 {"type":"ref","scope":"page","id":"x","pageId":"p"}'
+                    @change="setNodeActionJsonField(index, 'next', $event)"
+                  />
+                </el-form-item>
+
+                <div class="flow-grid">
+                  <el-form-item label="延迟(ms)" size="small">
+                    <el-input-number
+                      :model-value="toNumber(asRecord(action).delay)"
+                      :min="0"
+                      :step="50"
+                      controls-position="right"
+                      @change="setNodeActionTopLevelField(index, 'delay', $event)"
+                    />
+                  </el-form-item>
+                  <el-form-item label="防抖(ms)" size="small">
+                    <el-input-number
+                      :model-value="toNumber(asRecord(action).debounce)"
+                      :min="0"
+                      :step="50"
+                      controls-position="right"
+                      @change="setNodeActionTopLevelField(index, 'debounce', $event)"
+                    />
+                  </el-form-item>
+                  <el-form-item label="节流(ms)" size="small">
+                    <el-input-number
+                      :model-value="toNumber(asRecord(action).throttle)"
+                      :min="0"
+                      :step="50"
+                      controls-position="right"
+                      @change="setNodeActionTopLevelField(index, 'throttle', $event)"
+                    />
+                  </el-form-item>
+                </div>
+
+                <el-form-item label="执行条件表达式" size="small">
+                  <el-input
+                    :model-value="getConditionExpression(action)"
+                    placeholder="例如: state.count > 0"
+                    @update:model-value="setNodeActionConditionExpression(index, $event)"
+                  />
+                </el-form-item>
+
+                <el-form-item label="确认提示文本(为空则不确认)" size="small">
+                  <el-input
+                    :model-value="getConfirmMessage(action)"
+                    @update:model-value="setNodeActionConfirmMessage(index, $event)"
+                  />
+                </el-form-item>
+
+                <el-form-item label="调试日志(log)" size="small">
+                  <el-switch
+                    :model-value="Boolean(asRecord(action).log)"
+                    @change="setNodeActionLog(index, $event)"
+                  />
+                </el-form-item>
+
+                <el-form-item label="额外字段(JSON: targetId/duration等)" size="small">
+                  <el-input
+                    :model-value="formatJson(getExtraFields(action))"
+                    type="textarea"
+                    :rows="3"
+                    @change="setNodeActionExtraFields(index, $event)"
                   />
                 </el-form-item>
               </div>
             </div>
           </div>
 
-          <div class="event-section">
+          <div v-for="section in eventSections" :key="section.key" class="event-section">
             <div class="section-header">
-              <span>悬停事件</span>
-              <el-button type="primary" size="small" :icon="Plus" @click="addHoverAction" circle />
+              <span>{{ section.label }}</span>
+              <el-button
+                type="primary"
+                size="small"
+                :icon="Plus"
+                @click="addSectionAction(section.key)"
+                circle
+              />
             </div>
 
-            <el-empty v-if="hoverActions.length === 0" description="暂无事件" :image-size="40" />
+            <el-empty v-if="section.actions.length === 0" description="暂无动作" :image-size="40" />
 
             <div v-else class="action-list">
               <div
-                v-for="(action, index) in hoverActions"
-                :key="action.id || index"
-                class="action-item action-card"
+                v-for="(action, index) in section.actions"
+                :key="`${section.key}-${index}`"
+                class="action-item"
               >
                 <div class="action-header">
                   <el-select
-                    v-model="action.type"
-                    placeholder="选择动作类型"
+                    :model-value="getActionMode(action)"
                     size="small"
-                    @change="onActionTypeChange(action)"
+                    class="mode-select"
+                    @change="changeActionMode(section.key, index, $event as ActionMode)"
                   >
-                    <el-option label="弹窗提示" value="alert" />
-                    <el-option label="打开链接" value="openUrl" />
-                    <el-option label="页面跳转" value="navigate" />
-                    <el-option label="更新状态" value="updateState" />
-                    <el-option label="自定义脚本" value="customScript" />
+                    <el-option label="动作配置" value="action" />
+                    <el-option label="引用 ID" value="ref-string" />
+                    <el-option label="作用域引用" value="ref-scoped" />
                   </el-select>
                   <el-button
                     type="danger"
                     size="small"
                     :icon="Delete"
                     circle
-                    @click="removeHoverAction(index)"
+                    @click="removeSectionAction(section.key, index)"
                   />
                 </div>
 
-                <el-form-item v-if="action.type === 'alert'" label="提示内容" size="small">
-                  <el-input
-                    :model-value="getActionMessage(action)"
-                    @update:model-value="setActionMessage(action, $event as string)"
-                    placeholder="请输入提示内容"
-                  />
-                </el-form-item>
+                <template v-if="getActionMode(action) === 'action' && isInlineAction(action)">
+                  <el-form-item label="动作 ID" size="small">
+                    <el-input
+                      :model-value="action.id"
+                      @update:model-value="setActionId(section.key, index, $event)"
+                    />
+                  </el-form-item>
 
-                <el-form-item v-if="action.type === 'openUrl'" label="URL" size="small">
-                  <el-input
-                    :model-value="getActionUrl(action)"
-                    @update:model-value="setActionUrl(action, $event as string)"
-                    placeholder="https://..."
-                  />
-                </el-form-item>
+                  <el-form-item label="动作类型" size="small">
+                    <el-select
+                      :model-value="action.type"
+                      @change="setActionType(section.key, index, $event as string)"
+                    >
+                      <el-option
+                        v-for="option in actionTypeOptions"
+                        :key="option.value"
+                        :label="option.label"
+                        :value="option.value"
+                      />
+                    </el-select>
+                  </el-form-item>
 
-                <el-form-item v-if="action.type === 'navigate'" label="路径" size="small">
-                  <el-input
-                    :model-value="getActionPath(action)"
-                    @update:model-value="setActionPath(action, $event as string)"
-                    placeholder="/path"
-                  />
-                </el-form-item>
+                  <el-form-item label="payload(JSON)" size="small">
+                    <el-input
+                      :model-value="formatJson(asRecord(action).payload)"
+                      type="textarea"
+                      :rows="4"
+                      @change="setJsonField(section.key, index, 'payload', $event)"
+                    />
+                  </el-form-item>
 
-                <el-form-item v-if="action.type === 'customScript'" label="脚本代码" size="small">
-                  <el-input
-                    :model-value="getActionContent(action)"
-                    @update:model-value="setActionContent(action, $event as string)"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="输入 JavaScript 代码"
-                  />
-                </el-form-item>
+                  <el-form-item label="handlers(JSON)" size="small">
+                    <el-input
+                      :model-value="formatJson(asRecord(action).handlers)"
+                      type="textarea"
+                      :rows="3"
+                      placeholder='{"success":"a1","fail":"a2"}'
+                      @change="setJsonField(section.key, index, 'handlers', $event)"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="next(JSON: string/ref)" size="small">
+                    <el-input
+                      :model-value="formatJson(asRecord(action).next)"
+                      type="textarea"
+                      :rows="2"
+                      placeholder='"next_action" 或 {"type":"ref","scope":"page","id":"x","pageId":"p"}'
+                      @change="setJsonField(section.key, index, 'next', $event)"
+                    />
+                  </el-form-item>
+
+                  <div class="flow-grid">
+                    <el-form-item label="延迟(ms)" size="small">
+                      <el-input-number
+                        :model-value="toNumber(asRecord(action).delay)"
+                        :min="0"
+                        :step="50"
+                        controls-position="right"
+                        @change="setTopLevelField(section.key, index, 'delay', $event)"
+                      />
+                    </el-form-item>
+                    <el-form-item label="防抖(ms)" size="small">
+                      <el-input-number
+                        :model-value="toNumber(asRecord(action).debounce)"
+                        :min="0"
+                        :step="50"
+                        controls-position="right"
+                        @change="setTopLevelField(section.key, index, 'debounce', $event)"
+                      />
+                    </el-form-item>
+                    <el-form-item label="节流(ms)" size="small">
+                      <el-input-number
+                        :model-value="toNumber(asRecord(action).throttle)"
+                        :min="0"
+                        :step="50"
+                        controls-position="right"
+                        @change="setTopLevelField(section.key, index, 'throttle', $event)"
+                      />
+                    </el-form-item>
+                  </div>
+
+                  <el-form-item label="执行条件表达式" size="small">
+                    <el-input
+                      :model-value="getConditionExpression(action)"
+                      placeholder="例如: state.count > 0"
+                      @update:model-value="setConditionExpression(section.key, index, $event)"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="确认提示文本(为空则不确认)" size="small">
+                    <el-input
+                      :model-value="getConfirmMessage(action)"
+                      @update:model-value="setConfirmMessage(section.key, index, $event)"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="调试日志(log)" size="small">
+                    <el-switch
+                      :model-value="Boolean(asRecord(action).log)"
+                      @change="setActionLog(section.key, index, $event)"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="额外字段(JSON: targetId/duration等)" size="small">
+                    <el-input
+                      :model-value="formatJson(getExtraFields(action))"
+                      type="textarea"
+                      :rows="3"
+                      @change="setExtraFields(section.key, index, $event)"
+                    />
+                  </el-form-item>
+                </template>
+
+                <template v-else-if="getActionMode(action) === 'ref-string'">
+                  <el-form-item label="动作引用 ID" size="small">
+                    <el-select
+                      :model-value="typeof action === 'string' ? action : ''"
+                      filterable
+                      allow-create
+                      default-first-option
+                      clearable
+                      placeholder="输入或选择动作 ID"
+                      @change="setStringRef(section.key, index, $event)"
+                    >
+                      <el-option
+                        v-for="option in allActionRefOptions"
+                        :key="`all-${option}`"
+                        :label="option"
+                        :value="option"
+                      />
+                    </el-select>
+                  </el-form-item>
+                </template>
+
+                <template
+                  v-else-if="getActionMode(action) === 'ref-scoped' && isScopedRefAction(action)"
+                >
+                  <el-form-item label="作用域" size="small">
+                    <el-select
+                      :model-value="action.scope || 'global'"
+                      @change="setScopedScope(section.key, index, $event as RefScope)"
+                    >
+                      <el-option label="全局(global)" value="global" />
+                      <el-option label="页面(page)" value="page" />
+                      <el-option label="节点(node)" value="node" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="动作 ID" size="small">
+                    <el-select
+                      :model-value="action.id"
+                      filterable
+                      allow-create
+                      default-first-option
+                      clearable
+                      placeholder="输入或选择动作 ID"
+                      @change="setScopedField(section.key, index, 'id', $event)"
+                    >
+                      <el-option
+                        v-for="option in getScopedActionRefOptions(action.scope || 'global')"
+                        :key="`scoped-${action.scope || 'global'}-${option}`"
+                        :label="option"
+                        :value="option"
+                      />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item v-if="action.scope === 'page'" label="页面 ID" size="small">
+                    <el-select
+                      :model-value="getScopedFieldValue(action, 'pageId')"
+                      filterable
+                      allow-create
+                      default-first-option
+                      clearable
+                      placeholder="输入或选择页面 ID"
+                      @change="setScopedField(section.key, index, 'pageId', $event)"
+                    >
+                      <el-option
+                        v-for="pageId in pageIdOptions"
+                        :key="`page-id-${pageId}`"
+                        :label="pageId"
+                        :value="pageId"
+                      />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item v-if="action.scope === 'node'" label="节点 ID" size="small">
+                    <el-select
+                      :model-value="getScopedFieldValue(action, 'nodeId')"
+                      filterable
+                      allow-create
+                      default-first-option
+                      clearable
+                      placeholder="输入或选择节点 ID"
+                      @change="setScopedField(section.key, index, 'nodeId', $event)"
+                    >
+                      <el-option
+                        v-for="nodeId in nodeIdOptions"
+                        :key="`node-id-${nodeId}`"
+                        :label="nodeId"
+                        :value="nodeId"
+                      />
+                    </el-select>
+                  </el-form-item>
+                </template>
               </div>
             </div>
           </div>
@@ -168,69 +400,576 @@
 </template>
 
 <script setup lang="ts">
-import { useEventConfiguration } from '../composables/useEvents'
-import type { NodeSchema } from '@vela/core'
-import type { ActionSchema } from '@vela/core/types/action'
+import { computed } from 'vue'
+import { nanoid } from 'nanoid'
+import { ElMessage } from 'element-plus'
 import { Plus, Delete, Select } from '@element-plus/icons-vue'
+import type { NodeSchema } from '@vela/core'
+import type { ActionSchema, AnyActionSchema, ScopedActionRef } from '@vela/core/types/action'
+import type { NodeEventAction } from '@vela/core/types/schema'
+import { storeToRefs } from 'pinia'
+import { useProjectStore } from '@/stores/project'
+import { useComponent } from '@/stores/component'
+import { ACTION_TYPE_OPTIONS } from '@/constants/action-types'
+import { useEventConfiguration, type SupportedEventName } from '../composables/useEvents'
 
-type EditableAction = ActionSchema<string> & {
-  content?: string
-  blank?: boolean
-  stateName?: string
-}
+type ActionMode = 'action' | 'ref-string' | 'ref-scoped'
+type RefScope = 'global' | 'page' | 'node'
+type JsonFieldKey = 'payload' | 'handlers' | 'next'
 
 interface Props {
   node?: NodeSchema | null
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
-const {
-  clickActions,
-  hoverActions,
-  addClickAction,
-  removeClickAction,
-  addHoverAction,
-  removeHoverAction,
-} = useEventConfiguration()
+const projectStore = useProjectStore()
+const componentStore = useComponent()
+const { currentPage, project } = storeToRefs(projectStore)
 
-function onActionTypeChange(action: EditableAction) {
-  if (action.type !== 'customScript') {
-    delete action.content
+const { clickActions, hoverActions, doubleClickActions, addAction, removeAction, updateAction } =
+  useEventConfiguration()
+
+const eventSections = computed(() => [
+  { key: 'click' as SupportedEventName, label: '点击事件', actions: clickActions.value },
+  { key: 'hover' as SupportedEventName, label: '悬停事件', actions: hoverActions.value },
+  {
+    key: 'doubleClick' as SupportedEventName,
+    label: '双击事件',
+    actions: doubleClickActions.value,
+  },
+])
+
+const actionTypeOptions = ACTION_TYPE_OPTIONS
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return (value as Record<string, unknown>) || {}
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function toString(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value === undefined || value === null) return ''
+  return String(value)
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  return undefined
+}
+
+function parseJson(input: unknown): { ok: true; value: unknown } | { ok: false } {
+  const text = toString(input).trim()
+  if (!text) return { ok: true, value: undefined }
+  try {
+    return { ok: true, value: JSON.parse(text) }
+  } catch {
+    ElMessage.error('JSON 格式错误')
+    return { ok: false }
   }
 }
 
-// Type-safe getters for action properties
-function getActionPath(action: EditableAction): string {
-  return action.path || ''
+function formatJson(value: unknown): string {
+  if (value === undefined) return ''
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return ''
+  }
 }
 
-function setActionPath(action: EditableAction, value: string) {
-  action.path = value
+function normalizeActions(actions: unknown): ActionSchema<string>[] {
+  if (!Array.isArray(actions)) return []
+  return actions.filter((action): action is ActionSchema<string> => {
+    return (
+      typeof action === 'object' &&
+      action !== null &&
+      typeof (action as { id?: unknown }).id === 'string' &&
+      typeof (action as { type?: unknown }).type === 'string'
+    )
+  })
 }
 
-function getActionUrl(action: EditableAction): string {
-  return action.url || ''
+function collectNodeIds(node: NodeSchema | null | undefined, output: string[]) {
+  if (!node) return
+  if (typeof node.id === 'string' && node.id) {
+    output.push(node.id)
+  }
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      collectNodeIds(child, output)
+    }
+  }
 }
 
-function setActionUrl(action: EditableAction, value: string) {
-  action.url = value
+const pageIdOptions = computed(() => {
+  return Array.from(new Set((project.value.pages || []).map((item) => item.id).filter(Boolean)))
+})
+
+const nodeIdOptions = computed(() => {
+  const ids: string[] = []
+  collectNodeIds(currentPage.value?.children, ids)
+  return Array.from(new Set(ids))
+})
+
+const nodeActions = computed(() => normalizeActions(props.node?.actions))
+
+function extractActionIds(actions: unknown): string[] {
+  return normalizeActions(actions)
+    .map((action) => action.id.trim())
+    .filter(Boolean)
 }
 
-function getActionMessage(action: EditableAction): string {
-  return action.message || ''
+const nodeActionRefOptions = computed(() =>
+  extractActionIds(nodeActions.value as AnyActionSchema[]),
+)
+
+const pageActionRefOptions = computed(() => extractActionIds(currentPage.value?.actions))
+
+const globalActionRefOptions = computed(() => extractActionIds(project.value.logic?.actions))
+
+const allActionRefOptions = computed(() => {
+  return Array.from(
+    new Set([
+      ...nodeActionRefOptions.value,
+      ...pageActionRefOptions.value,
+      ...globalActionRefOptions.value,
+    ]),
+  )
+})
+
+function getScopedActionRefOptions(scope: RefScope): string[] {
+  if (scope === 'node') return nodeActionRefOptions.value
+  if (scope === 'page') return pageActionRefOptions.value
+  return globalActionRefOptions.value
 }
 
-function setActionMessage(action: EditableAction, value: string) {
-  action.message = value
+function isScopedRefAction(action: NodeEventAction): action is ScopedActionRef {
+  return typeof action === 'object' && action !== null && action.type === 'ref'
 }
 
-function getActionContent(action: EditableAction): string {
-  return action.content || ''
+function isInlineAction(action: NodeEventAction): action is ActionSchema<string> {
+  return typeof action === 'object' && action !== null && action.type !== 'ref'
 }
 
-function setActionContent(action: EditableAction, value: string) {
-  action.content = value
+function getActionMode(action: NodeEventAction): ActionMode {
+  if (typeof action === 'string') return 'ref-string'
+  if (isScopedRefAction(action)) return 'ref-scoped'
+  return 'action'
+}
+
+function sectionActions(eventName: SupportedEventName): NodeEventAction[] {
+  const section = eventSections.value.find((item) => item.key === eventName)
+  return section?.actions ?? []
+}
+
+function inlineDefaultAction(seed?: string): ActionSchema<string> {
+  return {
+    id: seed || nanoid(),
+    type: 'showToast',
+    payload: { message: '提示消息', type: 'info' },
+  }
+}
+
+function addSectionAction(eventName: SupportedEventName) {
+  addAction(eventName, inlineDefaultAction())
+}
+
+function removeSectionAction(eventName: SupportedEventName, index: number) {
+  removeAction(eventName, index)
+}
+
+function changeActionMode(eventName: SupportedEventName, index: number, mode: ActionMode) {
+  const current = sectionActions(eventName)[index]
+  const id =
+    typeof current === 'string'
+      ? current
+      : isScopedRefAction(current)
+        ? current.id
+        : current?.id || nanoid()
+
+  if (mode === 'action') {
+    updateAction(eventName, index, inlineDefaultAction(id))
+    return
+  }
+  if (mode === 'ref-string') {
+    updateAction(eventName, index, id)
+    return
+  }
+  updateAction(eventName, index, { type: 'ref', scope: 'global', id })
+}
+
+function updateInline(
+  eventName: SupportedEventName,
+  index: number,
+  updater: (action: ActionSchema<string>) => void,
+) {
+  const current = sectionActions(eventName)[index]
+  if (!isInlineAction(current)) return
+  const next = clone(current)
+  updater(next)
+  if (!next.id) next.id = nanoid()
+  if (!next.type) next.type = 'showToast'
+  updateAction(eventName, index, next)
+}
+
+function setActionId(eventName: SupportedEventName, index: number, value: unknown) {
+  updateInline(eventName, index, (action) => {
+    action.id = toString(value) || nanoid()
+  })
+}
+
+function setActionType(eventName: SupportedEventName, index: number, value: string) {
+  updateInline(eventName, index, (action) => {
+    action.type = value
+  })
+}
+
+function setJsonField(
+  eventName: SupportedEventName,
+  index: number,
+  key: JsonFieldKey,
+  value: unknown,
+) {
+  const parsed = parseJson(value)
+  if (!parsed.ok) return
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    if (parsed.value === undefined) {
+      delete record[key]
+      return
+    }
+    record[key] = parsed.value
+  })
+}
+
+function setTopLevelField(
+  eventName: SupportedEventName,
+  index: number,
+  key: 'delay' | 'debounce' | 'throttle',
+  value: unknown,
+) {
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    const nextValue = toNumber(value)
+    if (nextValue === undefined || nextValue <= 0) {
+      delete record[key]
+      return
+    }
+    record[key] = nextValue
+  })
+}
+
+function getConditionExpression(action: ActionSchema<string>): string {
+  const condition = asRecord(action).condition
+  if (isRecord(condition) && typeof condition.value === 'string') {
+    return condition.value
+  }
+  return ''
+}
+
+function setConditionExpression(eventName: SupportedEventName, index: number, value: unknown) {
+  const text = toString(value).trim()
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    if (!text) {
+      delete record.condition
+      return
+    }
+    record.condition = { type: 'expression', value: text }
+  })
+}
+
+function getConfirmMessage(action: ActionSchema<string>): string {
+  const confirm = asRecord(action).confirm
+  if (!isRecord(confirm)) return ''
+  return toString(confirm.message)
+}
+
+function setConfirmMessage(eventName: SupportedEventName, index: number, value: unknown) {
+  const text = toString(value).trim()
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    if (!text) {
+      delete record.confirm
+      return
+    }
+    record.confirm = { message: text }
+  })
+}
+
+function setActionLog(eventName: SupportedEventName, index: number, value: unknown) {
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    if (!value) {
+      delete record.log
+      return
+    }
+    record.log = Boolean(value)
+  })
+}
+
+function getExtraFields(action: ActionSchema<string>): Record<string, unknown> {
+  const record = asRecord(action)
+  const extras: Record<string, unknown> = {}
+  const reserved = new Set([
+    'id',
+    'type',
+    'name',
+    'description',
+    'group',
+    'payload',
+    'handlers',
+    'condition',
+    'delay',
+    'debounce',
+    'throttle',
+    'confirm',
+    'next',
+    'log',
+  ])
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!reserved.has(key)) {
+      extras[key] = value
+    }
+  }
+  return extras
+}
+
+function setExtraFields(eventName: SupportedEventName, index: number, value: unknown) {
+  const parsed = parseJson(value)
+  if (!parsed.ok) return
+  updateInline(eventName, index, (action) => {
+    const record = asRecord(action)
+    const reserved = new Set([
+      'id',
+      'type',
+      'name',
+      'description',
+      'group',
+      'payload',
+      'handlers',
+      'condition',
+      'delay',
+      'debounce',
+      'throttle',
+      'confirm',
+      'next',
+      'log',
+    ])
+
+    for (const key of Object.keys(record)) {
+      if (!reserved.has(key)) {
+        delete record[key]
+      }
+    }
+
+    if (!isRecord(parsed.value)) return
+    for (const [key, fieldValue] of Object.entries(parsed.value)) {
+      if (!reserved.has(key)) {
+        record[key] = fieldValue
+      }
+    }
+  })
+}
+
+function setStringRef(eventName: SupportedEventName, index: number, value: unknown) {
+  updateAction(eventName, index, toString(value).trim())
+}
+
+function getScopedFieldValue(action: ScopedActionRef, key: 'pageId' | 'nodeId'): string {
+  return toString(asRecord(action)[key])
+}
+
+function setScopedScope(eventName: SupportedEventName, index: number, scope: RefScope) {
+  const current = sectionActions(eventName)[index]
+  if (!isScopedRefAction(current)) return
+  const next = clone(current)
+  const record = asRecord(next)
+  record.scope = scope
+  if (scope !== 'page') delete record.pageId
+  if (scope !== 'node') delete record.nodeId
+  updateAction(eventName, index, next as unknown as ScopedActionRef)
+}
+
+function setScopedField(
+  eventName: SupportedEventName,
+  index: number,
+  key: 'id' | 'pageId' | 'nodeId',
+  value: unknown,
+) {
+  const current = sectionActions(eventName)[index]
+  if (!isScopedRefAction(current)) return
+  const next = clone(current)
+  const record = asRecord(next)
+  const text = toString(value).trim()
+  if (!text) {
+    delete record[key]
+  } else {
+    record[key] = text
+  }
+  updateAction(eventName, index, next as unknown as ScopedActionRef)
+}
+
+function commitNodeActions(updater: (actions: ActionSchema<string>[]) => void) {
+  if (!props.node) return
+  const targetNode = componentStore.findNodeById(props.node.id)
+  if (!targetNode) return
+
+  const actions = clone(nodeActions.value)
+  updater(actions)
+  const cleanActions = normalizeActions(actions)
+
+  if (cleanActions.length === 0) {
+    delete (targetNode as { actions?: unknown }).actions
+  } else {
+    targetNode.actions = cleanActions as AnyActionSchema[]
+  }
+
+  componentStore.syncToProjectStore()
+}
+
+function addNodeAction() {
+  commitNodeActions((actions) => {
+    actions.push(inlineDefaultAction())
+  })
+}
+
+function removeNodeAction(index: number) {
+  commitNodeActions((actions) => {
+    if (index < 0 || index >= actions.length) return
+    actions.splice(index, 1)
+  })
+}
+
+function updateNodeActionAt(index: number, updater: (action: ActionSchema<string>) => void) {
+  commitNodeActions((actions) => {
+    if (index < 0 || index >= actions.length) return
+    updater(actions[index])
+    if (!actions[index].id) actions[index].id = nanoid()
+    if (!actions[index].type) actions[index].type = 'showToast'
+  })
+}
+
+function setNodeActionId(index: number, value: unknown) {
+  updateNodeActionAt(index, (action) => {
+    action.id = toString(value) || nanoid()
+  })
+}
+
+function setNodeActionType(index: number, value: string) {
+  updateNodeActionAt(index, (action) => {
+    action.type = value
+  })
+}
+
+function setNodeActionJsonField(index: number, key: JsonFieldKey, value: unknown) {
+  const parsed = parseJson(value)
+  if (!parsed.ok) return
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    if (parsed.value === undefined) {
+      delete record[key]
+      return
+    }
+    record[key] = parsed.value
+  })
+}
+
+function setNodeActionTopLevelField(
+  index: number,
+  key: 'delay' | 'debounce' | 'throttle',
+  value: unknown,
+) {
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    const nextValue = toNumber(value)
+    if (nextValue === undefined || nextValue <= 0) {
+      delete record[key]
+      return
+    }
+    record[key] = nextValue
+  })
+}
+
+function setNodeActionConditionExpression(index: number, value: unknown) {
+  const text = toString(value).trim()
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    if (!text) {
+      delete record.condition
+      return
+    }
+    record.condition = { type: 'expression', value: text }
+  })
+}
+
+function setNodeActionConfirmMessage(index: number, value: unknown) {
+  const text = toString(value).trim()
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    if (!text) {
+      delete record.confirm
+      return
+    }
+    record.confirm = { message: text }
+  })
+}
+
+function setNodeActionLog(index: number, value: unknown) {
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    if (!value) {
+      delete record.log
+      return
+    }
+    record.log = Boolean(value)
+  })
+}
+
+function setNodeActionExtraFields(index: number, value: unknown) {
+  const parsed = parseJson(value)
+  if (!parsed.ok) return
+  updateNodeActionAt(index, (action) => {
+    const record = asRecord(action)
+    const reserved = new Set([
+      'id',
+      'type',
+      'name',
+      'description',
+      'group',
+      'payload',
+      'handlers',
+      'condition',
+      'delay',
+      'debounce',
+      'throttle',
+      'confirm',
+      'next',
+      'log',
+    ])
+
+    for (const key of Object.keys(record)) {
+      if (!reserved.has(key)) {
+        delete record[key]
+      }
+    }
+
+    if (!isRecord(parsed.value)) return
+    for (const [key, fieldValue] of Object.entries(parsed.value)) {
+      if (!reserved.has(key)) {
+        record[key] = fieldValue
+      }
+    }
+  })
 }
 </script>
 
@@ -243,20 +982,18 @@ function setActionContent(action: EditableAction, value: string) {
 
 .event-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
 }
 
 .event-scrollbar {
-  flex: 1;
   height: 100%;
 }
 
 .event-list {
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .event-section {
@@ -269,49 +1006,49 @@ function setActionContent(action: EditableAction, value: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 10px 12px;
   background: var(--el-fill-color-light);
   border-bottom: 1px solid var(--el-border-color-light);
   font-size: 13px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
 }
 
 .action-list {
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .action-item {
-  background: white;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 6px;
-  padding: 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  padding: 10px;
 }
 
 .action-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.action-header .el-select {
+.mode-select {
   flex: 1;
 }
 
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .action-item :deep(.el-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.action-item :deep(.el-form-item__label) {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.action-item :deep(.el-form-item__content) {
+.action-item :deep(.el-select),
+.action-item :deep(.el-input-number) {
   width: 100%;
 }
 </style>

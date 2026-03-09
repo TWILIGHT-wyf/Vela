@@ -1,19 +1,27 @@
 import { ref, computed } from 'vue'
 import {
-  countTracks,
-  type GridNodeGeometry,
+  normalizeGridContainerFields,
+  syncRowsTemplate,
+  type GridContainerLayout,
   type NodeGeometry,
   type NodeSchema,
   type NodeStyle,
 } from '@vela/core'
 import type { PropValue } from '@vela/core/types/expression'
+import {
+  maxOccupiedRow,
+  nodeToPlacement,
+  placementToLayoutItem,
+  resolveGridPlacements,
+  writePlacementToNode,
+} from '@/utils/gridPlacement'
 import type { ComponentIndexContext } from './useComponentIndex'
 
 /**
  * 组件样式和属性管理
  */
 export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProjectStore: () => void) {
-  const { nodeIndex } = indexCtx
+  const { nodeIndex, parentIndex } = indexCtx
 
   /**
    * 节点样式版本号：id -> version
@@ -36,6 +44,26 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
       ...styleVersion.value,
       [id]: (styleVersion.value[id] || 0) + 1,
     }
+  }
+
+  function ensureParentGridRowsForNode(id: string) {
+    const parentId = parentIndex.get(id)
+    if (!parentId) return
+
+    const parentNode = nodeIndex.get(parentId)
+    if (!parentNode || parentNode.container?.mode !== 'grid') return
+
+    const container = parentNode.container as GridContainerLayout
+    const { colCount } = normalizeGridContainerFields(container)
+
+    let occupied = 1
+    for (const child of parentNode.children || []) {
+      const placement = nodeToPlacement(child, colCount)
+      const rowEnd = placement.rowStart + placement.rowSpan
+      occupied = Math.max(occupied, rowEnd - 1)
+    }
+
+    syncRowsTemplate(container, occupied)
   }
 
   /**
@@ -96,10 +124,41 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     const node = nodeIndex.get(id)
     if (!node) return
 
-    node.geometry = {
+    const nextGeometry = {
       ...(node.geometry || { mode: 'free' }),
       ...geometry,
     } as NodeGeometry
+    node.geometry = nextGeometry
+
+    if (nextGeometry.mode === 'grid') {
+      const colSpan = Math.max(1, nextGeometry.gridColumnEnd - nextGeometry.gridColumnStart)
+      const rowSpan = Math.max(1, nextGeometry.gridRowEnd - nextGeometry.gridRowStart)
+      const fixedWidth =
+        typeof nextGeometry.width === 'number' && Number.isFinite(nextGeometry.width)
+          ? nextGeometry.width
+          : undefined
+      const fixedHeight =
+        typeof nextGeometry.height === 'number' && Number.isFinite(nextGeometry.height)
+          ? nextGeometry.height
+          : undefined
+      node.layoutItem = placementToLayoutItem(
+        {
+          colStart: nextGeometry.gridColumnStart,
+          colSpan,
+          rowStart: nextGeometry.gridRowStart,
+          rowSpan,
+        },
+        {
+          ...(node.layoutItem?.mode === 'grid' ? node.layoutItem : undefined),
+          sizeModeX: fixedWidth !== undefined ? 'fixed' : node.layoutItem?.sizeModeX || 'stretch',
+          sizeModeY: fixedHeight !== undefined ? 'fixed' : node.layoutItem?.sizeModeY || 'stretch',
+          fixedWidth: fixedWidth ?? node.layoutItem?.fixedWidth,
+          fixedHeight: fixedHeight ?? node.layoutItem?.fixedHeight,
+        },
+      )
+    }
+
+    ensureParentGridRowsForNode(id)
 
     incrementVersion(id)
     syncToProjectStore()
@@ -118,35 +177,51 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     } as NodeSchema['container']
 
     if (layoutMode === 'grid') {
-      const container = node.container as unknown as Record<string, unknown>
-      const normalizedColumns =
-        typeof container.columns === 'string' && container.columns.trim().length > 0
-          ? container.columns
-          : '1fr'
-      const colCount = Math.max(1, countTracks(String(normalizedColumns)))
+      const container = node.container as GridContainerLayout
+      const { templateMode, colCount } = normalizeGridContainerFields(container)
       const children = node.children || []
-      const rowCount = Math.max(children.length, 1)
 
-      container.columns = normalizedColumns
-      if (typeof container.rows !== 'string' || container.rows.trim().length === 0) {
-        container.rows = Array(rowCount).fill('1fr').join(' ')
-      }
-      if (container.gap === undefined) {
-        container.gap = 8
-      }
+      const placementMap = resolveGridPlacements(
+        children.map((child, index) => {
+          const hasExplicitPlacement =
+            child.layoutItem?.mode === 'grid' || child.geometry?.mode === 'grid'
+          return {
+            id: child.id,
+            explicit: hasExplicitPlacement,
+            placement: hasExplicitPlacement
+              ? nodeToPlacement(child, colCount)
+              : {
+                  colStart: 1,
+                  colSpan:
+                    (child.container?.mode === 'grid' ||
+                      child.container?.mode === 'free' ||
+                      child.container?.mode === 'flow') &&
+                    templateMode === 'autoFit'
+                      ? 1
+                      : 3,
+                  rowStart: index + 1,
+                  rowSpan: 2,
+                },
+          }
+        }),
+        colCount,
+      )
 
-      children.forEach((child, index) => {
-        const geometry =
-          child.geometry?.mode === 'grid' ? (child.geometry as GridNodeGeometry) : undefined
-        child.geometry = {
-          ...(geometry || {}),
-          mode: 'grid',
-          gridColumnStart: geometry?.gridColumnStart ?? 1,
-          gridColumnEnd: geometry?.gridColumnEnd ?? colCount + 1,
-          gridRowStart: index + 1,
-          gridRowEnd: index + 2,
-        } as GridNodeGeometry
+      children.forEach((child) => {
+        const placement = placementMap.get(child.id)
+        if (!placement) return
+        writePlacementToNode(child, placement)
       })
+
+      syncRowsTemplate(container, maxOccupiedRow(placementMap.values()))
+    } else if (layoutMode === 'flow') {
+      const container = node.container as unknown as Record<string, unknown>
+      container.direction = container.direction || 'row'
+      container.wrap = container.wrap || 'wrap'
+      container.justify = container.justify || 'flex-start'
+      container.align = container.align || 'stretch'
+      container.alignContent = container.alignContent || 'stretch'
+      container.gap = container.gap ?? 8
     }
 
     incrementVersion(id)
@@ -160,9 +235,11 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     const node = nodeIndex.get(id)
     if (!node || node.container?.mode !== 'grid') return
 
-    const container = node.container as unknown as Record<string, unknown>
+    const container = node.container as GridContainerLayout
     container.columns = columns
     container.rows = rows
+    // 重新规范化容器字段（会检测 templateMode、更新 tracks 等）
+    normalizeGridContainerFields(container)
     incrementVersion(id)
     syncToProjectStore()
   }

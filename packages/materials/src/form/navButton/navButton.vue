@@ -87,7 +87,7 @@ function handleClick() {
       actions: [
         {
           id: 'nav-action',
-          type: 'navigate-page',
+          type: 'navigate',
           targetId: targetPageId,
         },
       ],

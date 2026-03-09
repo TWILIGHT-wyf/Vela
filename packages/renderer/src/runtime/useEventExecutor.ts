@@ -8,11 +8,7 @@ import {
   type NodeSchema,
   validateCode,
 } from '@vela/core'
-import {
-  normalizeActionType,
-  ACTION_TARGET_DATA_ATTRIBUTES,
-  ACTION_CONFIRM_DEFAULT_MESSAGE,
-} from '@vela/core/contracts'
+import { ACTION_TARGET_DATA_ATTRIBUTES, ACTION_CONFIRM_DEFAULT_MESSAGE } from '@vela/core/contracts'
 import type { Page } from '../types'
 
 type UnknownRecord = Record<string, unknown>
@@ -208,9 +204,9 @@ function removeHighlightStyles(): void {
 function getNodeElement(componentId: string): HTMLElement | null {
   if (!componentId || typeof document === 'undefined') return null
 
-  const selectors = ACTION_TARGET_DATA_ATTRIBUTES
-    .map((attr) => `[${attr}="${componentId}"]`)
-    .concat(`#${componentId}`)
+  const selectors = ACTION_TARGET_DATA_ATTRIBUTES.map(
+    (attr) => `[${attr}="${componentId}"]`,
+  ).concat(`#${componentId}`)
 
   for (const selector of selectors) {
     try {
@@ -511,7 +507,10 @@ export function useEventExecutor(context: EventExecutorContext) {
     nodeId: string,
     event?: Event,
   ): Promise<void> {
-    const actionType = normalizeActionType(action.type)
+    const actionType = toStringValue(action.type).trim()
+    if (!actionType) {
+      return
+    }
 
     switch (actionType) {
       case 'setState':

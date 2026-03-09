@@ -1,18 +1,11 @@
-import {
-  ACTION_TYPE_ALIASES,
-  ACTION_TARGET_DATA_ATTRIBUTES,
-  ACTION_CONFIRM_DEFAULT_MESSAGE,
-} from '@vela/core/contracts'
+import { ACTION_TARGET_DATA_ATTRIBUTES, ACTION_CONFIRM_DEFAULT_MESSAGE } from '@vela/core/contracts'
 
 export interface ActionExecutorRuntimeOptions {
   typescript: boolean
 }
 
-export function createActionExecutorRuntimeSource(
-  options: ActionExecutorRuntimeOptions,
-): string {
+export function createActionExecutorRuntimeSource(options: ActionExecutorRuntimeOptions): string {
   const tsNoCheck = options.typescript ? '// @ts-nocheck\n' : ''
-  const actionTypeAliases = JSON.stringify(ACTION_TYPE_ALIASES, null, 2)
   const actionTargetDataAttributes = JSON.stringify(ACTION_TARGET_DATA_ATTRIBUTES, null, 2)
   const actionConfirmDefaultMessage = JSON.stringify(ACTION_CONFIRM_DEFAULT_MESSAGE)
 
@@ -50,14 +43,8 @@ function toStringValue(value, fallback = '') {
   return String(value)
 }
 
-const ACTION_TYPE_ALIASES = ${actionTypeAliases}
 const ACTION_TARGET_DATA_ATTRIBUTES = ${actionTargetDataAttributes}
 const ACTION_CONFIRM_DEFAULT_MESSAGE = ${actionConfirmDefaultMessage}
-
-function normalizeActionType(type) {
-  const normalized = toStringValue(type).trim()
-  return ACTION_TYPE_ALIASES[normalized] || normalized
-}
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -232,7 +219,10 @@ function resolveApiDefinition(options, apiId) {
 }
 
 async function executeBuiltInAction(action, scope, options, runtimeState, nodeId) {
-  const actionType = normalizeActionType(action.type)
+  const actionType = toStringValue(action.type).trim()
+  if (!actionType) {
+    return
+  }
   const payload = isRecord(action.payload) ? action.payload : {}
 
   switch (actionType) {

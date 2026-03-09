@@ -2,23 +2,128 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/core'
+import { countTracks } from '@vela/core'
 
 const STORAGE_KEY = 'vela_project'
 export type SaveStatus = 'saved' | 'saving' | 'unsaved'
 
+const DEFAULT_GRID_COL_COUNT = 12
+const DEFAULT_GRID_GAP = 8
+const DEFAULT_GRID_AUTO_FIT_MIN_WIDTH = 280
+
+function buildDefaultColumnTracks() {
+  return Array.from({ length: DEFAULT_GRID_COL_COUNT }, () => ({ unit: 'fr' as const, value: 1 }))
+}
+
+function buildDefaultColumnsTemplate() {
+  return Array(DEFAULT_GRID_COL_COUNT).fill('1fr').join(' ')
+}
+
+function toAutoFitColumns(minWidth: number): string {
+  const safeMinWidth = Math.max(120, Math.round(minWidth))
+  return `repeat(auto-fit, minmax(${safeMinWidth}px, 1fr))`
+}
+
 function createGridContainer(container?: NodeSchema['container']): NodeSchema['container'] {
+  const toTracks = (template: string) =>
+    template
+      .trim()
+      .split(/\s+/)
+      .map((token) => {
+        const match = token.match(/^([\d.]+)fr$/)
+        return { unit: 'fr' as const, value: Number.parseFloat(match?.[1] || '1') || 1 }
+      })
+
   if (container?.mode === 'grid') {
+    const templateMode =
+      container.templateMode ||
+      (typeof container.columns === 'string' && container.columns.includes('repeat(auto-fit')
+        ? 'autoFit'
+        : 'manual')
+    const autoFitMinWidth = Math.max(
+      120,
+      Number(container.autoFitMinWidth ?? DEFAULT_GRID_AUTO_FIT_MIN_WIDTH),
+    )
+    const columns =
+      templateMode === 'autoFit'
+        ? toAutoFitColumns(autoFitMinWidth)
+        : container.columns || buildDefaultColumnsTemplate()
+    const rows = templateMode === 'autoFit' ? 'auto' : container.rows || '1fr'
+    const gap = container.gap ?? DEFAULT_GRID_GAP
     return {
       ...container,
       mode: 'grid',
-      columns: container.columns || '1fr',
-      rows: container.rows || '1fr',
+      templateMode,
+      autoFitMinWidth,
+      autoFitDense: container.autoFitDense ?? true,
+      columns,
+      rows,
+      gap,
+      columnTracks:
+        Array.isArray(container.columnTracks) && container.columnTracks.length > 0
+          ? container.columnTracks
+          : templateMode === 'autoFit'
+            ? buildDefaultColumnTracks()
+            : toTracks(columns),
+      rowTracks:
+        templateMode === 'autoFit'
+          ? 'auto'
+          : container.rowTracks === 'auto'
+            ? 'auto'
+            : container.rowTracks || toTracks(rows),
+      gapX: container.gapX ?? gap,
+      gapY: container.gapY ?? gap,
+      autoFlow: container.autoFlow || 'row',
+      dense: container.dense ?? true,
+      autoRowsMin: container.autoRowsMin ?? 24,
     }
   }
   return {
     mode: 'grid',
-    columns: '1fr',
-    rows: '1fr',
+    templateMode: 'autoFit',
+    autoFitMinWidth: DEFAULT_GRID_AUTO_FIT_MIN_WIDTH,
+    autoFitDense: true,
+    columns: toAutoFitColumns(DEFAULT_GRID_AUTO_FIT_MIN_WIDTH),
+    rows: 'auto',
+    gap: DEFAULT_GRID_GAP,
+    columnTracks: buildDefaultColumnTracks(),
+    rowTracks: 'auto',
+    gapX: DEFAULT_GRID_GAP,
+    gapY: DEFAULT_GRID_GAP,
+    autoFlow: 'row',
+    dense: true,
+    autoRowsMin: 24,
+  }
+}
+
+function ensureEditableRootGridContainer(
+  container: NodeSchema['container'],
+  childCount: number,
+): NodeSchema['container'] {
+  if (container?.mode !== 'grid') return container
+  if (container.templateMode === 'autoFit') return container
+
+  const columnCount = Math.max(1, countTracks(container.columns || '1fr'))
+  const normalizedColumns = String(container.columns || '').trim()
+  const normalizedRows = String(container.rows || '').trim()
+  const isLegacySingleColumnPreset =
+    normalizedColumns === '1fr' &&
+    (normalizedRows.length === 0 || normalizedRows === '1fr') &&
+    (container.gap === undefined || Number(container.gap) === DEFAULT_GRID_GAP)
+
+  if (columnCount > 1) return container
+  if (childCount > 0 && !isLegacySingleColumnPreset) return container
+
+  return {
+    ...container,
+    templateMode: 'manual',
+    columns: buildDefaultColumnsTemplate(),
+    columnTracks: buildDefaultColumnTracks(),
+    rows: container.rows || '1fr',
+    rowTracks: container.rowTracks === 'auto' ? 'auto' : container.rowTracks,
+    gap: container.gap ?? DEFAULT_GRID_GAP,
+    gapX: container.gapX ?? container.gap ?? DEFAULT_GRID_GAP,
+    gapY: container.gapY ?? container.gap ?? DEFAULT_GRID_GAP,
   }
 }
 
@@ -89,10 +194,17 @@ export const useProjectStore = defineStore('project', () => {
       if (!page.config) page.config = { defaultLayoutMode: 'grid' }
       page.config.defaultLayoutMode = normalizeLayoutMode(page.config.defaultLayoutMode)
       if (page.children) {
-        page.children.container =
+        const normalizedContainer =
           page.config.defaultLayoutMode === 'free'
             ? { mode: 'free' }
             : createGridContainer(page.children.container)
+        page.children.container =
+          page.config.defaultLayoutMode === 'free'
+            ? normalizedContainer
+            : ensureEditableRootGridContainer(
+                normalizedContainer,
+                Array.isArray(page.children.children) ? page.children.children.length : 0,
+              )
       }
     }
   }

@@ -14,6 +14,7 @@ import type { LayoutMode } from '@vela/core'
 import Header from '@/components/Layout/Header/Header.vue'
 import MaterialPanel from '@/components/MaterialPanel/MaterialPanel.vue'
 import SetterPanel from '@/components/SetterPanel/SetterPanel.vue'
+import LogicPanel from '@/components/LogicPanel/LogicPanel.vue'
 import DraggablePanel from '@/components/common/DraggablePanel.vue'
 import AIAssistDialog from '@/components/AIAssist/AIAssistDialog.vue'
 import { RuntimeRenderer } from '@vela/renderer'
@@ -27,6 +28,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Menu,
   Setting,
+  Grid,
   VideoPlay,
   VideoPause,
   MagicStick,
@@ -65,11 +67,14 @@ const runtimeProjectMode = computed(() => runtimePages.value.length > 1)
 // --- Panel States ---
 const showMaterials = ref(true)
 const showSettings = ref(true)
+const showLogic = ref(false)
+const showHeader = ref(true)
 const aiVisible = ref(false)
 const switchingLayout = ref(false)
 
 // --- Initial Positions ---
-const initialSetterX = ref(window.innerWidth - 340)
+const initialLogicX = ref(Math.max(20, window.innerWidth - 780))
+const initialSetterX = ref(Math.max(20, window.innerWidth - 340))
 
 // --- Loading State ---
 const isLoading = ref(true)
@@ -101,9 +106,14 @@ onMounted(async () => {
 })
 
 // --- Handlers ---
-const togglePanel = (panel: 'materials' | 'settings') => {
+const togglePanel = (panel: 'materials' | 'logic' | 'settings') => {
   if (panel === 'materials') showMaterials.value = !showMaterials.value
+  if (panel === 'logic') showLogic.value = !showLogic.value
   if (panel === 'settings') showSettings.value = !showSettings.value
+}
+
+const toggleHeader = () => {
+  showHeader.value = !showHeader.value
 }
 
 const handleOpenAIAssist = () => {
@@ -200,7 +210,7 @@ function handleRuntimeNavigate(pageId: string) {
       </div>
 
       <!-- 2. Layer 50: Floating Header Island -->
-      <div class="header-island glass-panel">
+      <div v-show="showHeader" class="header-island glass-panel">
         <Header @open-ai-assist="handleOpenAIAssist" />
       </div>
 
@@ -214,6 +224,17 @@ function handleRuntimeNavigate(pageId: string) {
         height="calc(100vh - 180px)"
       >
         <MaterialPanel />
+      </DraggablePanel>
+
+      <DraggablePanel
+        v-model:visible="showLogic"
+        title="逻辑面板"
+        :initialX="initialLogicX"
+        :initialY="80"
+        width="460px"
+        height="calc(100vh - 180px)"
+      >
+        <LogicPanel />
       </DraggablePanel>
 
       <DraggablePanel
@@ -234,6 +255,7 @@ function handleRuntimeNavigate(pageId: string) {
           <el-tooltip content="组件库" placement="top" :offset="12">
             <button
               class="dock-item"
+              data-testid="toggle-material-panel"
               :class="{ active: showMaterials }"
               @click="togglePanel('materials')"
             >
@@ -244,10 +266,37 @@ function handleRuntimeNavigate(pageId: string) {
           <el-tooltip content="属性配置" placement="top" :offset="12">
             <button
               class="dock-item"
+              data-testid="toggle-setter-panel"
               :class="{ active: showSettings }"
               @click="togglePanel('settings')"
             >
               <el-icon><Setting /></el-icon>
+            </button>
+          </el-tooltip>
+
+          <el-tooltip content="逻辑面板" placement="top" :offset="12">
+            <button
+              class="dock-item"
+              data-testid="toggle-logic-panel"
+              :class="{ active: showLogic }"
+              @click="togglePanel('logic')"
+            >
+              <el-icon><Grid /></el-icon>
+            </button>
+          </el-tooltip>
+
+          <el-tooltip
+            :content="showHeader ? '隐藏顶部栏' : '显示顶部栏'"
+            placement="top"
+            :offset="12"
+          >
+            <button
+              class="dock-item"
+              data-testid="toggle-header"
+              :class="{ active: showHeader }"
+              @click="toggleHeader"
+            >
+              <span class="dock-mini-label">H</span>
             </button>
           </el-tooltip>
 
@@ -257,6 +306,7 @@ function handleRuntimeNavigate(pageId: string) {
           <div class="layout-switch" :class="{ disabled: switchingLayout }">
             <button
               class="layout-option"
+              data-testid="layout-mode-free"
               :class="{ active: canvasMode === 'free' }"
               :disabled="switchingLayout"
               @click="switchCanvasMode('free')"
@@ -265,6 +315,7 @@ function handleRuntimeNavigate(pageId: string) {
             </button>
             <button
               class="layout-option"
+              data-testid="layout-mode-grid"
               :class="{ active: canvasMode === 'grid' }"
               :disabled="switchingLayout"
               @click="switchCanvasMode('grid')"
@@ -279,6 +330,7 @@ function handleRuntimeNavigate(pageId: string) {
           <el-tooltip content="撤销 (Ctrl+Z)" placement="top" :offset="12">
             <button
               class="dock-item"
+              data-testid="dock-undo"
               @click="undo"
               :disabled="!canUndo"
               :class="{ disabled: !canUndo }"
@@ -290,6 +342,7 @@ function handleRuntimeNavigate(pageId: string) {
           <el-tooltip content="重做 (Ctrl+Y)" placement="top" :offset="12">
             <button
               class="dock-item"
+              data-testid="dock-redo"
               @click="redo"
               :disabled="!canRedo"
               :class="{ disabled: !canRedo }"
@@ -299,7 +352,7 @@ function handleRuntimeNavigate(pageId: string) {
           </el-tooltip>
 
           <el-tooltip content="清空画布" placement="top" :offset="12">
-            <button class="dock-item danger-hover" @click="handleReset">
+            <button class="dock-item danger-hover" data-testid="dock-reset" @click="handleReset">
               <el-icon><Delete /></el-icon>
             </button>
           </el-tooltip>
@@ -322,6 +375,7 @@ function handleRuntimeNavigate(pageId: string) {
           >
             <button
               class="dock-item run-btn"
+              data-testid="dock-simulation-toggle"
               :class="{ 'is-running': isSimulationMode }"
               @click="toggleSimulationMode"
             >
@@ -443,6 +497,12 @@ function handleRuntimeNavigate(pageId: string) {
   height: 4px;
   background: var(--color-primary);
   border-radius: 50%;
+}
+
+.dock-mini-label {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .dock-divider {

@@ -1,1419 +1,1059 @@
-﻿import { nanoid } from 'nanoid'
+import type { NodeSchema, NodeStyle } from '@vela/core'
+import type { AnyActionSchema } from '@vela/core/types/action'
+import type { NodeEventAction } from '@vela/core/types/schema'
+import {
+  extractDefaultProps,
+  extractDefaultStyles,
+  materialList,
+  resolveCanonicalMaterialName,
+} from '@vela/materials'
+import { nanoid } from 'nanoid'
 
-interface TemplateComponentSchema {
-  id: string
-  type: string
-  [key: string]: unknown
+export type TemplateCategory = 'dashboard' | 'analysis' | 'form' | 'management'
+
+export type TemplatePreview = readonly [string, string]
+
+type GridArea = readonly [number, number, number, number]
+
+interface TemplateRootConfig {
+  columns: string
+  rows: string
+  gap?: number
+  style?: Partial<NodeStyle>
 }
 
-type TemplateCategory = 'dashboard' | 'gis' | 'form' | 'chart' | 'other'
+interface TemplateNodePreset {
+  id?: string
+  component: string
+  area: GridArea
+  props?: Record<string, unknown>
+  style?: Partial<NodeStyle>
+  actions?: AnyActionSchema[]
+  events?: Record<string, NodeEventAction[]>
+  ref?: string
+}
 
-interface PageTemplate {
+export interface PageTemplateInstance {
+  root: TemplateRootConfig
+  nodes: NodeSchema[]
+  pageActions?: AnyActionSchema[]
+  globalActions?: AnyActionSchema[]
+}
+
+export interface PageTemplate {
   id: string
   name: string
-  description?: string
-  preview?: string
+  description: string
   category: TemplateCategory
-  components: TemplateComponentSchema[]
+  preview: TemplatePreview
+  build: () => PageTemplateInstance
 }
 
-// 默认样式基础对象
-const baseStyle = {
-  opacity: 100,
-  visible: true,
-  locked: false,
+const materialMetaMap = new Map<string, (typeof materialList)[number]>()
+
+for (const meta of materialList) {
+  const name = meta.name || meta.componentName
+  if (!name) continue
+  materialMetaMap.set(resolveCanonicalMaterialName(name), meta)
 }
 
-// --- 深色主题图表通用配置 (ECharts Option) ---
-// 用于修复深色背景下坐标轴文字看不清的问题
-const darkChartOption = JSON.stringify({
-  textStyle: { color: '#9ca3af' }, // 全局文字颜色 (灰色-400)
-  title: { textStyle: { color: '#f3f4f6' } }, // 标题颜色 (灰色-100)
-  legend: { textStyle: { color: '#9ca3af' } }, // 图例颜色
-  xAxis: {
-    axisLabel: { color: '#9ca3af' },
-    axisLine: { lineStyle: { color: '#4b5563' } }, // 轴线颜色 (灰色-600)
-    splitLine: { lineStyle: { color: '#374151' } }, // 分割线 (灰色-700)
-  },
-  yAxis: {
-    axisLabel: { color: '#9ca3af' },
-    axisLine: { lineStyle: { color: '#4b5563' } },
-    splitLine: { lineStyle: { color: '#374151' } },
-  },
-})
-
-// 深色饼图/仪表盘配置
-const darkPieOption = JSON.stringify({
-  textStyle: { color: '#9ca3af' },
-  title: { textStyle: { color: '#f3f4f6' } },
-  legend: { textStyle: { color: '#9ca3af' } },
-})
-
-const darkGaugeOption = JSON.stringify({
-  series: [
-    {
-      axisLabel: { color: '#9ca3af', distance: 25 }, // 刻度标签颜色
-      axisTick: { lineStyle: { color: '#4b5563' } }, // 刻度线
-      splitLine: { lineStyle: { color: '#6b7280' } }, // 分隔线
-    },
-  ],
-})
-
-// ==================== 1. 数据大屏模板 (优化版) ====================
-export const dashboardTemplate: PageTemplate = {
-  id: 'dashboard-1',
-  name: '数据监控大屏',
-  description: '经典数据可视化大屏布局，包含核心KPI指标、趋势折线图、占比饼图及实时数据表格。',
-  preview: '',
-  category: 'dashboard',
-  components: [
-    // --- 标题栏 ---
-    {
-      id: `template_dash_title_${nanoid()}`,
-      type: 'Text',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 80 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        fontSize: 36,
-        fontColor: '#ffffff',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        backgroundColor: '#111827',
-        lineHeight: 2.2,
-      },
-      props: {
-        text: '企业运营数据监控中心',
-      },
-    },
-    // --- 顶部 KPI 卡片 ---
-    {
-      id: `template_dash_kpi1_${nanoid()}`,
-      type: 'stat',
-      position: { x: 40, y: 100 },
-      size: { width: 440, height: 140 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-        borderWidth: 0,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-      },
-      props: {
-        title: '总销售额 (GMV)',
-        value: 4523189,
-        change: 12.5,
-        precision: 2,
-        suffix: '元',
-        titleColor: '#9ca3af',
-        valueColor: '#60a5fa',
-        changeColorPositive: '#34d399',
-        icon: 'el-icon-money',
-      },
-    },
-    {
-      id: `template_dash_kpi2_${nanoid()}`,
-      type: 'stat',
-      position: { x: 500, y: 100 },
-      size: { width: 440, height: 140 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-        borderWidth: 0,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-      },
-      props: {
-        title: '本月活跃用户',
-        value: 85420,
-        change: 8.3,
-        titleColor: '#9ca3af',
-        valueColor: '#fbbf24',
-        changeColorPositive: '#34d399',
-        icon: 'el-icon-user',
-      },
-    },
-    {
-      id: `template_dash_kpi3_${nanoid()}`,
-      type: 'stat',
-      position: { x: 980, y: 100 },
-      size: { width: 440, height: 140 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-        borderWidth: 0,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-      },
-      props: {
-        title: '订单转化率',
-        value: 24.8,
-        change: -2.1,
-        suffix: '%',
-        titleColor: '#9ca3af',
-        valueColor: '#a78bfa',
-        changeColorNegative: '#f87171',
-        icon: 'el-icon-shopping-cart-full',
-      },
-    },
-    {
-      id: `template_dash_kpi4_${nanoid()}`,
-      type: 'stat',
-      position: { x: 1440, y: 100 },
-      size: { width: 440, height: 140 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-        borderWidth: 0,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-      },
-      props: {
-        title: '平均客单价',
-        value: 356,
-        change: 5.4,
-        suffix: '元',
-        titleColor: '#9ca3af',
-        valueColor: '#f472b6',
-        changeColorPositive: '#34d399',
-        icon: 'el-icon-wallet',
-      },
-    },
-    // --- 主图表区域 (已添加 option 覆盖) ---
-    {
-      id: `template_dash_chart_main_${nanoid()}`,
-      type: 'lineChart',
-      position: { x: 40, y: 260 },
-      size: { width: 1380, height: 400 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-      },
-      props: {
-        title: '年度销售趋势分析',
-        xAxisData: [
-          '1月',
-          '2月',
-          '3月',
-          '4月',
-          '5月',
-          '6月',
-          '7月',
-          '8月',
-          '9月',
-          '10月',
-          '11月',
-          '12月',
-        ],
-        seriesName: '销售额',
-        dataInput: '1200, 1800, 1500, 2100, 2800, 2400, 2900, 3200, 3500, 4200, 5000, 4800',
-        showArea: true,
-        areaOpacity: 0.2,
-        smooth: true,
-        lineColor: '#60a5fa',
-        titleColor: '#e5e7eb', // 标题颜色
-        showGrid: true,
-        option: darkChartOption, // 注入深色模式 ECharts 配置
-      },
-    },
-    // --- 右侧饼图 (已添加 option 覆盖) ---
-    {
-      id: `template_dash_chart_pie_${nanoid()}`,
-      type: 'doughnutChart',
-      position: { x: 1440, y: 260 },
-      size: { width: 440, height: 400 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-      },
-      props: {
-        title: '各品类销售占比',
-        labelsInput: '电子产品, 家居用品, 服装服饰, 食品饮料, 美妆个护',
-        dataInput: '35, 20, 15, 18, 12',
-        innerRadius: '50%',
-        outerRadius: '70%',
-        titleColor: '#e5e7eb',
-        legendPosition: 'bottom',
-        option: darkPieOption, // 注入深色模式配置
-      },
-    },
-    // --- 底部表格 ---
-    {
-      id: `template_dash_table_${nanoid()}`,
-      type: 'table',
-      position: { x: 40, y: 680 },
-      size: { width: 1840, height: 360 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#1f2937',
-        borderRadius: 8,
-        headerBackgroundColor: '#374151',
-        headerColor: '#e5e7eb',
-        cellColor: '#d1d5db',
-        rowBackgroundColor: '#1f2937',
-        hoverBackgroundColor: '#374151',
-        borderColor: '#374151',
-      },
-      props: {
-        columns: [
-          { prop: 'id', label: '订单编号', width: 180 },
-          { prop: 'time', label: '下单时间', width: 200 },
-          { prop: 'product', label: '商品名称', width: 400 },
-          { prop: 'amount', label: '金额', width: 150, align: 'right' },
-          { prop: 'status', label: '状态', width: 120, align: 'center' },
-          { prop: 'customer', label: '客户', width: 200 },
-        ],
-        data: [
-          {
-            id: 'ORD-20240301-01',
-            time: '2024-03-01 14:32:10',
-            product: 'iPhone 15 Pro Max 256GB',
-            amount: 9999,
-            status: '已完成',
-            customer: '张**',
-          },
-          {
-            id: 'ORD-20240301-02',
-            time: '2024-03-01 14:35:45',
-            product: 'Dyson 吹风机 HD15',
-            amount: 2999,
-            status: '配送中',
-            customer: '李**',
-          },
-          {
-            id: 'ORD-20240301-03',
-            time: '2024-03-01 14:42:22',
-            product: 'Sony WH-1000XM5',
-            amount: 2499,
-            status: '待发货',
-            customer: '王**',
-          },
-          {
-            id: 'ORD-20240301-04',
-            time: '2024-03-01 14:55:00',
-            product: 'Nike Air Jordan 1',
-            amount: 1299,
-            status: '已完成',
-            customer: '赵**',
-          },
-          {
-            id: 'ORD-20240301-05',
-            time: '2024-03-01 15:05:30',
-            product: 'SK-II 神仙水 230ml',
-            amount: 1540,
-            status: '已完成',
-            customer: '陈**',
-          },
-        ],
-        stripe: false,
-      },
-    },
-  ],
+function buildFrTracks(count: number): string {
+  return Array.from({ length: count }, () => '1fr').join(' ')
 }
 
-// ==================== 2. GIS 监控模板 (增强版) ====================
-const gisIds = {
-  statRow: `template_gis_row_${nanoid()}`,
-  kpi1: `template_gis_kpi1_${nanoid()}`,
-  kpi2: `template_gis_kpi2_${nanoid()}`,
-  kpi3: `template_gis_kpi3_${nanoid()}`,
-  kpi4: `template_gis_kpi4_${nanoid()}`,
+function createSurfaceStyle(
+  backgroundColor: string,
+  textColor: string,
+  elevation: 'flat' | 'card' = 'card',
+): Partial<NodeStyle> {
+  const shadow = elevation === 'flat' ? 'none' : '0 8px 24px rgba(15, 23, 42, 0.12)'
+
+  return {
+    width: '100%',
+    height: '100%',
+    backgroundColor,
+    color: textColor,
+    borderRadius: '12px',
+    border: '1px solid rgba(148, 163, 184, 0.22)',
+    boxShadow: shadow,
+  }
 }
 
-export const gisTemplate: PageTemplate = {
-  id: 'gis-2',
-  name: '智慧城市GIS看板',
-  description: '集成真实地图组件的监控面板，包含地图底图、热力分布、设备标记与交互式图层控制。',
-  preview: '',
-  category: 'gis',
-  components: [
-    {
-      id: `template_gis_base_${nanoid()}`,
-      type: 'base',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 1080 },
-      rotation: 0,
-      zindex: 1,
-      style: { ...baseStyle, visible: true, locked: true },
-      props: {
-        centerLat: 31.2304,
-        centerLng: 121.4737,
-        zoom: 12,
-        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-      },
+function buildGridNode(preset: TemplateNodePreset): NodeSchema {
+  const canonicalName = resolveCanonicalMaterialName(preset.component)
+  const materialMeta = materialMetaMap.get(canonicalName)
+  const defaultProps = materialMeta?.props ? extractDefaultProps(materialMeta.props) : {}
+  const defaultStyles = materialMeta?.styles ? extractDefaultStyles(materialMeta.styles) : {}
+  const [gridColumnStart, gridColumnEnd, gridRowStart, gridRowEnd] = preset.area
+
+  return {
+    id: preset.id || `tpl_${canonicalName}_${nanoid(8)}`,
+    component: canonicalName,
+    props: {
+      ...defaultProps,
+      ...(preset.props || {}),
+    } as NodeSchema['props'],
+    style: {
+      ...defaultStyles,
+      width: '100%',
+      height: '100%',
+      ...(preset.style || {}),
     },
-    {
-      id: `template_gis_heat_${nanoid()}`,
-      type: 'heat',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 1080 },
-      rotation: 0,
-      zindex: 2,
-      style: { ...baseStyle, visible: true, locked: true },
-      props: {
-        centerLat: 31.2304,
-        centerLng: 121.4737,
-        zoom: 12,
-        radius: 25,
-        blur: 15,
-        heatData: Array.from({ length: 50 }).map(() => ({
-          lat: 31.2304 + (Math.random() - 0.5) * 0.1,
-          lng: 121.4737 + (Math.random() - 0.5) * 0.1,
-          intensity: Math.random(),
-        })),
-      },
+    geometry: {
+      mode: 'grid',
+      gridColumnStart,
+      gridColumnEnd,
+      gridRowStart,
+      gridRowEnd,
     },
-    {
-      id: `template_gis_marker_${nanoid()}`,
-      type: 'marker',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 1080 },
-      rotation: 0,
-      zindex: 3,
-      style: { ...baseStyle, visible: true, locked: true },
-      props: {
-        centerLat: 31.2304,
-        centerLng: 121.4737,
-        zoom: 12,
-        showLabel: true,
-        markers: [
-          { lat: 31.235, lng: 121.47, label: '监控中心', color: '#ef4444' },
-          { lat: 31.22, lng: 121.48, label: '设备A01', color: '#3b82f6' },
-          { lat: 31.24, lng: 121.46, label: '设备A02', color: '#3b82f6' },
-          { lat: 31.21, lng: 121.45, label: '设备B01', color: '#10b981' },
-        ],
+    layoutItem: {
+      mode: 'grid',
+      placement: {
+        colStart: gridColumnStart,
+        colSpan: Math.max(1, gridColumnEnd - gridColumnStart),
+        rowStart: gridRowStart,
+        rowSpan: Math.max(1, gridRowEnd - gridRowStart),
       },
+      sizeModeX: 'stretch',
+      sizeModeY: 'stretch',
     },
-    {
-      id: `template_gis_title_box_${nanoid()}`,
-      type: 'box',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 80 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        borderWidth: 0,
-        borderRadius: 0,
-      },
-      props: { content: '' },
-    },
-    {
-      id: `template_gis_title_text_${nanoid()}`,
-      type: 'Text',
-      position: { x: 20, y: 20 },
-      size: { width: 400, height: 40 },
-      rotation: 0,
-      zindex: 11,
-      style: {
-        ...baseStyle,
-        fontSize: 28,
-        fontColor: '#fff',
-        fontWeight: 'bold',
-      },
-      props: { text: '智慧城市 GIS 指挥中心' },
-    },
-    {
-      id: `template_gis_search_${nanoid()}`,
-      type: 'searchBox',
-      position: { x: 20, y: 100 },
-      size: { width: 300, height: 50 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-        borderRadius: 4,
-        padding: 5,
-      },
-      props: {
-        placeholder: '搜索设备/区域...',
-        buttonText: '定位',
-      },
-    },
-    {
-      id: `template_gis_layers_${nanoid()}`,
-      type: 'layers',
-      position: { x: 1680, y: 100 },
-      size: { width: 220, height: 200 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-        textColor: '#fff',
-        borderColor: '#334155',
-      },
-      props: {
-        title: '图层管理',
-        layers: [
-          { label: '城市底图', type: 'base', visible: true },
-          { label: '热力分布', type: 'heat', visible: true },
-          { label: '设备标记', type: 'marker', visible: true },
-          { label: '路网结构', type: 'vector', visible: false },
-        ],
-      },
-    },
-    {
-      id: `template_gis_legend_${nanoid()}`,
-      type: 'legend',
-      position: { x: 1750, y: 800 },
-      size: { width: 150, height: 200 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-        textColor: '#fff',
-        borderColor: '#334155',
-      },
-      props: {
-        title: '设备状态',
-        items: [
-          { label: '正常运行', color: '#10b981' },
-          { label: '离线', color: '#64748b' },
-          { label: '告警', color: '#ef4444' },
-          { label: '维护中', color: '#f59e0b' },
-        ],
-      },
-    },
-    {
-      id: gisIds.statRow,
-      type: 'row',
-      position: { x: 20, y: 940 },
-      size: { width: 1400, height: 120 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-        borderRadius: 8,
-        borderWidth: 0,
-      },
-      layout: {
-        mode: 'horizontal',
-        gap: 20,
-        align: 'center',
-        padding: 20,
-      },
-      children: [gisIds.kpi1, gisIds.kpi2, gisIds.kpi3, gisIds.kpi4],
-      props: {},
-    },
-    {
-      id: gisIds.kpi1,
-      type: 'countUp',
-      groupId: gisIds.statRow,
-      position: { x: 0, y: 0 },
-      size: { width: 200, height: 80 },
-      rotation: 0,
-      zindex: 11,
-      style: baseStyle,
-      props: {
-        title: '在线设备',
-        value: 3421,
-        valueColor: '#34d399',
-        titleColor: '#cbd5e1',
-      },
-    },
-    {
-      id: gisIds.kpi2,
-      type: 'countUp',
-      groupId: gisIds.statRow,
-      position: { x: 0, y: 0 },
-      size: { width: 200, height: 80 },
-      rotation: 0,
-      zindex: 11,
-      style: baseStyle,
-      props: {
-        title: '今日告警',
-        value: 45,
-        valueColor: '#f87171',
-        titleColor: '#cbd5e1',
-      },
-    },
-    {
-      id: gisIds.kpi3,
-      type: 'countUp',
-      groupId: gisIds.statRow,
-      position: { x: 0, y: 0 },
-      size: { width: 200, height: 80 },
-      rotation: 0,
-      zindex: 11,
-      style: baseStyle,
-      props: {
-        title: '覆盖区域',
-        value: 128,
-        suffix: 'km²',
-        valueColor: '#60a5fa',
-        titleColor: '#cbd5e1',
-      },
-    },
-    {
-      id: gisIds.kpi4,
-      type: 'countUp',
-      groupId: gisIds.statRow,
-      position: { x: 0, y: 0 },
-      size: { width: 200, height: 80 },
-      rotation: 0,
-      zindex: 11,
-      style: baseStyle,
-      props: {
-        title: '处理率',
-        value: 98.5,
-        suffix: '%',
-        valueColor: '#fbbf24',
-        titleColor: '#cbd5e1',
-      },
-    },
-  ],
+    actions: preset.actions,
+    events: preset.events,
+    ref: preset.ref,
+  }
 }
 
-// ==================== 3. 表单录入模板 (优化版) ====================
-const formIds = {
-  panel: `template_form_panel_${nanoid()}`,
-  labelName: `template_form_label_name_${nanoid()}`,
-  inputName: `template_form_input_name_${nanoid()}`,
-  labelDept: `template_form_label_dept_${nanoid()}`,
-  selectDept: `template_form_select_dept_${nanoid()}`,
-  labelDate: `template_form_label_date_${nanoid()}`,
-  dateEntry: `template_form_date_entry_${nanoid()}`,
-  labelStatus: `template_form_label_status_${nanoid()}`,
-  switchStatus: `template_form_switch_status_${nanoid()}`,
-  labelTags: `template_form_label_tags_${nanoid()}`,
-  multiTags: `template_form_multi_tags_${nanoid()}`,
-  btnGroup: `template_form_btn_group_${nanoid()}`,
-}
-
-export const formTemplate: PageTemplate = {
-  id: 'form-2',
-  name: '信息录入表单',
-  description: '标准的后台管理表单页面，包含输入框、下拉选、日期选择、开关等常用控件。',
-  preview: '',
-  category: 'form',
-  components: [
-    {
-      id: `template_form_bg_${nanoid()}`,
-      type: 'box',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 1080 },
-      rotation: 0,
-      zindex: 0,
-      style: { ...baseStyle, backgroundColor: '#f3f4f6', borderWidth: 0 },
-      props: { content: '' },
+function buildOpsDashboardTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(9),
+      gap: 12,
+      style: { backgroundColor: '#0b1220' },
     },
-    {
-      id: formIds.panel,
-      type: 'panel',
-      position: { x: 460, y: 100 },
-      size: { width: 1000, height: 800 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        bodyPadding: 40,
-      },
-      props: {
-        title: '新员工入职信息登记',
-        showHeader: true,
-        showFooter: true,
-        footerContent: '请确保信息真实有效',
-      },
-      children: [
-        formIds.labelName,
-        formIds.inputName,
-        formIds.labelDept,
-        formIds.selectDept,
-        formIds.labelDate,
-        formIds.dateEntry,
-        formIds.labelStatus,
-        formIds.switchStatus,
-        formIds.labelTags,
-        formIds.multiTags,
-        formIds.btnGroup,
-      ],
-    },
-    {
-      id: formIds.labelName,
-      groupId: formIds.panel,
-      type: 'Text',
-      position: { x: 50, y: 50 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: {
-        ...baseStyle,
-        fontSize: 14,
-        fontWeight: 'bold',
-        textAlign: 'right',
-        lineHeight: 2.8,
-      },
-      props: { text: '姓名：' },
-    },
-    {
-      id: formIds.inputName,
-      groupId: formIds.panel,
-      type: 'searchBox',
-      position: { x: 160, y: 50 },
-      size: { width: 300, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        placeholder: '请输入真实姓名',
-        showSearchButton: false,
-      },
-    },
-    {
-      id: formIds.labelDept,
-      groupId: formIds.panel,
-      type: 'Text',
-      position: { x: 500, y: 50 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: {
-        ...baseStyle,
-        fontSize: 14,
-        fontWeight: 'bold',
-        textAlign: 'right',
-        lineHeight: 2.8,
-      },
-      props: { text: '所属部门：' },
-    },
-    {
-      id: formIds.selectDept,
-      groupId: formIds.panel,
-      type: 'select',
-      position: { x: 610, y: 50 },
-      size: { width: 300, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        placeholder: '请选择部门',
-        options: [
-          { label: '研发部', value: 'dev' },
-          { label: '产品部', value: 'pm' },
-          { label: '设计部', value: 'design' },
-          { label: '运营部', value: 'ops' },
-        ],
-      },
-    },
-    {
-      id: formIds.labelDate,
-      groupId: formIds.panel,
-      type: 'Text',
-      position: { x: 50, y: 120 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: {
-        ...baseStyle,
-        fontSize: 14,
-        fontWeight: 'bold',
-        textAlign: 'right',
-        lineHeight: 2.8,
-      },
-      props: { text: '入职日期：' },
-    },
-    {
-      id: formIds.dateEntry,
-      groupId: formIds.panel,
-      type: 'dateRange',
-      position: { x: 160, y: 120 },
-      size: { width: 300, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        startPlaceholder: '试用期开始',
-        endPlaceholder: '试用期结束',
-      },
-    },
-    {
-      id: formIds.labelStatus,
-      groupId: formIds.panel,
-      type: 'Text',
-      position: { x: 500, y: 120 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: {
-        ...baseStyle,
-        fontSize: 14,
-        fontWeight: 'bold',
-        textAlign: 'right',
-        lineHeight: 2.8,
-      },
-      props: { text: '启用账号：' },
-    },
-    {
-      id: formIds.switchStatus,
-      groupId: formIds.panel,
-      type: 'switch',
-      position: { x: 610, y: 125 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        activeText: '启用',
-        inactiveText: '禁用',
-        activeValue: true,
-        inactiveValue: false,
-      },
-    },
-    {
-      id: formIds.labelTags,
-      groupId: formIds.panel,
-      type: 'Text',
-      position: { x: 50, y: 190 },
-      size: { width: 100, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: {
-        ...baseStyle,
-        fontSize: 14,
-        fontWeight: 'bold',
-        textAlign: 'right',
-        lineHeight: 2.8,
-      },
-      props: { text: '技能标签：' },
-    },
-    {
-      id: formIds.multiTags,
-      groupId: formIds.panel,
-      type: 'multiSelect',
-      position: { x: 160, y: 190 },
-      size: { width: 750, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        placeholder: '选择技能标签',
-        options: [
-          { label: 'Vue.js', value: 'vue' },
-          { label: 'React', value: 'react' },
-          { label: 'TypeScript', value: 'ts' },
-          { label: 'Node.js', value: 'node' },
-          { label: 'Java', value: 'java' },
-        ],
-      },
-    },
-    {
-      id: formIds.btnGroup,
-      groupId: formIds.panel,
-      type: 'buttonGroup',
-      position: { x: 160, y: 300 },
-      size: { width: 300, height: 40 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        buttons: [
-          { label: '提交登记', value: 'submit', type: 'primary' },
-          { label: '重置表单', value: 'reset', type: 'default' },
-        ],
-      },
-    },
-  ],
-}
-
-// ==================== 4. 图表分析模板 ====================
-export const chartAnalysisTemplate: PageTemplate = {
-  id: 'chart-1',
-  name: '多维数据分析报表',
-  description: '2x2 布局的多图表数据分析面板，适合数据探索和报表展示。',
-  preview: '',
-  category: 'chart',
-  components: [
-    {
-      id: `template_chart_title_${nanoid()}`,
-      type: 'Text',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 80 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        fontSize: 32,
-        fontColor: '#111827',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        backgroundColor: '#fff',
-        lineHeight: 2.5,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-      },
-      props: {
-        text: '年度业务数据分析报告',
-      },
-    },
-    {
-      id: `template_chart_line_${nanoid()}`,
-      type: 'lineChart',
-      position: { x: 40, y: 120 },
-      size: { width: 900, height: 440 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-      },
-      props: {
-        title: '月度营收趋势',
-        xAxisData: ['1月', '2月', '3月', '4月', '5月', '6月'],
-        seriesName: '营收(万)',
-        seriesData: [120, 180, 150, 210, 190, 240],
-        smooth: true,
-        showArea: true,
-      },
-    },
-    {
-      id: `template_chart_bar_${nanoid()}`,
-      type: 'barChart',
-      position: { x: 980, y: 120 },
-      size: { width: 900, height: 440 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-      },
-      props: {
-        title: '各部门业绩对比',
-        xAxisData: ['销售一部', '销售二部', '大客户部', '渠道部', '海外部'],
-        seriesName: '业绩',
-        seriesData: [420, 680, 550, 730, 610],
-        barWidth: '40%',
-      },
-    },
-    {
-      id: `template_chart_pie_${nanoid()}`,
-      type: 'pieChart',
-      position: { x: 40, y: 600 },
-      size: { width: 900, height: 440 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-      },
-      props: {
-        title: '成本结构分析',
-        labels: ['研发投入', '市场推广', '人力成本', '运营杂项'],
-        data: [450, 380, 290, 220],
-        radius: '70%',
-      },
-    },
-    {
-      id: `template_chart_radar_${nanoid()}`,
-      type: 'radarChart',
-      position: { x: 980, y: 600 },
-      size: { width: 900, height: 440 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-      },
-      props: {
-        title: '团队能力评估',
-        indicators: ['技术能力', '响应速度', '客户满意度', '创新能力', '文档质量'],
-        indicatorMaxsInput: '100,100,100,100,100',
-        data: [
-          { name: 'A团队', value: [85, 90, 88, 70, 80] },
-          { name: 'B团队', value: [95, 75, 82, 85, 78] },
-        ],
-      },
-    },
-  ],
-}
-
-// ==================== 5. IoT 物联网模板 (新增) ====================
-const iotIds = {
-  panel: `template_iot_panel_${nanoid()}`,
-  status1: `template_iot_status1_${nanoid()}`,
-  status2: `template_iot_status2_${nanoid()}`,
-  status3: `template_iot_status3_${nanoid()}`,
-  status4: `template_iot_status4_${nanoid()}`,
-  progress: `template_iot_progress_${nanoid()}`,
-}
-
-export const iotTemplate: PageTemplate = {
-  id: 'iot-1',
-  name: 'IoT 生产线监控',
-  description: '工业物联网风格，包含仪表盘、实时状态指示灯、流水线进度监控。',
-  preview: '',
-  category: 'dashboard',
-  components: [
-    {
-      id: `template_iot_title_${nanoid()}`,
-      type: 'Text',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 80 },
-      rotation: 0,
-      zindex: 10,
-      style: {
-        ...baseStyle,
-        fontSize: 32,
-        fontColor: '#00f2ff',
-        textAlign: 'center',
-        backgroundColor: '#050e21',
-        lineHeight: 2.5,
-        borderBottom: '2px solid #1e3a8a',
-      },
-      props: { text: '数字化工厂 - 生产线实时监控' },
-    },
-    {
-      id: `template_iot_bg_${nanoid()}`,
-      type: 'box',
-      position: { x: 0, y: 0 },
-      size: { width: 1920, height: 1080 },
-      rotation: 0,
-      zindex: -1,
-      style: { ...baseStyle, backgroundColor: '#020617' },
-      props: { content: '' },
-    },
-    // 左侧 - 仪表盘组 (已添加 option 覆盖)
-    {
-      id: `template_iot_gauge1_${nanoid()}`,
-      type: 'gaugeChart',
-      position: { x: 50, y: 120 },
-      size: { width: 400, height: 350 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: 8,
-        border: '1px solid #1e293b',
-      },
-      props: {
-        title: '主要设备负载',
-        value: 85,
-        name: '负载率',
-        titleColor: '#fff',
-        axisLineColor: [
-          [0.3, '#67e0e3'],
-          [0.7, '#37a2da'],
-          [1, '#fd666d'],
-        ],
-        option: darkGaugeOption, // 注入深色模式配置
-      },
-    },
-    {
-      id: `template_iot_gauge2_${nanoid()}`,
-      type: 'gaugeChart',
-      position: { x: 50, y: 500 },
-      size: { width: 400, height: 350 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: 8,
-        border: '1px solid #1e293b',
-      },
-      props: {
-        title: '车间温度',
-        value: 42,
-        min: 0,
-        max: 80,
-        name: '温度',
-        titleColor: '#fff',
-        pointerColor: '#f59e0b',
-        option: darkGaugeOption, // 注入深色模式配置
-      },
-    },
-    // 中间 - 流水线状态
-    {
-      id: iotIds.panel,
-      type: 'panel',
-      position: { x: 500, y: 120 },
-      size: { width: 920, height: 730 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        border: '1px solid #1e40af',
-        borderRadius: 8,
-        bodyPadding: 20,
-        headerBg: 'transparent',
-        headerColor: '#00f2ff',
-      },
-      props: { title: '产线实时状态', showHeader: true },
-      children: [iotIds.status1, iotIds.status2, iotIds.status3, iotIds.status4, iotIds.progress],
-    },
-    {
-      id: iotIds.status1,
-      groupId: iotIds.panel,
-      type: 'badge',
-      position: { x: 50, y: 50 },
-      size: { width: 180, height: 80 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        value: '运行中',
-        type: 'success',
-        showSlot: true,
-        slotText: '1号机组',
-        slotFontSize: 18,
-        slotColor: '#fff',
-      },
-    },
-    {
-      id: iotIds.status2,
-      groupId: iotIds.panel,
-      type: 'badge',
-      position: { x: 250, y: 50 },
-      size: { width: 180, height: 80 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        value: '运行中',
-        type: 'success',
-        showSlot: true,
-        slotText: '2号机组',
-        slotFontSize: 18,
-        slotColor: '#fff',
-      },
-    },
-    {
-      id: iotIds.status3,
-      groupId: iotIds.panel,
-      type: 'badge',
-      position: { x: 450, y: 50 },
-      size: { width: 180, height: 80 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        value: '待机',
-        type: 'warning',
-        showSlot: true,
-        slotText: '3号机组',
-        slotFontSize: 18,
-        slotColor: '#fff',
-      },
-    },
-    {
-      id: iotIds.status4,
-      groupId: iotIds.panel,
-      type: 'badge',
-      position: { x: 650, y: 50 },
-      size: { width: 180, height: 80 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        value: '故障',
-        type: 'danger',
-        showSlot: true,
-        slotText: '4号机组',
-        slotFontSize: 18,
-        slotColor: '#fff',
-      },
-    },
-    {
-      id: iotIds.progress,
-      groupId: iotIds.panel,
-      type: 'progress',
-      position: { x: 50, y: 200 },
-      size: { width: 800, height: 100 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        value: 68,
-        type: 'line',
-        strokeWidth: 24,
-        textInside: true,
-        showStripe: true,
-        animateStripe: true,
-        status: 'success',
-      },
-    },
-    // 右侧 - 产量统计 (已添加 option 覆盖)
-    {
-      id: `template_iot_bar_${nanoid()}`,
-      type: 'barChart',
-      position: { x: 1470, y: 120 },
-      size: { width: 400, height: 350 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: 8,
-        border: '1px solid #1e293b',
-      },
-      props: {
-        title: '小时产量',
-        titleColor: '#fff',
-        xAxisData: ['08:00', '09:00', '10:00', '11:00', '12:00'],
-        seriesName: '件数',
-        seriesData: [120, 132, 101, 134, 90],
-        barColor: '#3b82f6',
-        option: darkChartOption, // 注入深色模式配置
-      },
-    },
-    {
-      id: `template_iot_list_${nanoid()}`,
-      type: 'list',
-      position: { x: 1470, y: 500 },
-      size: { width: 400, height: 350 },
-      rotation: 0,
-      zindex: 5,
-      style: {
-        ...baseStyle,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: 8,
-        border: '1px solid #1e293b',
-        titleColor: '#fff',
-        descriptionColor: '#94a3b8',
-      },
-      props: {
-        data: [
-          { title: '4号机组温度过高', description: '14:20:35 - 温度达到 85°C', extra: '严重' },
-          { title: '2号传送带卡顿', description: '13:15:20 - 速度下降 30%', extra: '警告' },
-          { title: '原料不足提醒', description: '11:05:00 - A料剩余 10%', extra: '提示' },
-        ],
-        showIcon: true,
-        iconSize: 24,
-        iconColor: '#ef4444',
-      },
-    },
-  ],
-}
-
-// ==================== 6. 项目管理模板 (新增) ====================
-const pmIds = {
-  timelinePanel: `template_pm_timeline_panel_${nanoid()}`,
-  timeline: `template_pm_timeline_${nanoid()}`,
-  teamPanel: `template_pm_team_panel_${nanoid()}`,
-  teamGrid: `template_pm_team_grid_${nanoid()}`,
-}
-
-export const projectTemplate: PageTemplate = {
-  id: 'pm-1',
-  name: '项目进度管理',
-  description: '项目管理看板，包含任务时间轴、团队成员卡片和整体进度统计。',
-  preview: '',
-  category: 'other',
-  components: [
-    {
-      id: `template_pm_title_${nanoid()}`,
-      type: 'Text',
-      position: { x: 40, y: 30 },
-      size: { width: 400, height: 50 },
-      rotation: 0,
-      zindex: 10,
-      style: { ...baseStyle, fontSize: 28, fontWeight: 'bold' },
-      props: { text: 'SaaS 平台研发项目' },
-    },
-    {
-      id: `template_pm_progress_${nanoid()}`,
-      type: 'progress',
-      position: { x: 500, y: 45 },
-      size: { width: 600, height: 30 },
-      rotation: 0,
-      zindex: 5,
-      style: baseStyle,
-      props: { value: 45, strokeWidth: 15, status: 'primary' },
-    },
-    {
-      id: pmIds.timelinePanel,
-      type: 'panel',
-      position: { x: 40, y: 100 },
-      size: { width: 500, height: 800 },
-      rotation: 0,
-      zindex: 5,
-      style: { ...baseStyle, backgroundColor: '#fff', borderRadius: 8, border: '1px solid #eee' },
-      props: { title: '里程碑计划', showHeader: true },
-      children: [pmIds.timeline],
-    },
-    {
-      id: pmIds.timeline,
-      groupId: pmIds.timelinePanel,
-      type: 'timeline',
-      position: { x: 20, y: 20 },
-      size: { width: 460, height: 700 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        data: [
+    nodes: [
+      buildGridNode({
+        id: 'tpl_ops_title',
+        component: 'Text',
+        area: [1, 9, 1, 2],
+        props: {
+          content: '运营总览大屏',
+          fontSize: 32,
+          color: '#f8fafc',
+          fontWeight: 700,
+          textAlign: 'left',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc', 'flat'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_refresh',
+        component: 'Button',
+        area: [9, 11, 1, 2],
+        props: { text: '刷新数据', type: 'primary' },
+        actions: [
           {
-            title: '需求评审',
-            timestamp: '2024-01-10',
-            type: 'success',
-            content: '已完成需求确认',
+            id: 'node_ops_refresh_notice',
+            type: 'showToast',
+            payload: { message: '已触发刷新', type: 'info' },
           },
           {
-            title: 'UI设计',
-            timestamp: '2024-01-25',
-            type: 'success',
-            content: '高保真原型已定稿',
-          },
-          {
-            title: '前端开发',
-            timestamp: '2024-02-20',
-            type: 'primary',
-            content: '进行中，完成度 60%',
-          },
-          { title: '后端联调', timestamp: '2024-03-01', type: 'info', content: '计划中' },
-          { title: 'UAT测试', timestamp: '2024-03-15', type: 'warning', content: '待启动' },
-        ],
-        showCard: true,
-      },
-    },
-    {
-      id: pmIds.teamPanel,
-      type: 'panel',
-      position: { x: 580, y: 100 },
-      size: { width: 800, height: 800 },
-      rotation: 0,
-      zindex: 5,
-      style: { ...baseStyle, backgroundColor: '#fff', borderRadius: 8, border: '1px solid #eee' },
-      props: { title: '核心成员', showHeader: true },
-      children: [pmIds.teamGrid],
-    },
-    {
-      id: pmIds.teamGrid,
-      groupId: pmIds.teamPanel,
-      type: 'cardGrid',
-      position: { x: 20, y: 20 },
-      size: { width: 760, height: 700 },
-      rotation: 0,
-      zindex: 6,
-      style: baseStyle,
-      props: {
-        columns: 3,
-        gap: 20,
-        imageHeight: 100,
-        data: [
-          {
-            title: 'Alex',
-            description: '产品经理',
-            image: 'https://ui-avatars.com/api/?name=Alex&background=random',
-            tags: ['PM', '需求'],
-          },
-          {
-            title: 'Sarah',
-            description: 'UI设计师',
-            image: 'https://ui-avatars.com/api/?name=Sarah&background=random',
-            tags: ['Design', 'Figma'],
-          },
-          {
-            title: 'Mike',
-            description: '前端负责人',
-            image: 'https://ui-avatars.com/api/?name=Mike&background=random',
-            tags: ['Vue', 'TS'],
-          },
-          {
-            title: 'John',
-            description: '后端架构师',
-            image: 'https://ui-avatars.com/api/?name=John&background=random',
-            tags: ['Java', 'Go'],
-          },
-          {
-            title: 'Emily',
-            description: '测试工程师',
-            image: 'https://ui-avatars.com/api/?name=Emily&background=random',
-            tags: ['QA', 'Auto'],
+            id: 'node_ops_refresh_table',
+            type: 'refresh-data',
+            targetId: 'tpl_ops_table',
           },
         ],
+        events: {
+          click: [
+            'node_ops_refresh_notice',
+            'node_ops_refresh_table',
+            { type: 'ref', scope: 'global', id: 'global_ops_refresh_emit' },
+          ],
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_help',
+        component: 'Button',
+        area: [11, 13, 1, 2],
+        props: { text: '帮助文档', type: 'default' },
+        events: {
+          click: [{ type: 'ref', scope: 'global', id: 'global_ops_open_doc' }],
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_stat_1',
+        component: 'stat',
+        area: [1, 5, 2, 4],
+        props: {
+          title: '今日访问',
+          value: 12854,
+          change: 9.2,
+          showChange: true,
+          valueColor: '#60a5fa',
+          titleColor: '#cbd5e1',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_stat_2',
+        component: 'stat',
+        area: [5, 9, 2, 4],
+        props: {
+          title: '支付转化',
+          value: 14.8,
+          suffix: '%',
+          precision: 1,
+          change: 1.6,
+          showChange: true,
+          valueColor: '#34d399',
+          titleColor: '#cbd5e1',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_stat_3',
+        component: 'stat',
+        area: [9, 13, 2, 4],
+        props: {
+          title: '异常告警',
+          value: 7,
+          change: -22.2,
+          showChange: true,
+          valueColor: '#f59e0b',
+          titleColor: '#cbd5e1',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_trend',
+        component: 'lineChart',
+        area: [1, 8, 4, 7],
+        props: {
+          title: '过去 24 小时流量',
+          seriesName: '流量',
+          xAxisData: ['00', '04', '08', '12', '16', '20', '24'],
+          data: [120, 180, 260, 310, 285, 340, 320],
+          smooth: true,
+          showArea: true,
+          lineColor: '#38bdf8',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_channel',
+        component: 'pieChart',
+        area: [8, 13, 4, 7],
+        props: {
+          title: '渠道占比',
+          legendTop: 'bottom',
+          data: [
+            { name: '自然流量', value: 46 },
+            { name: '广告', value: 24 },
+            { name: '私域', value: 18 },
+            { name: '合作', value: 12 },
+          ],
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_ops_table',
+        component: 'table',
+        area: [1, 13, 7, 10],
+        props: {
+          border: true,
+          stripe: true,
+          columns: [
+            { prop: 'event', label: '事件' },
+            { prop: 'source', label: '来源' },
+            { prop: 'count', label: '次数' },
+            { prop: 'updatedAt', label: '更新时间' },
+          ],
+          data: [
+            { event: '下单成功', source: 'App', count: 128, updatedAt: '2026-02-20 10:15' },
+            { event: '登录失败', source: 'Web', count: 37, updatedAt: '2026-02-20 10:18' },
+            { event: '退款申请', source: 'Mini', count: 11, updatedAt: '2026-02-20 10:21' },
+          ],
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+    ],
+    globalActions: [
+      {
+        id: 'global_ops_refresh_emit',
+        type: 'emit',
+        payload: { event: 'ops:refresh', data: { source: 'ops-dashboard-template' } },
       },
-    },
-    {
-      id: `template_pm_chart_${nanoid()}`,
-      type: 'pieChart',
-      position: { x: 1420, y: 100 },
-      size: { width: 460, height: 380 },
-      rotation: 0,
-      zindex: 5,
-      style: { ...baseStyle, backgroundColor: '#fff', borderRadius: 8, border: '1px solid #eee' },
-      props: {
-        title: '任务状态分布',
-        data: [
-          { name: '已完成', value: 45 },
-          { name: '进行中', value: 30 },
-          { name: '待开始', value: 20 },
-          { name: '延期', value: 5 },
-        ],
+      {
+        id: 'global_ops_open_doc',
+        type: 'openUrl',
+        payload: { url: 'https://example.com/ops-dashboard-doc', target: '_blank' },
       },
-    },
-    {
-      id: `template_pm_box_${nanoid()}`,
-      type: 'box',
-      position: { x: 1420, y: 520 },
-      size: { width: 460, height: 380 },
-      rotation: 0,
-      zindex: 5,
-      style: { ...baseStyle, backgroundColor: '#fff5f5', borderRadius: 8, borderColor: '#feb2b2' },
-      props: {
-        content:
-          '⚠️ 风险提示：\n\n后端联调进度略有滞后，请相关人员关注。\n下周二将进行阶段性演示汇报。',
-        textAlign: 'left',
-        textColor: '#c53030',
-      },
-    },
-  ],
+    ],
+  }
 }
 
-// 所有模板
+function buildAnalysisTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(9),
+      gap: 12,
+      style: { backgroundColor: '#f5f7fb' },
+    },
+    nodes: [
+      buildGridNode({
+        component: 'Text',
+        area: [1, 13, 1, 2],
+        props: {
+          content: '多维数据分析报表',
+          fontSize: 30,
+          color: '#0f172a',
+          fontWeight: 700,
+          textAlign: 'center',
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        component: 'lineChart',
+        area: [1, 7, 2, 6],
+        props: {
+          title: '营收趋势',
+          seriesName: '营收',
+          xAxisData: ['Q1', 'Q2', 'Q3', 'Q4'],
+          data: [320, 460, 520, 680],
+          smooth: true,
+          showArea: true,
+          lineColor: '#2563eb',
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        component: 'barChart',
+        area: [7, 13, 2, 6],
+        props: {
+          title: '区域销售',
+          seriesName: '销售额',
+          xAxisData: ['华东', '华南', '华北', '西南', '海外'],
+          data: [180, 240, 210, 160, 130],
+          barColor: '#0ea5e9',
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        component: 'pieChart',
+        area: [1, 7, 6, 10],
+        props: {
+          title: '成本结构',
+          legendTop: 'bottom',
+          data: [
+            { name: '研发', value: 38 },
+            { name: '市场', value: 27 },
+            { name: '运营', value: 23 },
+            { name: '其他', value: 12 },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        component: 'table',
+        area: [7, 13, 6, 10],
+        props: {
+          border: true,
+          stripe: true,
+          columns: [
+            { prop: 'metric', label: '指标' },
+            { prop: 'value', label: '当前值' },
+            { prop: 'trend', label: '环比' },
+          ],
+          data: [
+            { metric: '客单价', value: '¥328', trend: '+5.6%' },
+            { metric: '复购率', value: '32.4%', trend: '+1.3%' },
+            { metric: '退款率', value: '1.8%', trend: '-0.5%' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+    ],
+  }
+}
+
+function buildQueryWorkbenchTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(8),
+      gap: 12,
+      style: { backgroundColor: '#f8fafc' },
+    },
+    nodes: [
+      buildGridNode({
+        id: 'tpl_query_title',
+        component: 'Text',
+        area: [1, 10, 1, 2],
+        props: {
+          content: '订单查询工作台',
+          fontSize: 28,
+          color: '#0f172a',
+          fontWeight: 700,
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_help',
+        component: 'Button',
+        area: [10, 13, 1, 2],
+        props: { text: '查询说明', type: 'default' },
+        events: { click: [{ type: 'ref', scope: 'global', id: 'global_query_help_link' }] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_keyword',
+        component: 'TextInput',
+        area: [1, 4, 2, 3],
+        props: { placeholder: '输入订单号/客户名', clearable: true },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_status',
+        component: 'select',
+        area: [4, 7, 2, 3],
+        props: {
+          placeholder: '订单状态',
+          options: [
+            { label: '全部', value: 'all' },
+            { label: '待支付', value: 'pending' },
+            { label: '待发货', value: 'shipping' },
+            { label: '已完成', value: 'done' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_range',
+        component: 'dateRange',
+        area: [7, 10, 2, 3],
+        props: { startPlaceholder: '开始日期', endPlaceholder: '结束日期' },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_submit',
+        component: 'Button',
+        area: [10, 11, 2, 3],
+        props: { text: '查询', type: 'primary' },
+        actions: [
+          {
+            id: 'node_query_call_api',
+            type: 'callApi',
+            payload: {
+              apiId: 'https://jsonplaceholder.typicode.com/todos/1',
+              method: 'GET',
+              resultPath: 'orders.lastQuery',
+            },
+            handlers: {
+              success: 'page_query_success',
+              fail: 'page_query_fail',
+              complete: 'node_query_complete',
+            },
+            debounce: 300,
+          },
+          {
+            id: 'node_query_complete',
+            type: 'setState',
+            payload: { path: 'orders.loading', value: false },
+          },
+        ],
+        events: {
+          click: ['node_query_call_api', { type: 'ref', scope: 'global', id: 'global_query_emit' }],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_reset',
+        component: 'Button',
+        area: [11, 12, 2, 3],
+        props: { text: '重置', type: 'default' },
+        actions: [
+          {
+            id: 'node_query_reset_filters',
+            type: 'setState',
+            payload: { path: 'orders.filters', value: {} },
+            next: 'node_query_reset_notice',
+          },
+          {
+            id: 'node_query_reset_notice',
+            type: 'showToast',
+            payload: { message: '筛选条件已重置', type: 'success' },
+          },
+        ],
+        events: { click: ['node_query_reset_filters'] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_export',
+        component: 'Button',
+        area: [12, 13, 2, 3],
+        props: { text: '导出', type: 'default' },
+        actions: [
+          {
+            id: 'node_query_export_notice',
+            type: 'showToast',
+            payload: { message: '已提交导出任务', type: 'info' },
+          },
+        ],
+        events: { click: ['node_query_export_notice'] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_table',
+        component: 'table',
+        area: [1, 13, 3, 9],
+        props: {
+          border: true,
+          stripe: true,
+          columns: [
+            { prop: 'orderNo', label: '订单号' },
+            { prop: 'customer', label: '客户' },
+            { prop: 'amount', label: '金额' },
+            { prop: 'status', label: '状态' },
+            { prop: 'createdAt', label: '下单时间' },
+          ],
+          data: [
+            {
+              orderNo: 'Q-10021',
+              customer: '张三',
+              amount: '¥2,380',
+              status: '待支付',
+              createdAt: '2026-02-17 14:12',
+            },
+            {
+              orderNo: 'Q-10022',
+              customer: '李四',
+              amount: '¥1,120',
+              status: '待发货',
+              createdAt: '2026-02-18 09:40',
+            },
+            {
+              orderNo: 'Q-10023',
+              customer: '王五',
+              amount: '¥4,560',
+              status: '已完成',
+              createdAt: '2026-02-18 18:08',
+            },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+    ],
+    pageActions: [
+      {
+        id: 'page_query_success',
+        type: 'showToast',
+        payload: { message: '查询成功，表格已刷新', type: 'success' },
+        next: 'page_query_refresh',
+      },
+      {
+        id: 'page_query_fail',
+        type: 'showToast',
+        payload: { message: '查询失败，请稍后重试', type: 'error' },
+      },
+      {
+        id: 'page_query_refresh',
+        type: 'refresh-data',
+        targetId: 'tpl_query_table',
+      },
+    ],
+    globalActions: [
+      {
+        id: 'global_query_emit',
+        type: 'emit',
+        payload: { event: 'orders:query', data: { from: 'query-workbench-template' } },
+      },
+      {
+        id: 'global_query_help_link',
+        type: 'openUrl',
+        payload: { url: 'https://example.com/query-help', target: '_blank' },
+      },
+    ],
+  }
+}
+
+function buildApprovalCenterTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(9),
+      gap: 12,
+      style: { backgroundColor: '#f1f5f9' },
+    },
+    nodes: [
+      buildGridNode({
+        id: 'tpl_approval_title',
+        component: 'Text',
+        area: [1, 9, 1, 2],
+        props: { content: '审批中心', fontSize: 30, color: '#0f172a', fontWeight: 700 },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_pass',
+        component: 'Button',
+        area: [9, 11, 1, 2],
+        props: { text: '通过', type: 'success' },
+        actions: [
+          {
+            id: 'node_approval_pass_api',
+            type: 'callApi',
+            payload: {
+              apiId: 'https://jsonplaceholder.typicode.com/posts/1',
+              method: 'GET',
+              resultPath: 'approval.lastResult',
+            },
+            confirm: { message: '确认通过当前审批？' },
+            handlers: {
+              success: 'page_approval_success',
+              fail: 'page_approval_fail',
+            },
+          },
+        ],
+        events: {
+          click: [
+            'node_approval_pass_api',
+            { type: 'ref', scope: 'global', id: 'global_approval_emit' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_reject',
+        component: 'Button',
+        area: [11, 13, 1, 2],
+        props: { text: '驳回', type: 'danger' },
+        actions: [
+          {
+            id: 'node_approval_reject_script',
+            type: 'runScript',
+            payload: { code: "console.warn('[template] reject approval request')" },
+            confirm: { message: '确认驳回当前审批？' },
+            next: 'page_approval_reject_notice',
+          },
+        ],
+        events: { click: ['node_approval_reject_script'] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_table',
+        component: 'table',
+        area: [1, 13, 2, 7],
+        props: {
+          border: true,
+          stripe: true,
+          columns: [
+            { prop: 'requestId', label: '单号' },
+            { prop: 'applicant', label: '申请人' },
+            { prop: 'type', label: '类型' },
+            { prop: 'priority', label: '优先级' },
+            { prop: 'status', label: '状态' },
+            { prop: 'createdAt', label: '创建时间' },
+          ],
+          data: [
+            {
+              requestId: 'APR-0901',
+              applicant: 'Alex',
+              type: '预算',
+              priority: '高',
+              status: '待审',
+              createdAt: '2026-02-16 09:12',
+            },
+            {
+              requestId: 'APR-0902',
+              applicant: 'Mia',
+              type: '权限',
+              priority: '中',
+              status: '待审',
+              createdAt: '2026-02-16 10:38',
+            },
+            {
+              requestId: 'APR-0903',
+              applicant: 'Leo',
+              type: '采购',
+              priority: '低',
+              status: '待审',
+              createdAt: '2026-02-16 14:02',
+            },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_timeline',
+        component: 'timeline',
+        area: [1, 8, 7, 10],
+        props: {
+          mode: 'left',
+          data: [
+            {
+              title: '提交申请',
+              timestamp: '2026-02-16 09:12',
+              content: '申请人提交',
+              type: 'primary',
+            },
+            {
+              title: '主管审核',
+              timestamp: '2026-02-16 10:00',
+              content: '待处理',
+              type: 'warning',
+            },
+            { title: '财务复核', timestamp: '2026-02-16 13:00', content: '待处理', type: 'info' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_notice',
+        component: 'list',
+        area: [8, 13, 7, 10],
+        props: {
+          data: [
+            { title: '高优申请', description: '今日剩余 2 条', extra: '高' },
+            { title: '逾期审批', description: '超过 24h 1 条', extra: '中' },
+            { title: '系统公告', description: '审批规则已更新', extra: '低' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+    ],
+    pageActions: [
+      {
+        id: 'page_approval_success',
+        type: 'showToast',
+        payload: { message: '审批通过', type: 'success' },
+        next: 'page_approval_refresh',
+      },
+      {
+        id: 'page_approval_fail',
+        type: 'showToast',
+        payload: { message: '审批失败，请重试', type: 'error' },
+      },
+      {
+        id: 'page_approval_reject_notice',
+        type: 'showToast',
+        payload: { message: '已驳回申请', type: 'warning' },
+      },
+      {
+        id: 'page_approval_refresh',
+        type: 'refresh-data',
+        targetId: 'tpl_approval_table',
+      },
+    ],
+    globalActions: [
+      {
+        id: 'global_approval_emit',
+        type: 'emit',
+        payload: { event: 'approval:changed', data: { source: 'approval-template' } },
+      },
+    ],
+  }
+}
+
+function buildSecureLoginTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(8),
+      gap: 12,
+      style: { backgroundColor: '#0f172a' },
+    },
+    nodes: [
+      buildGridNode({
+        id: 'tpl_login_title',
+        component: 'Text',
+        area: [4, 10, 2, 3],
+        props: {
+          content: '账号登录',
+          fontSize: 34,
+          color: '#f8fafc',
+          fontWeight: 700,
+          textAlign: 'center',
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc', 'flat'),
+      }),
+      buildGridNode({
+        id: 'tpl_login_user',
+        component: 'TextInput',
+        area: [4, 10, 3, 4],
+        props: { placeholder: '用户名 / 邮箱', clearable: true },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_login_pass',
+        component: 'TextInput',
+        area: [4, 10, 4, 5],
+        props: { placeholder: '密码', type: 'password' },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_login_submit',
+        component: 'Button',
+        area: [4, 7, 5, 6],
+        props: { text: '登录', type: 'primary' },
+        actions: [
+          {
+            id: 'node_login_call_api',
+            type: 'callApi',
+            payload: {
+              apiId: 'https://jsonplaceholder.typicode.com/todos/1',
+              method: 'GET',
+              resultPath: 'auth.lastLoginResult',
+            },
+            confirm: { message: '确认登录？' },
+            debounce: 500,
+            handlers: {
+              success: 'page_login_success',
+              fail: 'page_login_fail',
+              complete: 'node_login_complete',
+            },
+          },
+          {
+            id: 'node_login_complete',
+            type: 'setState',
+            payload: { path: 'auth.loading', value: false },
+          },
+        ],
+        events: {
+          click: ['node_login_call_api', { type: 'ref', scope: 'global', id: 'global_login_emit' }],
+        },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_login_reset',
+        component: 'Button',
+        area: [7, 10, 5, 6],
+        props: { text: '重置', type: 'default' },
+        actions: [
+          {
+            id: 'node_login_reset',
+            type: 'setState',
+            payload: { path: 'auth.form', value: {} },
+            next: 'node_login_reset_toast',
+          },
+          {
+            id: 'node_login_reset_toast',
+            type: 'showToast',
+            payload: { message: '已重置登录信息', type: 'info' },
+          },
+        ],
+        events: { click: ['node_login_reset'] },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+      buildGridNode({
+        id: 'tpl_login_policy',
+        component: 'Button',
+        area: [4, 10, 6, 7],
+        props: { text: '隐私政策', type: 'default' },
+        events: { click: [{ type: 'ref', scope: 'global', id: 'global_login_policy' }] },
+        style: createSurfaceStyle('#111827', '#f8fafc'),
+      }),
+    ],
+    pageActions: [
+      {
+        id: 'page_login_success',
+        type: 'showToast',
+        payload: { message: '登录成功', type: 'success' },
+        next: 'page_login_navigate',
+      },
+      {
+        id: 'page_login_navigate',
+        type: 'navigate',
+        payload: { path: '/dashboard' },
+      },
+      {
+        id: 'page_login_fail',
+        type: 'showToast',
+        payload: { message: '登录失败，请重试', type: 'error' },
+      },
+    ],
+    globalActions: [
+      {
+        id: 'global_login_emit',
+        type: 'emit',
+        payload: { event: 'auth:login', data: { source: 'secure-login-template' } },
+      },
+      {
+        id: 'global_login_policy',
+        type: 'openUrl',
+        payload: { url: 'https://example.com/privacy', target: '_blank' },
+      },
+    ],
+  }
+}
+
+function buildProjectBoardTemplate(): PageTemplateInstance {
+  return {
+    root: {
+      columns: buildFrTracks(12),
+      rows: buildFrTracks(9),
+      gap: 12,
+      style: { backgroundColor: '#f3f4f6' },
+    },
+    nodes: [
+      buildGridNode({
+        id: 'tpl_board_title',
+        component: 'Text',
+        area: [1, 8, 1, 2],
+        props: {
+          content: '项目推进看板',
+          fontSize: 30,
+          color: '#0f172a',
+          fontWeight: 700,
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_board_focus',
+        component: 'Button',
+        area: [8, 10, 1, 2],
+        props: { text: '聚焦风险', type: 'warning' },
+        actions: [
+          { id: 'node_board_highlight_risk', type: 'highlight', targetId: 'tpl_board_risk' },
+          {
+            id: 'node_board_highlight_notice',
+            type: 'showToast',
+            payload: { message: '已聚焦风险区域', type: 'warning' },
+          },
+        ],
+        events: { click: ['node_board_highlight_risk', 'node_board_highlight_notice'] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_board_progress',
+        component: 'progress',
+        area: [10, 13, 1, 2],
+        props: {
+          percentage: 72,
+          status: 'success',
+          strokeWidth: 16,
+          textInside: true,
+          showStripe: true,
+          animateStripe: true,
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_board_timeline',
+        component: 'timeline',
+        area: [1, 7, 2, 10],
+        props: {
+          mode: 'left',
+          data: [
+            {
+              title: '需求冻结',
+              timestamp: '2026-02-01',
+              content: '范围确认完成',
+              type: 'success',
+            },
+            { title: '设计评审', timestamp: '2026-02-06', content: '主流程通过', type: 'success' },
+            { title: '开发联调', timestamp: '2026-02-12', content: '进行中', type: 'primary' },
+            { title: '灰度发布', timestamp: '2026-02-24', content: '计划中', type: 'info' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_board_member',
+        component: 'cardGrid',
+        area: [7, 13, 2, 7],
+        props: {
+          columns: 2,
+          gap: 12,
+          showImage: false,
+          showTags: true,
+          data: [
+            { title: '产品经理', description: '1 人', tags: ['需求', '排期'] },
+            { title: '前端开发', description: '3 人', tags: ['Vue', 'TS'] },
+            { title: '后端开发', description: '2 人', tags: ['Node', 'API'] },
+            { title: '测试', description: '2 人', tags: ['功能', '回归'] },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_board_risk',
+        component: 'list',
+        area: [7, 13, 7, 10],
+        props: {
+          data: [
+            { title: '接口响应偏慢', description: '建议排查数据库索引', extra: '高' },
+            { title: '回归覆盖不足', description: '补充支付链路用例', extra: '中' },
+            { title: '上线窗口冲突', description: '需与运维二次确认', extra: '低' },
+          ],
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+    ],
+  }
+}
+
 export const templates: PageTemplate[] = [
-  dashboardTemplate,
-  formTemplate,
-  chartAnalysisTemplate,
-  iotTemplate,
-  projectTemplate,
+  {
+    id: 'ops-dashboard',
+    name: '运营总览大屏',
+    description: 'KPI + 趋势图 + 占比图 + 明细表，含刷新与帮助动作。',
+    category: 'dashboard',
+    preview: ['#0f172a', '#1e293b'],
+    build: buildOpsDashboardTemplate,
+  },
+  {
+    id: 'analysis-report',
+    name: '多维分析报表',
+    description: '趋势、柱状、饼图与指标表组合，适合周报/月报页面。',
+    category: 'analysis',
+    preview: ['#f8fafc', '#dbeafe'],
+    build: buildAnalysisTemplate,
+  },
+  {
+    id: 'query-workbench',
+    name: '查询列表工作台',
+    description: '筛选区 + 数据表，预置查询、重置、导出等动作链路。',
+    category: 'form',
+    preview: ['#f8fafc', '#cbd5e1'],
+    build: buildQueryWorkbenchTemplate,
+  },
+  {
+    id: 'approval-center',
+    name: '审批中心',
+    description: '审批通过/驳回/刷新流程完整，适合事件联调和状态演示。',
+    category: 'management',
+    preview: ['#f1f5f9', '#94a3b8'],
+    build: buildApprovalCenterTemplate,
+  },
+  {
+    id: 'secure-login',
+    name: '登录页',
+    description: '登录、重置、跳转、外链等常见交互已预置。',
+    category: 'form',
+    preview: ['#0f172a', '#334155'],
+    build: buildSecureLoginTemplate,
+  },
+  {
+    id: 'project-board',
+    name: '项目推进看板',
+    description: '进度、时间线、团队与风险视图，内置风险聚焦动作。',
+    category: 'management',
+    preview: ['#f3f4f6', '#9ca3af'],
+    build: buildProjectBoardTemplate,
+  },
 ]
 
-// 根据分类获取模板
-export function getTemplatesByCategory(category: PageTemplate['category']): PageTemplate[] {
-  return templates.filter((t) => t.category === category)
+export function getTemplateById(id: string): PageTemplate | undefined {
+  return templates.find((item) => item.id === id)
 }
 
-// 根据ID获取模板
-export function getTemplateById(id: string): PageTemplate | undefined {
-  return templates.find((t) => t.id === id)
+export function instantiateTemplate(id: string): PageTemplateInstance | undefined {
+  const template = getTemplateById(id)
+  if (!template) return undefined
+  return template.build()
+}
+
+export function getTemplatesByCategory(category: TemplateCategory): PageTemplate[] {
+  return templates.filter((item) => item.category === category)
 }

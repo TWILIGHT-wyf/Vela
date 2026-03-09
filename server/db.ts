@@ -16,12 +16,3 @@ export async function connectDB() {
     // 不退出进程，让 AI 代理和测试接口继续可用
   }
 }
-
-export async function disconnectDB() {
-  try {
-    await mongoose.disconnect()
-    console.log('✅ MongoDB 断开连接')
-  } catch (error) {
-    console.error('❌ MongoDB 断开连接失败:', error)
-  }
-}

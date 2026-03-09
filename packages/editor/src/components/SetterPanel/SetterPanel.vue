@@ -1,12 +1,12 @@
 <template>
-  <div class="setter-panel-root sider-root properties-panel">
+  <div class="setter-panel-root sider-root properties-panel" data-testid="setter-panel">
     <!-- 选中 Page 根节点或无选中时，显示页面设置 -->
     <template v-if="showPageSettings">
       <PageSettingPane />
     </template>
 
     <!-- 选中普通组件时显示组件设置面板 -->
-    <el-tabs v-else v-model="activeTab" class="setter-tabs" stretch>
+    <el-tabs v-else v-model="activeTab" class="setter-tabs" stretch data-testid="setter-tabs">
       <el-tab-pane label="属性" name="props">
         <PropsPane :node="selectedComponent" />
       </el-tab-pane>
@@ -58,6 +58,7 @@ const activeTab = ref('props')
 <style scoped>
 .setter-panel-root {
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;

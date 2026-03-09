@@ -92,7 +92,7 @@ function parseGridPlacement(value: unknown): GridPlacement | undefined {
 }
 
 export interface ResolveLayoutParams {
-  node: Pick<NodeSchema, 'geometry' | 'container' | 'style'>
+  node: Pick<NodeSchema, 'geometry' | 'layoutItem' | 'container' | 'style'>
   parentChildMode: LayoutMode
   pageDefaultMode: LayoutMode
 }
@@ -103,6 +103,7 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
   const childMode = params.node.container?.mode ?? nodeMode
   const style = params.node.style
   const geometry = params.node.geometry
+  const layoutItem = params.node.layoutItem
 
   const x =
     nodeMode === 'free'
@@ -134,17 +135,27 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
       : parseRotationFromTransform(style)
 
   const gridColumnPlacement =
-    geometry?.mode === 'grid'
-      ? normalizeGridPlacement(geometry.gridColumnStart, geometry.gridColumnEnd)
-      : nodeMode === 'grid'
-        ? parseGridPlacement(style?.gridColumn)
-        : undefined
+    layoutItem?.mode === 'grid'
+      ? normalizeGridPlacement(
+          layoutItem.placement.colStart ?? 1,
+          (layoutItem.placement.colStart ?? 1) + Math.max(1, layoutItem.placement.colSpan),
+        )
+      : geometry?.mode === 'grid'
+        ? normalizeGridPlacement(geometry.gridColumnStart, geometry.gridColumnEnd)
+        : nodeMode === 'grid'
+          ? parseGridPlacement(style?.gridColumn)
+          : undefined
   const gridRowPlacement =
-    geometry?.mode === 'grid'
-      ? normalizeGridPlacement(geometry.gridRowStart, geometry.gridRowEnd)
-      : nodeMode === 'grid'
-        ? parseGridPlacement(style?.gridRow)
-        : undefined
+    layoutItem?.mode === 'grid'
+      ? normalizeGridPlacement(
+          layoutItem.placement.rowStart ?? 1,
+          (layoutItem.placement.rowStart ?? 1) + Math.max(1, layoutItem.placement.rowSpan),
+        )
+      : geometry?.mode === 'grid'
+        ? normalizeGridPlacement(geometry.gridRowStart, geometry.gridRowEnd)
+        : nodeMode === 'grid'
+          ? parseGridPlacement(style?.gridRow)
+          : undefined
 
   return {
     mode: nodeMode,

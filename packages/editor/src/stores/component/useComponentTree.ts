@@ -1,13 +1,18 @@
 import { ref } from 'vue'
 import {
-  buildFrTemplate,
-  countTracks,
-  parseFrTemplate,
+  normalizeGridContainerFields,
+  syncRowsTemplate,
   type GridContainerLayout,
-  type GridNodeGeometry,
   type NodeSchema,
 } from '@vela/core'
+import { getComponentDefinition, resolveComponentAlias } from '@vela/core/contracts'
 import { cloneDeep } from 'lodash-es'
+import {
+  maxOccupiedRow,
+  nodeToPlacement,
+  resolveGridPlacements,
+  writePlacementToNode,
+} from '@/utils/gridPlacement'
 import type { ComponentIndexContext } from './useComponentIndex'
 import type { ComponentSelectionContext } from './useComponentSelection'
 
@@ -27,55 +32,82 @@ export function useComponentTree(
    */
   const rootNode = ref<NodeSchema | null>(null)
 
-  function clampInt(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, Math.round(value)))
-  }
-
   function normalizeGridContainer(parent: NodeSchema | null | undefined) {
     if (!parent || parent.container?.mode !== 'grid') return
 
     const container = parent.container as GridContainerLayout
     const children = parent.children || []
-    const normalizedColumns =
-      typeof container.columns === 'string' && container.columns.trim().length > 0
-        ? container.columns
-        : '1fr'
-    const colCount = Math.max(1, countTracks(normalizedColumns))
 
-    container.columns = normalizedColumns
+    // ── 使用共享纯函数规范化容器字段 ──
+    const { templateMode, colCount } = normalizeGridContainerFields(container)
 
-    const targetRowCount = Math.max(children.length, 1)
-    const rowValues = parseFrTemplate(container.rows || '1fr')
-
-    while (rowValues.length < targetRowCount) {
-      rowValues.push(1)
-    }
-    while (rowValues.length > targetRowCount) {
-      rowValues.pop()
-    }
-
-    container.rows = buildFrTemplate(rowValues)
-
-    children.forEach((child, index) => {
-      const existingGeometry =
-        child.geometry?.mode === 'grid' ? (child.geometry as GridNodeGeometry) : undefined
-
-      const colStart = clampInt(existingGeometry?.gridColumnStart ?? 1, 1, colCount)
-      const colEnd = clampInt(
-        existingGeometry?.gridColumnEnd ?? colCount + 1,
-        colStart + 1,
-        colCount + 1,
-      )
-
-      child.geometry = {
-        ...(existingGeometry || {}),
-        mode: 'grid',
-        gridColumnStart: colStart,
-        gridColumnEnd: colEnd,
-        gridRowStart: index + 1,
-        gridRowEnd: index + 2,
+    // ── 容器型节点判断 ──
+    const isContainerNode = (node: NodeSchema): boolean => {
+      if (
+        node.container?.mode === 'grid' ||
+        node.container?.mode === 'free' ||
+        node.container?.mode === 'flow'
+      ) {
+        return true
       }
+      const componentName = node.component || node.componentName
+      if (!componentName) return Array.isArray(node.children)
+      const definition = getComponentDefinition(resolveComponentAlias(componentName))
+      if (definition?.isContainer) return true
+      return Array.isArray(node.children)
+    }
+
+    // ── Legacy sizing 清理 ──
+    const isPercentage100 = (value: unknown): boolean =>
+      typeof value === 'string' && value.trim() === '100%'
+
+    const sanitizeLegacyGridItemSizing = (node: NodeSchema): void => {
+      if (!node.style || isContainerNode(node)) return
+      const width100 = isPercentage100(node.style.width)
+      const height100 = isPercentage100(node.style.height)
+      const minHeight100 = isPercentage100(node.style.minHeight)
+      if (!width100 || (!height100 && !minHeight100)) return
+      delete node.style.width
+      if (height100) delete node.style.height
+      if (minHeight100) delete node.style.minHeight
+    }
+
+    // ── 解析放置 ──
+    const placementMap = resolveGridPlacements(
+      children.map((child, index) => {
+        sanitizeLegacyGridItemSizing(child)
+        const hasExplicitPlacement =
+          child.layoutItem?.mode === 'grid' || child.geometry?.mode === 'grid'
+        return {
+          id: child.id,
+          explicit: hasExplicitPlacement,
+          placement: hasExplicitPlacement
+            ? nodeToPlacement(child, colCount)
+            : {
+                colStart: 1,
+                colSpan: isContainerNode(child)
+                  ? templateMode === 'autoFit'
+                    ? 1
+                    : Math.min(6, colCount)
+                  : 3,
+                rowStart: index + 1,
+                rowSpan: isContainerNode(child) ? 2 : 2,
+              },
+        }
+      }),
+      colCount,
+    )
+
+    // ── 写入放置结果 ──
+    children.forEach((child) => {
+      sanitizeLegacyGridItemSizing(child)
+      const placement = placementMap.get(child.id)
+      if (!placement) return
+      writePlacementToNode(child, placement)
     })
+
+    // ── 使用共享函数同步行模板 ──
+    syncRowsTemplate(container, maxOccupiedRow(placementMap.values()))
   }
 
   function normalizeGridHierarchy(node: NodeSchema | null | undefined) {

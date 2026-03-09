@@ -56,7 +56,7 @@ function handleItemClick(item: BreadcrumbItem) {
     emit('component-event', {
       componentId: props.id,
       eventType: 'click',
-      actions: [{ id: 'nav', type: 'navigate-page', targetId: item.pageId }],
+      actions: [{ id: 'nav', type: 'navigate', targetId: item.pageId }],
     })
     return
   }
