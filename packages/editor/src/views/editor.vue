@@ -7,7 +7,6 @@ import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
 import { useHistoryStore } from '@/stores/history'
 import { useRuntimePlugins } from '@/composables/useRuntimePlugins'
-import { convertLayout } from '@/utils/layoutConverter'
 import type { LayoutMode } from '@vela/core'
 
 // Components
@@ -164,10 +163,7 @@ async function switchCanvasMode(mode: LayoutMode) {
     })
 
     switchingLayout.value = true
-    const converted = convertLayout(rootNode.value, targetMode)
-    componentStore.setTree(converted)
-    componentStore.syncToProjectStore()
-    projectStore.updatePageConfig({ defaultLayoutMode: targetMode })
+    uiStore.setCanvasMode(targetMode)
     const successMap: Record<string, string> = {
       free: '已切换到自由布局',
       grid: '已切换到网格编排',

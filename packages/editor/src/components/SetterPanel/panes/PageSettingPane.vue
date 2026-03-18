@@ -125,13 +125,14 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { InfoFilled, Rank, Grid } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
+import { useUIStore } from '@/stores/ui'
 import { useSizeStore, DEVICE_PRESETS } from '@/stores/size'
 import { storeToRefs } from 'pinia'
 import type { LayoutMode } from '@vela/core'
-import { convertLayout } from '@/utils/layoutConverter'
 
 const projectStore = useProjectStore()
 const componentStore = useComponent()
+const uiStore = useUIStore()
 const sizeStore = useSizeStore()
 
 const { currentPage } = storeToRefs(projectStore)
@@ -197,12 +198,7 @@ async function handleLayoutChange(mode: LayoutMode) {
       type: 'warning',
     })
 
-    if (rootNode.value) {
-      const converted = convertLayout(rootNode.value, targetMode)
-      componentStore.setTree(converted)
-      componentStore.syncToProjectStore()
-    }
-    projectStore.updatePageConfig({ defaultLayoutMode: targetMode })
+    uiStore.setCanvasMode(targetMode)
     const labelMap: Record<string, string> = { free: '自由', grid: '网格编排' }
     ElMessage.success(`已切换到${labelMap[targetMode] || targetMode}布局`)
   } catch {

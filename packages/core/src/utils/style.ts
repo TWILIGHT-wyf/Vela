@@ -208,20 +208,44 @@ export function generateLayoutCSS(
     if (geometry?.mode === 'grid') {
       css.gridColumn = `${geometry.gridColumnStart} / ${geometry.gridColumnEnd}`
       css.gridRow = `${geometry.gridRowStart} / ${geometry.gridRowEnd}`
+    } else {
+      if (style?.gridColumn !== undefined) css.gridColumn = style.gridColumn
+      if (style?.gridRow !== undefined) css.gridRow = style.gridRow
     }
 
-    // No explicit width/height: CSS grid's default justify-self/align-self:stretch fills the cell.
-    // Setting width:100% + margin causes overflow (100% + margins > cell width).
+    const explicitWidth = toCssLength(geometry?.width ?? style?.width)
+    const explicitHeight = toCssLength(geometry?.height ?? style?.height)
+    const minWidth = toCssLength(geometry?.minWidth ?? style?.minWidth)
+    const maxWidth = toCssLength(geometry?.maxWidth ?? style?.maxWidth)
+    const minHeight = toCssLength(geometry?.minHeight ?? style?.minHeight)
+    const maxHeight = toCssLength(geometry?.maxHeight ?? style?.maxHeight)
+
+    // Keep grid item sizing consistent between editor and runtime:
+    // 1) explicit width/height (fixed mode) wins
+    // 2) otherwise fill cell only when no outer margin exists
     const hasMargin =
       style?.margin !== undefined ||
       style?.marginTop !== undefined ||
       style?.marginRight !== undefined ||
       style?.marginBottom !== undefined ||
       style?.marginLeft !== undefined
-    if (!hasMargin) {
+
+    if (explicitWidth !== undefined) {
+      css.width = explicitWidth
+    } else if (!hasMargin) {
       css.width = '100%'
+    }
+
+    if (explicitHeight !== undefined) {
+      css.height = explicitHeight
+    } else if (!hasMargin) {
       css.height = '100%'
     }
+
+    if (minWidth !== undefined) css.minWidth = minWidth
+    if (maxWidth !== undefined) css.maxWidth = maxWidth
+    if (minHeight !== undefined) css.minHeight = minHeight
+    if (maxHeight !== undefined) css.maxHeight = maxHeight
 
     const margin = toCssLength(style?.margin)
     if (margin !== undefined) css.margin = margin

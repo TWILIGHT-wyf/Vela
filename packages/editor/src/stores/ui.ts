@@ -10,6 +10,7 @@ import { convertLayout } from '@/utils/layoutConverter'
  * 管理画布缩放、平移、面板显示等 UI 状态
  */
 export const useUIStore = defineStore('ui', () => {
+  type EditorCanvasMode = 'free' | 'grid'
   // ========== Canvas State ==========
 
   /**
@@ -88,7 +89,7 @@ export const useUIStore = defineStore('ui', () => {
    * 画布模式（单一真源：rootNode.container.mode）
    * page.config.defaultLayoutMode 仅作为兜底值
    */
-  const canvasMode = computed<LayoutMode>(() => {
+  const canvasMode = computed<EditorCanvasMode>(() => {
     const rootMode = rootNode.value?.container?.mode
     if (rootMode === 'free') {
       return 'free'
@@ -157,8 +158,8 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 设置画布模式
    */
-  function setCanvasMode(mode: LayoutMode) {
-    const normalizedMode: LayoutMode = mode === 'free' ? 'free' : 'grid'
+  function setCanvasMode(mode: EditorCanvasMode | LayoutMode) {
+    const normalizedMode: EditorCanvasMode = mode === 'free' ? 'free' : 'grid'
     const root = rootNode.value
     if (root && root.container?.mode !== normalizedMode) {
       const converted = convertLayout(root, normalizedMode)
