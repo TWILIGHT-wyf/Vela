@@ -20,6 +20,8 @@
       "@vela/core/*": ["packages/core/src/*"],
       "@vela/ui": ["packages/ui"],
       "@vela/ui/*": ["packages/ui/*"],
+      "@vela/ui-react": ["packages/ui-react/src"],
+      "@vela/ui-react/*": ["packages/ui-react/src/*"],
       "@vela/materials": ["packages/materials/src"],
       "@vela/materials/*": ["packages/materials/src/*"],
       "@vela/renderer": ["packages/renderer/src"],
