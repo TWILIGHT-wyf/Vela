@@ -1,10 +1,6 @@
 import type { IRPage, IRProject } from '../../pipeline/ir/ir'
 import { createDiagnostic, type CompileDiagnostic } from '../../pipeline/validate/diagnostics'
-import {
-  REACT_TAG_MAP,
-  WRAPPER_COMPONENTS,
-  HTML_TAGS,
-} from '@vela/core/contracts'
+import { REACT_TAG_MAP, WRAPPER_COMPONENTS, HTML_TAGS } from '@vela/core/contracts'
 import { createActionExecutorRuntimeSource } from '../shared/createActionExecutorRuntime'
 
 export interface ReactEmitterOptions {
@@ -115,9 +111,8 @@ function createPageSource(
   descriptor: ReactPageDescriptor,
   projectActions: unknown[],
   projectApis: unknown[],
-  typescript: boolean,
 ): string {
-  const header = typescript ? '// @ts-nocheck\n' : ''
+  const header = ''
   const rootLiteral = descriptor.page.root ? JSON.stringify(descriptor.page.root, null, 2) : 'null'
   const runtimeMaps = collectNodeRuntimeMaps(descriptor.page.root)
   const pageActions = descriptor.page.raw.actions ?? []
@@ -183,12 +178,7 @@ function createPageDescriptors(
       routePath: page.type === 'page' ? normalizeRoutePath(page.path, page.name, index) : undefined,
       source: '',
     }
-    descriptor.source = createPageSource(
-      descriptor,
-      projectActions,
-      projectApis,
-      options.typescript,
-    )
+    descriptor.source = createPageSource(descriptor, projectActions, projectApis)
     descriptors.push(descriptor)
   })
 
@@ -439,15 +429,13 @@ declare module '@tanstack/react-router' {
 `
 }
 
-function createNodeRendererRuntime(typescript: boolean): string {
-  const tsNoCheck = typescript ? '// @ts-nocheck\n' : ''
-
+function createNodeRendererRuntime(): string {
   // Serialize maps from the unified registry so generated code stays in sync
   const wrapperArr = JSON.stringify([...WRAPPER_COMPONENTS])
   const htmlArr = JSON.stringify([...HTML_TAGS])
   const reactMapStr = JSON.stringify(REACT_TAG_MAP, null, 2)
 
-  return `${tsNoCheck}import { createElement } from 'react'
+  return `import { createElement } from 'react'
 import * as VelaUI from '@vela/ui-react'
 
 const WRAPPER_COMPONENTS = new Set(${wrapperArr})
@@ -941,7 +929,7 @@ export function emitReactProject(
     },
     {
       path: `src/runtime/nodeRenderer.${extension}`,
-      content: createNodeRendererRuntime(options.typescript),
+      content: createNodeRendererRuntime(),
     },
     {
       path: `src/runtime/actionExecutor.${configExtension}`,

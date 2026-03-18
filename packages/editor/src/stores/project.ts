@@ -194,9 +194,9 @@ export const useProjectStore = defineStore('project', () => {
       if (!page.config) page.config = { defaultLayoutMode: 'grid' }
       page.config.defaultLayoutMode = normalizeLayoutMode(page.config.defaultLayoutMode)
       if (page.children) {
-        const normalizedContainer =
+        const normalizedContainer: NodeSchema['container'] =
           page.config.defaultLayoutMode === 'free'
-            ? { mode: 'free' }
+            ? ({ mode: 'free' } as const)
             : createGridContainer(page.children.container)
         page.children.container =
           page.config.defaultLayoutMode === 'free'

@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useRef } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 export interface HtmlProps extends React.HTMLAttributes<HTMLDivElement> {
   content: string
@@ -12,6 +12,8 @@ export interface HtmlProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Html = forwardRef<HTMLDivElement, HtmlProps>(
   ({ content, sanitize = true, allowScripts = false, style, className, ...props }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null)
+
+    useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, [])
 
     useEffect(() => {
       if (!containerRef.current || !allowScripts) return
@@ -45,15 +47,7 @@ export const Html = forwardRef<HTMLDivElement, HtmlProps>(
 
     return (
       <div
-        ref={(node) => {
-          // Handle both refs
-          if (typeof ref === 'function') {
-            ref(node)
-          } else if (ref) {
-            ref.current = node
-          }
-          containerRef.current = node
-        }}
+        ref={containerRef}
         className={`vela-html ${className || ''}`}
         style={{
           ...style,
@@ -62,7 +56,7 @@ export const Html = forwardRef<HTMLDivElement, HtmlProps>(
         {...props}
       />
     )
-  }
+  },
 )
 
 Html.displayName = 'Html'

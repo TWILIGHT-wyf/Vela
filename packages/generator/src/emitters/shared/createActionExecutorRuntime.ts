@@ -5,11 +5,11 @@ export interface ActionExecutorRuntimeOptions {
 }
 
 export function createActionExecutorRuntimeSource(options: ActionExecutorRuntimeOptions): string {
-  const tsNoCheck = options.typescript ? '// @ts-nocheck\n' : ''
+  void options
   const actionTargetDataAttributes = JSON.stringify(ACTION_TARGET_DATA_ATTRIBUTES, null, 2)
   const actionConfirmDefaultMessage = JSON.stringify(ACTION_CONFIRM_DEFAULT_MESSAGE)
 
-  return `${tsNoCheck}function isRecord(value) {
+  return `function isRecord(value) {
   return typeof value === 'object' && value !== null
 }
 
