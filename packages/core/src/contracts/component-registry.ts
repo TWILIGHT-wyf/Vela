@@ -126,9 +126,6 @@ export const COMPONENT_REGISTRY: readonly ComponentDefinition[] = [
   // ── Data ──────────────────────────────────────────────────
   { name: 'table', category: 'data', vueTag: 'vTable', reactComponent: 'Table' },
   { name: 'list', category: 'data', vueTag: 'vList', reactComponent: 'List' },
-  { name: 'timeline', category: 'data', vueTag: 'vTimeline', reactComponent: 'Timeline' },
-  { name: 'cardGrid', category: 'data', vueTag: 'vCardGrid', reactComponent: 'CardGrid' },
-  { name: 'pivot', category: 'data', vueTag: 'vPivot', reactComponent: 'Pivot' },
 
   // ── Form ──────────────────────────────────────────────────
   { name: 'select', category: 'form', vueTag: 'vSelect', reactComponent: 'Select' },
@@ -168,23 +165,6 @@ export const COMPONENT_REGISTRY: readonly ComponentDefinition[] = [
   { name: 'markdown', category: 'content', vueTag: 'vMarkdown', reactComponent: 'Markdown' },
   { name: 'html', category: 'content', vueTag: 'vHtml', reactComponent: 'Html' },
   { name: 'iframe', category: 'content', vueTag: 'vIframe', reactComponent: 'Iframe' },
-
-  // ── GIS ───────────────────────────────────────────────────
-  { name: 'map', category: 'gis', vueTag: 'vMap', reactComponent: 'Map' },
-  { name: 'marker', category: 'gis', vueTag: 'vMarker', reactComponent: null },
-  { name: 'heatLayer', category: 'gis', vueTag: 'vHeatLayer', reactComponent: null },
-  { name: 'geoJsonLayer', category: 'gis', vueTag: 'vGeoJsonLayer', reactComponent: null },
-  { name: 'clusterLayer', category: 'gis', vueTag: 'vClusterLayer', reactComponent: null },
-  { name: 'tileLayer', category: 'gis', vueTag: 'vTileLayer', reactComponent: null },
-  { name: 'vectorLayer', category: 'gis', vueTag: 'vVectorLayer', reactComponent: null },
-  { name: 'legend', category: 'gis', vueTag: 'vLegend', reactComponent: null },
-  { name: 'scale', category: 'gis', vueTag: 'vScale', reactComponent: null },
-  { name: 'layers', category: 'gis', vueTag: 'vLayers', reactComponent: null },
-
-  // ── Advanced ──────────────────────────────────────────────
-  { name: 'scripting', category: 'advanced', vueTag: 'vScripting', reactComponent: null },
-  { name: 'state', category: 'advanced', vueTag: 'vState', reactComponent: null },
-  { name: 'trigger', category: 'advanced', vueTag: 'vTrigger', reactComponent: null },
 
   // ── Navigation ────────────────────────────────────────────
   { name: 'navButton', category: 'navigation', vueTag: 'vNavButton', reactComponent: 'NavButton' },

@@ -20,7 +20,7 @@ type ComponentLike = LegacySuggestionComponent & { id?: string }
  */
 function buildComponentCapabilityDoc(): string {
   // Keep the capability list explicit until schema metadata is fully normalized.
-  return '- base: 地图基础图层\n- lineChart: 折线图[支持数据源]\n- barChart: 柱状图[支持数据源]\n- stat: KPI统计\n- table: 数据表[支持数据源]'
+  return '- lineChart: 折线图[支持数据源]\n- barChart: 柱状图[支持数据源]\n- stat: KPI统计\n- table: 数据表[支持数据源]\n- TextInput: 文本输入\n- select: 下拉选择'
 }
 
 /**
@@ -28,17 +28,6 @@ function buildComponentCapabilityDoc(): string {
  */
 const DEFAULT_WHITELIST: WhitelistConfig = {
   allowedComponents: [
-    // 地图
-    'base',
-    'tile',
-    'vector',
-    'geojson',
-    'marker',
-    'cluster',
-    'heat',
-    'legend',
-    'scale',
-    'layers',
     // 图表
     'lineChart',
     'barChart',
@@ -60,9 +49,6 @@ const DEFAULT_WHITELIST: WhitelistConfig = {
     // 数据
     'table',
     'list',
-    'timeline',
-    'cardGrid',
-    'pivot',
     // 控件
     'select',
     'multiSelect',
@@ -87,10 +73,6 @@ const DEFAULT_WHITELIST: WhitelistConfig = {
     'markdown',
     'html',
     'iframe',
-    // 高级
-    'scripting',
-    'trigger',
-    'state',
   ],
   allowedPropPrefixes: ['label', 'title', 'value', 'placeholder', 'options', 'dataSource'],
   forbiddenProps: ['__proto__', 'constructor', 'prototype', 'eval', 'Function'],

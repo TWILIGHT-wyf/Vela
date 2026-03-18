@@ -134,9 +134,6 @@ export function useComponentDataSource(component: Ref<NodeSchema>) {
 
         case 'Table':
         case 'List':
-        case 'Timeline':
-        case 'CardGrid':
-        case 'Pivot':
           // Most list/table components expect 'data' prop
           if (ds.dataPath) props.data = getValueByPath(data, ds.dataPath)
           break

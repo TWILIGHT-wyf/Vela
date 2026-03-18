@@ -2,5 +2,7 @@
 export * from './types'
 export * from './utils'
 export * from './constants'
-export * from './model'
-export * from './plugins'
+
+// NOTE:
+// model/plugins are internal editing-engine implementation details.
+// They are intentionally NOT part of the public root API surface.

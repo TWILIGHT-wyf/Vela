@@ -27,9 +27,6 @@ export { Modal } from './components/Modal'
 // Data Components
 export { Table } from './components/Table'
 export { List } from './components/List'
-export { CardGrid } from './components/CardGrid'
-export { Pivot } from './components/Pivot'
-export { Timeline } from './components/Timeline'
 
 // Form Components
 export { Select } from './components/Select'
@@ -62,7 +59,6 @@ export { Html } from './components/Html'
 // Media Components
 export { Image } from './components/Image'
 export { Video } from './components/Video'
-export { Map } from './components/Map'
 
 // Chart Components (re-export from echarts-for-react)
 export { default as ReactECharts } from 'echarts-for-react'
@@ -86,9 +82,6 @@ export type { TabsProps, TabPaneProps } from './components/Tabs'
 export type { ModalProps } from './components/Modal'
 export type { TableProps } from './components/Table'
 export type { ListProps } from './components/List'
-export type { CardGridProps, CardGridItem } from './components/CardGrid'
-export type { PivotProps } from './components/Pivot'
-export type { TimelineProps, TimelineItem } from './components/Timeline'
 export type { SelectProps } from './components/Select'
 export type { TextInputProps } from './components/TextInput'
 export type { TextareaInputProps } from './components/TextareaInput'
@@ -115,4 +108,3 @@ export type { NavButtonProps } from './components/NavButton'
 export type { PaginationProps } from './components/Pagination'
 export type { ImageProps } from './components/Image'
 export type { VideoProps } from './components/Video'
-export type { MapProps } from './components/Map'

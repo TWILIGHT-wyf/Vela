@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: '@twi1i9ht/visual-lib',
-  description: '数据可视化组件库 - 图表、KPI、布局、地图等组件',
+  description: '数据可视化组件库 - 图表、KPI、布局、表单等常用组件',
 
   // Vercel 部署到根域名用 '/'，GitHub Pages 用 '/visual-lib/'
   base: '/',
@@ -70,30 +70,11 @@ export default defineConfig({
           ],
         },
         {
-          text: '地图组件',
-          collapsed: false,
-          items: [
-            { text: 'vMap 地图容器', link: '/components/map/map' },
-            { text: 'vMarker 标记点', link: '/components/map/marker' },
-            { text: 'vHeatLayer 热力图层', link: '/components/map/heat-layer' },
-            { text: 'vClusterLayer 聚合图层', link: '/components/map/cluster-layer' },
-            { text: 'vGeoJsonLayer GeoJSON图层', link: '/components/map/geojson-layer' },
-            { text: 'vTileLayer 瓦片图层', link: '/components/map/tile-layer' },
-            { text: 'vVectorLayer 矢量图层', link: '/components/map/vector-layer' },
-            { text: 'vLegend 图例', link: '/components/map/legend' },
-            { text: 'vScale 比例尺', link: '/components/map/scale' },
-            { text: 'vLayers 图层控制', link: '/components/map/layers' },
-          ],
-        },
-        {
           text: '数据组件',
           collapsed: true,
           items: [
             { text: 'vTable 表格', link: '/components/data/table' },
             { text: 'vList 列表', link: '/components/data/list' },
-            { text: 'vTimeline 时间线', link: '/components/data/timeline' },
-            { text: 'vCardGrid 卡片网格', link: '/components/data/card-grid' },
-            { text: 'vPivot 透视表', link: '/components/data/pivot' },
           ],
         },
         {

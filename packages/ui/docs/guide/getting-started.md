@@ -1,14 +1,13 @@
 # 快速开始
 
-`@twi1i9ht/visual-lib` 是一个基于 Vue 3 的数据可视化组件库，提供图表、KPI、布局、地图等开箱即用的组件。
+`@twi1i9ht/visual-lib` 是一个基于 Vue 3 的数据可视化组件库，提供图表、KPI、布局等开箱即用的组件。
 
 ## 特性
 
-- 🎨 **50+ 组件** — 图表、KPI、布局、地图、控件等
+- 🎨 **精选常用组件** — 图表、KPI、布局、控件等
 - 📦 **开箱即用** — 无需复杂配置，导入即可使用
 - 🔧 **高度可定制** — 丰富的 Props 配置项
 - 📊 **ECharts 驱动** — 图表组件基于 ECharts，功能强大
-- 🗺️ **Leaflet 地图** — 地图组件基于 Leaflet，支持多种图层
 - 💪 **TypeScript** — 完整的类型定义
 
 ## 环境要求
@@ -42,7 +41,7 @@ yarn add @twi1i9ht/visual-lib
 # 图表组件需要
 pnpm add echarts vue-echarts
 
-# 地图组件需要（可选）
+# 如项目自行使用地图能力（组件库不内置地图组件）
 pnpm add leaflet
 ```
 
@@ -52,15 +51,12 @@ pnpm add leaflet
 
 ```vue
 <script setup>
-import { lineChart, vMap, vMarker } from '@twi1i9ht/visual-lib'
+import { lineChart, vText } from '@twi1i9ht/visual-lib'
 </script>
 
 <template>
   <lineChart :data="[10, 20, 30]" title="销售趋势" />
-
-  <vMap :center-lat="39.9" :center-lng="116.4" :zoom="12">
-    <vMarker :lat="39.9" :lng="116.4" title="北京" />
-  </vMap>
+  <vText content="欢迎使用 Vela UI" :font-size="24" />
 </template>
 ```
 
@@ -82,13 +78,13 @@ app.mount('#app')
 ```vue
 <template>
   <line-chart :data="[10, 20, 30]" />
-  <v-map :center-lat="39.9" :center-lng="116.4" />
+  <v-text content="欢迎使用" />
 </template>
 ```
 
 ## 引入样式
 
-如果使用地图组件，需要引入 Leaflet 样式：
+如果你的业务项目自行使用 Leaflet，需要引入 Leaflet 样式：
 
 ```ts
 // main.ts

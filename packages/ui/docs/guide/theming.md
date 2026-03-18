@@ -57,29 +57,7 @@ const customOption = {
 
 ## 地图主题
 
-### 自定义瓦片图层
-
-```vue
-<script setup>
-import { vMap } from '@twi1i9ht/visual-lib'
-
-// 使用暗色主题瓦片
-const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-</script>
-
-<template>
-  <vMap :center-lat="39.9" :center-lng="116.4" :zoom="12" :tile-url="darkTileUrl" />
-</template>
-```
-
-### 常用瓦片图层
-
-| 名称          | URL                                                                                                |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| OpenStreetMap | `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`                                               |
-| CartoDB Light | `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`                                   |
-| CartoDB Dark  | `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`                                    |
-| 高德地图      | `https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}` |
+当前组件库不内置地图组件。若业务项目自行集成 Leaflet，可按 Leaflet 官方方式定制瓦片图层与主题。
 
 ## CSS 变量
 

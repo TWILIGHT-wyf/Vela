@@ -80,11 +80,8 @@ export const vRow = componentRegistry.vRow
 export const vCol = componentRegistry.vCol
 
 // 数据组件
-export const vTimeline = componentRegistry.vTimeline
 export const vTable = componentRegistry.vTable
 export const vList = componentRegistry.vList
-export const vCardGrid = componentRegistry.vCardGrid
-export const vPivot = componentRegistry.vPivot
 
 // 控件组件
 export const vButtonGroup = componentRegistry.vButtonGroup
@@ -117,11 +114,6 @@ export const vMarkdown = componentRegistry.vMarkdown
 // 媒体组件
 export const vImage = componentRegistry.vImage
 export const vVideo = componentRegistry.vVideo
-
-// 高级组件
-export const vScripting = componentRegistry.vScripting
-export const vState = componentRegistry.vState
-export const vTrigger = componentRegistry.vTrigger
 
 // Group 组件
 export const vGroup = componentRegistry.vGroup

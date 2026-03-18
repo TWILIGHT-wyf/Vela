@@ -686,10 +686,9 @@ function buildApprovalCenterTemplate(): PageTemplateInstance {
       }),
       buildGridNode({
         id: 'tpl_approval_timeline',
-        component: 'timeline',
+        component: 'list',
         area: [1, 8, 7, 10],
         props: {
-          mode: 'left',
           data: [
             {
               title: '提交申请',
@@ -940,10 +939,9 @@ function buildProjectBoardTemplate(): PageTemplateInstance {
       }),
       buildGridNode({
         id: 'tpl_board_timeline',
-        component: 'timeline',
+        component: 'list',
         area: [1, 7, 2, 10],
         props: {
-          mode: 'left',
           data: [
             {
               title: '需求冻结',
@@ -960,18 +958,21 @@ function buildProjectBoardTemplate(): PageTemplateInstance {
       }),
       buildGridNode({
         id: 'tpl_board_member',
-        component: 'cardGrid',
+        component: 'table',
         area: [7, 13, 2, 7],
         props: {
-          columns: 2,
-          gap: 12,
-          showImage: false,
-          showTags: true,
+          border: true,
+          stripe: true,
+          columns: [
+            { prop: 'role', label: '角色' },
+            { prop: 'count', label: '人数' },
+            { prop: 'stack', label: '技能' },
+          ],
           data: [
-            { title: '产品经理', description: '1 人', tags: ['需求', '排期'] },
-            { title: '前端开发', description: '3 人', tags: ['Vue', 'TS'] },
-            { title: '后端开发', description: '2 人', tags: ['Node', 'API'] },
-            { title: '测试', description: '2 人', tags: ['功能', '回归'] },
+            { role: '产品经理', count: '1 人', stack: '需求/排期' },
+            { role: '前端开发', count: '3 人', stack: 'Vue/TS' },
+            { role: '后端开发', count: '2 人', stack: 'Node/API' },
+            { role: '测试', count: '2 人', stack: '功能/回归' },
           ],
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),

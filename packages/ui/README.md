@@ -2,11 +2,11 @@
 
 Vela LowCode UI Component Library - 数据可视化组件库 for Vue 3
 
-基于 Vue 3 + TypeScript + ECharts 的数据可视化大屏组件库，提供开箱即用的图表、KPI、布局等50+组件。
+基于 Vue 3 + TypeScript + ECharts 的数据可视化大屏组件库，提供开箱即用的图表、KPI、布局等常用组件。
 
 ## ✨ 特性
 
-- 🎨 **50+ 组件** - 图表、KPI、布局、表单控件等开箱即用
+- 🎨 **精选常用组件** - 图表、KPI、布局、表单控件等开箱即用
 - 📊 **ECharts 集成** - 深度封装 ECharts，支持所有图表类型
 - 🎯 **TypeScript** - 完整的类型定义
 - 🌳 **Tree-shaking** - 按需引入，减小打包体积
@@ -89,9 +89,6 @@ const xAxis = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 - `vTable` - 表格
 - `vList` - 列表
-- `vTimeline` - 时间线
-- `vCardGrid` - 卡片网格
-- `vPivot` - 透视表
 
 ### 表单控件
 
@@ -113,12 +110,6 @@ const xAxis = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 - `vHtml` - HTML 内容
 - `vMarkdown` - Markdown
 - `vIframe` - 内嵌页面
-
-### 高级组件
-
-- `vScripting` - 脚本执行
-- `vState` - 状态管理
-- `vTrigger` - 事件触发器
 
 ## 🎯 低代码平台集成
 
