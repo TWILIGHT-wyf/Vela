@@ -1,62 +1,84 @@
 {
   "name": "@vela/core",
   "version": "1.0.0",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
-  "types": "src/index.ts",
+  "description": "Vela Low-Code Platform core schemas, contracts, and utilities",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./types": "./src/types/index.ts",
-    "./types/*": "./src/types/*.ts",
-    "./contracts": "./src/contracts/index.ts",
-    "./contracts/*": "./src/contracts/*.ts",
-    "./runtime": "./src/runtime/index.ts",
-    "./runtime/*": "./src/runtime/*.ts",
-    "./validation": "./src/validation/index.ts",
-    "./validation/*": "./src/validation/*.ts",
-    "./utils": "./src/utils/index.ts",
-    "./constants": "./src/constants/index.ts",
-    "./*": "./src/*.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.cjs"
+    },
+    "./types/*": {
+      "types": "./dist/types/*.d.ts",
+      "import": "./dist/types/*.js",
+      "require": "./dist/types/*.cjs"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js",
+      "require": "./dist/contracts/index.cjs"
+    },
+    "./contracts/*": {
+      "types": "./dist/contracts/*.d.ts",
+      "import": "./dist/contracts/*.js",
+      "require": "./dist/contracts/*.cjs"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "import": "./dist/validation/index.js",
+      "require": "./dist/validation/index.cjs"
+    },
+    "./validation/*": {
+      "types": "./dist/validation/*.d.ts",
+      "import": "./dist/validation/*.js",
+      "require": "./dist/validation/*.cjs"
+    },
+    "./package.json": "./package.json"
   },
-  "typesVersions": {
-    "*": {
-      "types": [
-        "./src/types/index.ts"
-      ],
-      "types/*": [
-        "./src/types/*.ts"
-      ],
-      "contracts": [
-        "./src/contracts/index.ts"
-      ],
-      "contracts/*": [
-        "./src/contracts/*.ts"
-      ],
-      "runtime": [
-        "./src/runtime/index.ts"
-      ],
-      "runtime/*": [
-        "./src/runtime/*.ts"
-      ],
-      "validation": [
-        "./src/validation/index.ts"
-      ],
-      "validation/*": [
-        "./src/validation/*.ts"
-      ],
-      "utils": [
-        "./src/utils/index.ts"
-      ],
-      "constants": [
-        "./src/constants/index.ts"
-      ],
-      "*": [
-        "./src/*",
-        "./src/*.ts"
-      ]
-    }
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "zod": "^4.3.5"
-  }
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "lowcode",
+    "core",
+    "schema",
+    "contracts",
+    "vela"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor/issues"
+  },
+  "homepage": "https://github.com/TWILIGHT-wyf/vela-lowcode-editor#readme"
 }

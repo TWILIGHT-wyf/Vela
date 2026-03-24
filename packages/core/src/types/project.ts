@@ -1,7 +1,6 @@
 import type { PageSchema, LayoutSchema } from './page'
 import type { VariableSchema, ApiSchema } from './data'
 import type { ActionRef, AnyActionSchema } from './action'
-import type { MaterialMeta, ComponentImportSpec } from './material'
 
 // ============================================================================
 // 项目元数据
@@ -38,10 +37,7 @@ export type RouterMode = 'hash' | 'history' | 'memory'
  * 页面引用类型
  * 用于在配置中引用页面，支持 ID 或路径两种方式
  */
-export type PageRef =
-  | { type: 'id'; pageId: string }
-  | { type: 'path'; path: string }
-  | string  // 简写形式：直接使用 pageId
+export type PageRef = { type: 'id'; pageId: string } | { type: 'path'; path: string } | string // 简写形式：直接使用 pageId
 
 /**
  * 标准化后的页面引用
@@ -90,7 +86,7 @@ export interface RouterConfig {
  */
 export function getRouterPageRef(
   router: RouterConfig | undefined,
-  key: RouterPageRefKey
+  key: RouterPageRefKey,
 ): NormalizedPageRef | undefined {
   if (!router) {
     return undefined
@@ -107,20 +103,17 @@ export function getRouterPageRef(
 /**
  * 解析页面引用到页面对象
  */
-export function resolvePageRef(
-  pages: PageSchema[],
-  pageRef?: PageRef
-): PageSchema | undefined {
+export function resolvePageRef(pages: PageSchema[], pageRef?: PageRef): PageSchema | undefined {
   if (!pageRef) {
     return undefined
   }
 
   const normalized = normalizePageRef(pageRef)
   if (normalized.type === 'id') {
-    return pages.find(page => page.id === normalized.pageId)
+    return pages.find((page) => page.id === normalized.pageId)
   }
 
-  return pages.find(page => page.type === 'page' && page.path === normalized.path)
+  return pages.find((page) => page.type === 'page' && page.path === normalized.path)
 }
 
 /**
@@ -129,7 +122,7 @@ export function resolvePageRef(
 export function resolveRouterPage(
   pages: PageSchema[],
   router: RouterConfig | undefined,
-  key: RouterPageRefKey
+  key: RouterPageRefKey,
 ): PageSchema | undefined {
   const pageRef = getRouterPageRef(router, key)
   return resolvePageRef(pages, pageRef)
@@ -183,61 +176,6 @@ export interface ConstantSchema {
 }
 
 /**
- * Store 模块定义
- * 用于复杂状态管理，类似 Pinia/Vuex 的 module
- */
-export interface StoreModuleSchema {
-  /** 模块 ID */
-  id: string
-  /** 模块名称 */
-  name: string
-  /** 模块说明 */
-  description?: string
-  /** 状态字段 */
-  state: VariableSchema[]
-  /** Getter 定义 (计算属性) */
-  getters?: Array<{
-    key: string
-    /** 计算表达式，可访问 state */
-    expression: string
-    description?: string
-  }>
-  /** Action 定义 (方法) */
-  actions?: Array<{
-    key: string
-    /** 函数体代码 */
-    body: string
-    /** 参数定义 */
-    params?: Array<{ name: string; type?: string }>
-    description?: string
-  }>
-}
-
-/**
- * 持久化存储类型
- */
-export type PersistentStorageType = 'localStorage' | 'sessionStorage' | 'cookie'
-
-/**
- * 持久化配置
- * 定义哪些状态需要持久化存储
- */
-export interface PersistentConfig {
-  /** 配置 ID */
-  id: string
-  /** 存储键名 */
-  storageKey: string
-  /** 存储类型 */
-  storageType: PersistentStorageType
-  /** 要持久化的状态路径列表 (如 ['user.token', 'settings.theme']) */
-  paths: string[]
-  /** 过期时间 (秒)，仅 cookie 生效 */
-  expires?: number
-  /** 加密存储 */
-  encrypt?: boolean
-}
-
-/**
  * 数据层配置
  */
 export interface ProjectDataConfig {
@@ -245,10 +183,6 @@ export interface ProjectDataConfig {
   constants?: ConstantSchema[]
   /** 全局响应式状态 (简单状态) */
   globalState?: VariableSchema[]
-  /** Store 模块 (复杂状态) */
-  stores?: StoreModuleSchema[]
-  /** 持久化配置 */
-  persistent?: PersistentConfig[]
 }
 
 // ============================================================================
@@ -256,32 +190,9 @@ export interface ProjectDataConfig {
 // ============================================================================
 
 /**
- * API 基础配置
- * 全局请求配置，所有 API 继承
- */
-export interface ApiBaseConfig {
-  /** 基础 URL (支持环境变量插值，如 ${env.API_BASE}) */
-  baseURL?: string
-  /** 默认超时时间 (ms) */
-  timeout?: number
-  /** 默认请求头 */
-  headers?: Record<string, string>
-  /** 请求拦截器代码 */
-  requestInterceptor?: string
-  /** 响应拦截器代码 */
-  responseInterceptor?: string
-  /** 错误处理器代码 */
-  errorHandler?: string
-  /** 是否携带凭证 (cookies) */
-  withCredentials?: boolean
-}
-
-/**
  * 接口层配置
  */
 export interface ProjectApiConfig {
-  /** API 基础配置 */
-  baseConfig?: ApiBaseConfig
   /** API 定义列表 */
   definitions?: ApiSchema[]
 }
@@ -289,33 +200,6 @@ export interface ProjectApiConfig {
 // ============================================================================
 // 逻辑层 - 工具函数、生命周期、守卫
 // ============================================================================
-
-/**
- * 工具函数定义
- */
-export interface UtilFunctionSchema {
-  /** 函数 ID */
-  id: string
-  /** 函数名 */
-  name: string
-  /** 函数说明 */
-  description?: string
-  /** 参数定义 */
-  params?: Array<{
-    name: string
-    type?: string
-    required?: boolean
-    defaultValue?: unknown
-  }>
-  /** 返回值类型 */
-  returnType?: string
-  /** 函数体代码 */
-  body: string
-  /** 是否异步 */
-  async?: boolean
-  /** 分组 (如 'format', 'validate', 'transform') */
-  group?: string
-}
 
 /**
  * 应用生命周期钩子 (框架无关)
@@ -339,40 +223,11 @@ export interface AppLifecycleConfig {
 }
 
 /**
- * 路由守卫时机 (框架无关)
- */
-export type RouteGuardTiming = 'before' | 'after'
-
-/**
- * 路由守卫定义
- */
-export interface RouteGuardSchema {
-  /** 守卫 ID */
-  id: string
-  /** 守卫名称 */
-  name: string
-  /** 守卫时机 (before: 导航前, after: 导航后) */
-  timing: RouteGuardTiming
-  /** 守卫逻辑代码 (可访问 to, from 路由信息，返回 false 或路径可阻止/重定向) */
-  handler: string
-  /** 优先级 (数字越小越先执行) */
-  priority?: number
-  /** 是否启用 */
-  enabled?: boolean
-  /** 说明 */
-  description?: string
-}
-
-/**
  * 逻辑层配置
  */
 export interface ProjectLogicConfig {
-  /** 全局工具函数 */
-  utils?: UtilFunctionSchema[]
   /** 应用生命周期 */
   lifecycle?: AppLifecycleConfig
-  /** 路由守卫 */
-  guards?: RouteGuardSchema[]
   /** 全局动作注册表 (可通过 ActionRef ID 引用) */
   actions?: GlobalActionSchema[]
 }
@@ -391,112 +246,6 @@ export type EnvType = 'development' | 'staging' | 'production'
  * 支持多环境差异化配置
  */
 export type ProjectEnvConfig = Partial<Record<EnvType, Record<string, string>>>
-
-// ============================================================================
-// 资源层
-// ============================================================================
-
-/**
- * 静态资源引用
- */
-export interface AssetSchema {
-  /** 资源 ID */
-  id: string
-  /** 资源名称 */
-  name: string
-  /** 资源类型 */
-  type: 'image' | 'font' | 'icon' | 'video' | 'audio' | 'file'
-  /** 资源 URL */
-  url: string
-  /** 文件大小 (bytes) */
-  size?: number
-  /** 资源分组 */
-  group?: string
-}
-
-/**
- * 资源层配置
- */
-export interface ProjectAssetsConfig {
-  /** 资源列表 */
-  items?: AssetSchema[]
-  /** CDN 前缀 */
-  cdnPrefix?: string
-}
-
-// ============================================================================
-// 依赖与插件
-// ============================================================================
-
-/**
- * 外部依赖定义
- */
-export interface DependencySchema {
-  /** 包名 */
-  name: string
-  /** 版本 */
-  version: string
-  /** CDN 地址 (用于运行时加载) */
-  cdnUrl?: string
-  /** 全局变量名 (UMD) */
-  globalName?: string
-  /** 依赖说明 */
-  description?: string
-}
-
-/**
- * 插件配置
- */
-export interface PluginSchema {
-  /** 插件 ID */
-  id: string
-  /** 插件版本 */
-  version: string
-  /** 是否启用 */
-  enabled?: boolean
-  /** 插件配置 */
-  options?: Record<string, unknown>
-}
-
-// ============================================================================
-// 组件库配置
-// ============================================================================
-
-/**
- * 组件库来源类型
- */
-export type ComponentLibrarySource = 'npm' | 'local' | 'cdn' | 'builtin'
-
-/**
- * 组件库配置
- * 记录项目使用的组件库及其元信息
- */
-export interface ComponentLibrarySchema {
-  /** 库唯一标识 (如 '@vela/materials', 'antd', 'element-plus') */
-  id: string
-  /** 库名称 */
-  name: string
-  /** 版本号 */
-  version: string
-  /** 来源类型 */
-  source: ComponentLibrarySource
-  /** 包名 (npm 包名或 CDN 路径) */
-  package?: string
-  /** CDN 地址 */
-  cdnUrl?: string
-  /** 组件元信息列表 (按需加载时可能为空) */
-  components?: MaterialMeta[]
-  /** 组件导入规范 (默认导入方式) */
-  defaultImport?: ComponentImportSpec
-  /** 样式入口 */
-  styleEntry?: string
-  /** 依赖的其他库 */
-  peerDependencies?: string[]
-  /** 是否启用 */
-  enabled?: boolean
-  /** 库说明 */
-  description?: string
-}
 
 // ============================================================================
 // 全局动作注册表
@@ -561,20 +310,6 @@ export interface ProjectSchema {
   // ========== 逻辑层 ==========
   /** 逻辑配置 (工具函数、生命周期、守卫) */
   logic?: ProjectLogicConfig
-
-  // ========== 资源层 ==========
-  /** 静态资源 */
-  assets?: ProjectAssetsConfig
-
-  // ========== 组件库 ==========
-  /** 组件库配置 (物料来源) */
-  componentLibraries?: ComponentLibrarySchema[]
-
-  // ========== 依赖与插件 ==========
-  /** 外部依赖 */
-  dependencies?: DependencySchema[]
-  /** 插件配置 */
-  plugins?: PluginSchema[]
 
   // ========== 页面层 ==========
   /** 页面定义 */

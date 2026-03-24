@@ -23,9 +23,8 @@
 import { ref, computed, watch, provide, onBeforeUnmount, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
-import RuntimeComponent from './RuntimeComponent.vue'
 import type { NodeSchema } from '@vela/core'
-import type { Page, RuntimePlugin, RuntimeContext, RuntimeMode } from '../types'
+import type { Page, RuntimePlugin, RuntimeContext, RuntimeMode } from './types'
 
 /**
  * Runtime Renderer

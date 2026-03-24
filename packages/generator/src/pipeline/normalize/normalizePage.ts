@@ -11,7 +11,7 @@ export interface NormalizePageResult {
 
 export function normalizePage(page: PageSchema): NormalizePageResult {
   const diagnostics: CompileDiagnostic[] = []
-  const pageDefaultMode: LayoutMode = page.config?.defaultLayoutMode ?? 'flow'
+  const pageDefaultMode: LayoutMode = 'grid'
   const nodeIndex = new Map<string, NormalizedNode>()
 
   let root: NormalizedNode | undefined
@@ -46,4 +46,3 @@ export function normalizePage(page: PageSchema): NormalizePageResult {
 
   return { page: normalizedPage, diagnostics }
 }
-

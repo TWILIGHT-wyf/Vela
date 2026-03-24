@@ -205,10 +205,9 @@ import { computed, ref, inject, watch, onBeforeUnmount, type CSSProperties } fro
 import { storeToRefs } from 'pinia'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
-import { useCanvasContext } from '../../composables/useCanvasContext'
+import { useCanvasContext } from '@/components/Canvas/composables/useCanvasContext'
 import {
   countTracks,
-  type FlowContainerLayout,
   type GridContainerLayout,
   type GridItemLayout,
   type GridNodeGeometry,
@@ -221,7 +220,7 @@ interface Props {
   nodeId: string
   componentName?: string
   node?: NodeSchema
-  parentLayoutMode?: 'free' | 'flow' | 'grid'
+  parentLayoutMode?: 'grid'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -258,7 +257,7 @@ const suppressNativeDrag = ref(false)
 const activeSpacingKind = ref<'margin' | 'padding' | null>(null)
 const activeSpacingSide = ref<'top' | 'right' | 'bottom' | 'left' | null>(null)
 let cleanupActiveSpacingAdjust: (() => void) | null = null
-const isFreeParent = computed(() => props.parentLayoutMode === 'free')
+const isFreeParent = computed(() => false)
 
 const applyWrapperDraggableState = () => {
   const wrapper = wrapperRef.value
@@ -278,11 +277,7 @@ const setNativeDragSuppressed = (value: boolean) => {
 // ========== Computed ==========
 const isSelected = computed(() => selectedIds.value.includes(props.nodeId))
 const isHovered = computed(() => hoveredId.value === props.nodeId)
-const showFlowResizeHandles = computed(
-  () =>
-    selectedId.value === props.nodeId &&
-    (props.parentLayoutMode === 'grid' || props.parentLayoutMode === 'flow'),
-)
+const showFlowResizeHandles = computed(() => selectedId.value === props.nodeId)
 
 const currentNode = computed(() => {
   // Always prefer indexed lookup to avoid stale node snapshots after undo/redo
@@ -305,7 +300,7 @@ const isDragFeedbackActive = computed(() => {
 })
 
 const shouldAllowSpacingAdjust = computed(() => {
-  return props.parentLayoutMode === 'grid' || props.parentLayoutMode === 'flow'
+  return props.parentLayoutMode === 'grid'
 })
 
 // ========== Box Model Overlays (Margin + Padding) ==========
@@ -578,7 +573,6 @@ const wrapperClasses = computed(() => [
     'is-container': isContainer.value,
     'is-empty': isEmpty.value,
     'is-free-parent': isFreeParent.value,
-    'is-flow-item': props.parentLayoutMode === 'flow',
     'is-grid-item': props.parentLayoutMode === 'grid',
   },
 ])
@@ -612,75 +606,7 @@ const wrapperStyle = computed<CSSProperties>(() => {
   const _v = componentStore.styleVersion[node.id]
   void _v
 
-  // Free mode: read positioning from node.geometry, sizing from geometry/style
-  if (props.parentLayoutMode === 'free') {
-    const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
-    const style = node.style || {}
-    const rotate = Number(geometry?.rotate ?? 0)
-    const rotateTransform = rotate ? `rotate(${rotate}deg)` : undefined
-
-    return {
-      position: 'absolute',
-      left: formatValue(geometry?.x as number | undefined, 0),
-      top: formatValue(geometry?.y as number | undefined, 0),
-      width: formatValue((geometry?.width ?? style.width) as string | number | undefined, 'auto'),
-      height: formatValue(
-        (geometry?.height ?? style.height) as string | number | undefined,
-        'auto',
-      ),
-      zIndex: geometry?.zIndex ?? (style.zIndex as number | undefined) ?? 0,
-      transform: rotateTransform || undefined,
-      transformOrigin: rotateTransform ? 'center center' : undefined,
-    }
-  }
-
-  // Adaptive grid mode: components placed via gridColumnStart/End, gridRowStart/End
-  if (props.parentLayoutMode === 'flow') {
-    const style = node.style || {}
-    const parentId = componentStore.getParentId(props.nodeId)
-    const parentNode = parentId ? componentStore.findNodeById(parentId) : null
-    const parentFlowDirection =
-      parentNode?.container?.mode === 'flow'
-        ? ((parentNode.container as FlowContainerLayout).direction ?? 'row')
-        : 'row'
-    const isRowDirection = parentFlowDirection !== 'column'
-    const explicitFlexBasis = formatOptionalValue(style.flexBasis as string | number | undefined)
-    const fallbackFlexBasis = isRowDirection
-      ? formatOptionalValue(style.width as string | number | undefined)
-      : formatOptionalValue(style.height as string | number | undefined)
-    const resolvedFlexBasis = explicitFlexBasis ?? fallbackFlexBasis
-
-    return {
-      order:
-        typeof style.order === 'number' && Number.isFinite(style.order) ? style.order : undefined,
-      flexGrow:
-        typeof style.flexGrow === 'number' && Number.isFinite(style.flexGrow)
-          ? style.flexGrow
-          : undefined,
-      flexShrink:
-        typeof style.flexShrink === 'number' && Number.isFinite(style.flexShrink)
-          ? style.flexShrink
-          : undefined,
-      flexBasis: resolvedFlexBasis,
-      alignSelf:
-        typeof style.alignSelf === 'string' && style.alignSelf.trim().length > 0
-          ? (style.alignSelf as CSSProperties['alignSelf'])
-          : undefined,
-      width: formatOptionalValue(style.width as string | number | undefined),
-      height: formatOptionalValue(style.height as string | number | undefined),
-      minWidth: formatOptionalValue(style.minWidth as string | number | undefined),
-      minHeight: formatOptionalValue(style.minHeight as string | number | undefined),
-      maxWidth: formatOptionalValue(style.maxWidth as string | number | undefined),
-      maxHeight: formatOptionalValue(style.maxHeight as string | number | undefined),
-      margin: formatOptionalValue(style.margin as string | number | undefined),
-      marginTop: formatOptionalValue(style.marginTop as string | number | undefined),
-      marginRight: formatOptionalValue(style.marginRight as string | number | undefined),
-      marginBottom: formatOptionalValue(style.marginBottom as string | number | undefined),
-      marginLeft: formatOptionalValue(style.marginLeft as string | number | undefined),
-    }
-  }
-
-  // Adaptive grid mode: components placed via gridColumnStart/End, gridRowStart/End
+  // Grid mode: components placed via gridColumnStart/End, gridRowStart/End
   if (props.parentLayoutMode === 'grid') {
     const fallbackColSpan = isContainer.value ? 6 : 3
     const fallbackRowSpan = isContainer.value ? 4 : 2
@@ -1083,26 +1009,13 @@ const resolveSpacingNumber = (style: NodeStyle, side: FlowSpacingSide): number =
   return 0
 }
 
-const resolveFlowDirection = (): 'row' | 'column' => {
-  const parentId = componentStore.getParentId(props.nodeId)
-  const parentNode = parentId ? componentStore.findNodeById(parentId) : rootNode.value
-  if (parentNode?.container?.mode === 'flow') {
-    const flowContainer = parentNode.container as FlowContainerLayout
-    return flowContainer.direction === 'column' ? 'column' : 'row'
-  }
-  const parentFlexDirection = String(parentNode?.style?.flexDirection || '').toLowerCase()
-  return parentFlexDirection.startsWith('column') ? 'column' : 'row'
-}
-
 const handleFlowResizeStart = (handle: FlowResizeHandle, e: MouseEvent) => {
-  if (props.parentLayoutMode === 'free') return
   if (!currentNode.value || !wrapperRef.value) return
   setNativeDragSuppressed(true)
   if (props.parentLayoutMode === 'grid') {
     handleGridSpanResize(handle, e)
     return
   }
-  handleFlowItemResize(handle, e)
 }
 
 const resolveGridGeometry = (): GridNodeGeometry | null => {
@@ -1302,153 +1215,6 @@ const handleGridSpanResize = (handle: FlowResizeHandle, e: MouseEvent) => {
         gridRowEnd: baseRowStart + baseRowSpan,
       })
     }
-    document.body.style.cursor = prevCursor
-    document.body.style.userSelect = prevUserSelect
-    isResizing.value = false
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', onMouseUp)
-    window.removeEventListener('keydown', onKeyDown)
-    setNativeDragSuppressed(false)
-  }
-
-  const onMouseUp = () => cleanup()
-  const onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.key === 'Escape') {
-      cancelled = true
-      cleanup()
-    }
-  }
-
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
-  window.addEventListener('keydown', onKeyDown)
-}
-
-const handleFlowItemResize = (handle: FlowResizeHandle, e: MouseEvent) => {
-  if (!currentNode.value || !wrapperRef.value) return
-
-  selectComponent(props.nodeId)
-  isResizing.value = true
-  setHovered(null)
-
-  const direction = resolveFlowDirection()
-  const isRowDirection = direction === 'row'
-  const style = currentNode.value.style || {}
-  const wrapperRect = wrapperRef.value.getBoundingClientRect()
-  const scale = canvasScale.value || 1
-  const startX = e.clientX
-  const startY = e.clientY
-  const baseWidth = Math.max(
-    1,
-    parseAbsoluteLength(style.width) ?? Math.max(1, wrapperRect.width / scale),
-  )
-  const baseHeight = Math.max(
-    1,
-    parseAbsoluteLength(style.height) ?? Math.max(1, wrapperRect.height / scale),
-  )
-  const baseFlexBasis = Math.max(
-    1,
-    parseAbsoluteLength(style.flexBasis) ?? (isRowDirection ? baseWidth : baseHeight),
-  )
-  const minWidth = Math.max(24, parseAbsoluteLength(style.minWidth) ?? 24)
-  const minHeight = Math.max(24, parseAbsoluteLength(style.minHeight) ?? 24)
-  const maxWidth = Math.max(minWidth, parseAbsoluteLength(style.maxWidth) ?? 4096)
-  const maxHeight = Math.max(minHeight, parseAbsoluteLength(style.maxHeight) ?? 4096)
-  const originalWidth = style.width
-  const originalHeight = style.height
-  const originalFlexBasis = style.flexBasis
-
-  let rafId = 0
-  let cancelled = false
-  let pendingPatch: Partial<NodeStyle> | null = null
-
-  const cursorMap: Record<FlowResizeHandle, string> = {
-    n: 'ns-resize',
-    s: 'ns-resize',
-    e: 'ew-resize',
-    w: 'ew-resize',
-    nw: 'nwse-resize',
-    se: 'nwse-resize',
-    ne: 'nesw-resize',
-    sw: 'nesw-resize',
-  }
-  const prevCursor = document.body.style.cursor
-  const prevUserSelect = document.body.style.userSelect
-  document.body.style.userSelect = 'none'
-  document.body.style.cursor = cursorMap[handle]
-
-  const flushPatch = () => {
-    rafId = 0
-    if (cancelled || !pendingPatch) return
-    componentStore.updateStyle(props.nodeId, pendingPatch)
-  }
-
-  const onMouseMove = (ev: MouseEvent) => {
-    if (cancelled) return
-    const dx = (ev.clientX - startX) / scale
-    const dy = (ev.clientY - startY) / scale
-    const affectsX =
-      handle === 'e' ||
-      handle === 'w' ||
-      handle === 'ne' ||
-      handle === 'nw' ||
-      handle === 'se' ||
-      handle === 'sw'
-    const affectsY =
-      handle === 'n' ||
-      handle === 's' ||
-      handle === 'ne' ||
-      handle === 'nw' ||
-      handle === 'se' ||
-      handle === 'sw'
-
-    const patch: Partial<NodeStyle> = {}
-
-    if (affectsX) {
-      const horizontalDelta = handle === 'w' || handle === 'nw' || handle === 'sw' ? -dx : dx
-      const nextWidth = clampNumber(baseWidth + horizontalDelta, minWidth, maxWidth)
-      patch.width = `${Math.round(nextWidth)}px`
-      if (isRowDirection) {
-        patch.flexBasis = `${Math.round(nextWidth)}px`
-      }
-    }
-
-    if (affectsY) {
-      const verticalDelta = handle === 'n' || handle === 'ne' || handle === 'nw' ? -dy : dy
-      const nextHeight = clampNumber(baseHeight + verticalDelta, minHeight, maxHeight)
-      patch.height = `${Math.round(nextHeight)}px`
-      if (!isRowDirection) {
-        patch.flexBasis = `${Math.round(nextHeight)}px`
-      }
-    }
-
-    // Keep the current main-axis basis stable when only cross-axis handle is dragged.
-    if (patch.flexBasis === undefined && (affectsX || affectsY)) {
-      patch.flexBasis = `${Math.round(baseFlexBasis)}px`
-    }
-
-    pendingPatch = patch
-    if (rafId === 0) {
-      rafId = requestAnimationFrame(flushPatch)
-    }
-  }
-
-  const cleanup = () => {
-    if (rafId !== 0) {
-      cancelAnimationFrame(rafId)
-      if (!cancelled) {
-        flushPatch()
-      }
-    }
-
-    if (cancelled) {
-      componentStore.updateStyle(props.nodeId, {
-        width: originalWidth,
-        height: originalHeight,
-        flexBasis: originalFlexBasis,
-      })
-    }
-
     document.body.style.cursor = prevCursor
     document.body.style.userSelect = prevUserSelect
     isResizing.value = false

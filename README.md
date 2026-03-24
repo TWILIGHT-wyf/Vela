@@ -355,7 +355,7 @@ vela-lowcode-editor/
 │   ├── services/                # 服务层
 │   │   ├── http.ts             # HTTP 请求封装
 │   │   ├── projects.ts         # 项目 API
-│   │   └── suggestService.ts   # AI 建议服务
+│   │   └── suggestionService.ts # AI 建议服务
 │   │
 │   ├── datasource/              # 数据源
 │   │   └── useDataSource.ts    # 数据源 Hook

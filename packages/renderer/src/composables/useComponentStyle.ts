@@ -1,7 +1,5 @@
 import { computed, type Ref, type ComputedRef, unref, type CSSProperties, watch } from 'vue'
-import type { NodeSchema, NodeStyle } from '@vela/core'
 import {
-  extractPosition,
   extractSize,
   extractRotation,
   extractZIndex,
@@ -10,7 +8,9 @@ import {
   generateLayoutCSS,
   generateVisualCSS,
   generateAnimationCSS,
-} from '@vela/core/utils'
+  type NodeSchema,
+  type NodeStyle,
+} from '@vela/core'
 
 export type ComponentCSSStyle = CSSProperties
 
@@ -32,26 +32,9 @@ interface StyleCacheEntry {
 function inferLayoutMode(
   style: NodeStyle | undefined,
   geometry: NodeSchema['geometry'] | undefined,
-): 'free' | 'flow' | 'grid' {
-  if (geometry?.mode === 'free' || geometry?.mode === 'flow' || geometry?.mode === 'grid') {
-    return geometry.mode
-  }
-
-  const position = style?.position
-  if (position === 'absolute' || position === 'fixed') {
-    return 'free'
-  }
-
-  if (
-    style?.left !== undefined ||
-    style?.top !== undefined ||
-    style?.right !== undefined ||
-    style?.bottom !== undefined
-  ) {
-    return 'free'
-  }
-
-  return 'flow'
+): 'grid' {
+  void style
+  return geometry?.mode === 'grid' ? 'grid' : 'grid'
 }
 
 /**
@@ -115,14 +98,9 @@ export function useComponentStyle(
     return undefined
   })
 
-  const layoutMode = computed<'free' | 'flow' | 'grid'>(() =>
-    inferLayoutMode(styleRef.value, geometryRef.value),
-  )
+  const layoutMode = computed<'grid'>(() => inferLayoutMode(styleRef.value, geometryRef.value))
 
   // ========== Granular Layout Properties ==========
-
-  // Position (x, y) - only recalculates when position changes
-  const position = computed(() => extractPosition(styleRef.value, geometryRef.value))
 
   // Size (width, height) - only recalculates when size changes
   const size = computed(() => extractSize(styleRef.value, geometryRef.value))
@@ -140,27 +118,6 @@ export function useComponentStyle(
   const visible = computed(() => isNodeVisible(styleRef.value, geometryRef.value))
 
   // ========== Cached Style Computations ==========
-
-  // Position style (absolute positioning)
-  const positionStyle = computed<CSSProperties>(() => {
-    const pos = position.value
-    const cacheKey = `pos:${pos.x}:${pos.y}`
-    if (enableCache && styleCache.has(cacheKey)) {
-      return styleCache.get(cacheKey)!.value
-    }
-
-    const result: CSSProperties = {
-      position: 'absolute',
-      left: `${pos.x}px`,
-      top: `${pos.y}px`,
-    }
-
-    if (enableCache) {
-      styleCache.set(cacheKey, { key: cacheKey, value: result })
-    }
-
-    return result
-  })
 
   // Size style (width, height)
   const sizeStyle = computed<CSSProperties>(() => {
@@ -193,11 +150,6 @@ export function useComponentStyle(
 
     const transforms: string[] = []
     if (rotation.value) transforms.push(`rotate(${rotation.value}deg)`)
-    if (geometry?.mode === 'free' && (geometry.scaleX != null || geometry.scaleY != null)) {
-      const sx = geometry.scaleX ?? 1
-      const sy = geometry.scaleY ?? 1
-      transforms.push(`scale(${sx}, ${sy})`)
-    }
 
     if (transforms.length === 0) return {}
 
@@ -315,7 +267,6 @@ export function useComponentStyle(
 
   return {
     // Granular properties
-    position,
     size,
     rotation,
     zIndex,
@@ -323,7 +274,6 @@ export function useComponentStyle(
     visible,
 
     // Granular styles
-    positionStyle,
     sizeStyle,
     transformStyle,
 

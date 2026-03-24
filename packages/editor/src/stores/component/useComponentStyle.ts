@@ -125,7 +125,13 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     if (!node) return
 
     const nextGeometry = {
-      ...(node.geometry || { mode: 'free' }),
+      ...(node.geometry || {
+        mode: 'grid',
+        gridColumnStart: 1,
+        gridColumnEnd: 4,
+        gridRowStart: 1,
+        gridRowEnd: 3,
+      }),
       ...geometry,
     } as NodeGeometry
     node.geometry = nextGeometry
@@ -165,64 +171,50 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
   }
 
   /**
-   * [Raw] 更新布局模式 - 不记录历史
+   * [Raw] 统一设置为网格编排 - 不记录历史
    */
-  function updateContainerLayoutRaw(id: string, layoutMode: 'free' | 'flow' | 'grid'): void {
+  function updateContainerLayoutRaw(id: string, layoutMode: 'grid' | undefined): void {
     const node = nodeIndex.get(id)
     if (!node) return
 
+    const normalizedMode: 'grid' = layoutMode === 'grid' ? 'grid' : 'grid'
+
     node.container = {
       ...(node.container || {}),
-      mode: layoutMode,
+      mode: normalizedMode,
     } as NodeSchema['container']
 
-    if (layoutMode === 'grid') {
-      const container = node.container as GridContainerLayout
-      const { templateMode, colCount } = normalizeGridContainerFields(container)
-      const children = node.children || []
+    const container = node.container as GridContainerLayout
+    const { templateMode, colCount } = normalizeGridContainerFields(container)
+    const children = node.children || []
 
-      const placementMap = resolveGridPlacements(
-        children.map((child, index) => {
-          const hasExplicitPlacement =
-            child.layoutItem?.mode === 'grid' || child.geometry?.mode === 'grid'
-          return {
-            id: child.id,
-            explicit: hasExplicitPlacement,
-            placement: hasExplicitPlacement
-              ? nodeToPlacement(child, colCount)
-              : {
-                  colStart: 1,
-                  colSpan:
-                    (child.container?.mode === 'grid' ||
-                      child.container?.mode === 'free' ||
-                      child.container?.mode === 'flow') &&
-                    templateMode === 'autoFit'
-                      ? 1
-                      : 3,
-                  rowStart: index + 1,
-                  rowSpan: 2,
-                },
-          }
-        }),
-        colCount,
-      )
+    const placementMap = resolveGridPlacements(
+      children.map((child, index) => {
+        const hasExplicitPlacement =
+          child.layoutItem?.mode === 'grid' || child.geometry?.mode === 'grid'
+        return {
+          id: child.id,
+          explicit: hasExplicitPlacement,
+          placement: hasExplicitPlacement
+            ? nodeToPlacement(child, colCount)
+            : {
+                colStart: 1,
+                colSpan: child.container?.mode === 'grid' && templateMode === 'autoFit' ? 1 : 3,
+                rowStart: index + 1,
+                rowSpan: 2,
+              },
+        }
+      }),
+      colCount,
+    )
 
-      children.forEach((child) => {
-        const placement = placementMap.get(child.id)
-        if (!placement) return
-        writePlacementToNode(child, placement)
-      })
+    children.forEach((child) => {
+      const placement = placementMap.get(child.id)
+      if (!placement) return
+      writePlacementToNode(child, placement)
+    })
 
-      syncRowsTemplate(container, maxOccupiedRow(placementMap.values()))
-    } else if (layoutMode === 'flow') {
-      const container = node.container as unknown as Record<string, unknown>
-      container.direction = container.direction || 'row'
-      container.wrap = container.wrap || 'wrap'
-      container.justify = container.justify || 'flex-start'
-      container.align = container.align || 'stretch'
-      container.alignContent = container.alignContent || 'stretch'
-      container.gap = container.gap ?? 8
-    }
+    syncRowsTemplate(container, maxOccupiedRow(placementMap.values()))
 
     incrementVersion(id)
     syncToProjectStore()

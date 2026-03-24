@@ -1,0 +1,113 @@
+/* Shared style patterns for editor shell/panels */
+
+.vela-panel-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vela-panel-tabs .el-tabs__header {
+  margin: 0;
+  padding: 0 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.vela-panel-tabs .el-tabs__nav-wrap::after {
+  height: 0;
+}
+
+.vela-panel-tabs .el-tabs__item {
+  height: 44px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.vela-panel-tabs .el-tabs__item.is-active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.vela-panel-tabs .el-tabs__content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.vela-panel-tabs .el-tab-pane {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.vela-icon-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.vela-icon-btn:hover {
+  color: var(--color-primary);
+  background-color: var(--surface-hover-primary);
+}
+
+.vela-icon-btn-primary-soft {
+  color: var(--color-primary);
+  background-color: var(--color-primary-fade);
+}
+
+.vela-icon-btn-primary-soft:hover {
+  background-color: var(--surface-active-primary);
+}
+
+.vela-dock-item {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.vela-dock-item:hover {
+  background: var(--surface-hover-soft);
+  transform: translateY(-8px) scale(1.1);
+  color: var(--color-primary);
+}
+
+.vela-dock-item.active {
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--color-primary);
+}
+
+.vela-dock-item.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.vela-dock-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+.vela-dock-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--dock-divider);
+}

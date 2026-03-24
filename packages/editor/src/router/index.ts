@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // 路由懒加载，优化首屏性能
-const Dashboard = () => import('@/views/dashboard.vue')
-const Editor = () => import('@/views/editor.vue')
-const Preview = () => import('@/views/Preview.vue')
+const Dashboard = () => import('@/views/DashboardView.vue')
+const Editor = () => import('@/views/EditorView.vue')
+const Preview = () => import('@/views/PreviewView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,7 +28,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/preview',
+      path: '/preview/:id?',
       name: 'Preview',
       component: Preview,
       meta: { title: '预览' },

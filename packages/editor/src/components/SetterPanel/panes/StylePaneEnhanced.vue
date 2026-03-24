@@ -44,23 +44,6 @@
       <!-- 通用样式面板（总是显示，但在有自定义配置时去重） -->
       <el-form label-position="top" size="default" class="style-form">
         <el-collapse v-model="activeNames" class="style-collapse">
-          <!-- 布局模式 (仅容器组件) -->
-          <el-collapse-item title="布局模式" name="layoutMode" v-if="isContainer">
-            <el-form-item label="子节点布局">
-              <el-radio-group
-                :model-value="layoutModeValue"
-                @update:model-value="
-                  (val: 'grid' | 'flow' | 'free' | undefined) =>
-                    setLayoutMode((val as 'grid' | 'flow' | 'free') || 'grid')
-                "
-              >
-                <el-radio-button label="grid">网格编排</el-radio-button>
-                <el-radio-button label="flow">流式布局</el-radio-button>
-                <el-radio-button label="free">自由布局</el-radio-button>
-              </el-radio-group>
-            </el-form-item>
-          </el-collapse-item>
-
           <!-- 尺寸 -->
           <el-collapse-item
             title="尺寸"
@@ -403,41 +386,7 @@ const props = defineProps<Props>()
 const componentStore = useComponent()
 
 const activeGroups = ref<string[]>(['尺寸', '布局', '外观'])
-const activeNames = ref(['layoutMode', 'size', 'appearance'])
-
-const CONTAINER_COMPONENTS = [
-  'Container',
-  'Row',
-  'Col',
-  'Flex',
-  'Grid',
-  'Panel',
-  'Card',
-  'Tabs',
-  'TabPane',
-  'Modal',
-  'Page',
-]
-
-const isContainer = computed(() => {
-  return (
-    !!props.node &&
-    CONTAINER_COMPONENTS.includes(props.node.component || props.node.componentName || '')
-  )
-})
-
-const layoutModeValue = computed(() => {
-  const mode = props.node?.container?.mode
-  if (mode === 'free' || mode === 'flow') {
-    return mode
-  }
-  return 'grid'
-})
-
-function setLayoutMode(mode: 'grid' | 'flow' | 'free') {
-  if (!props.node) return
-  componentStore.updateContainerLayout(props.node.id, mode)
-}
+const activeNames = ref(['size', 'appearance'])
 
 // 获取当前组件的 Meta 样式配置（包含 styles 和 group='样式' 的 props）
 const metaStyles = computed<NamedStyleConfig[]>(() => {

@@ -1,11 +1,11 @@
 /**
- * API types for server communication
+ * 服务端通信相关类型
  */
 
 import type { ProjectSchema } from '../types/project'
 
 /**
- * Server-side project representation
+ * 服务端项目结构
  */
 export interface ServerProject {
   _id: string
@@ -17,7 +17,7 @@ export interface ServerProject {
 }
 
 /**
- * Project input for create/update operations
+ * 项目创建/更新入参
  */
 export interface ProjectInput {
   name: string
@@ -26,7 +26,7 @@ export interface ProjectInput {
 }
 
 /**
- * Canvas settings
+ * 画布设置
  */
 export interface CanvasSettings {
   width: number

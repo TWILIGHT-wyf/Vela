@@ -105,7 +105,7 @@ export interface UpdateGeometryPayload {
  */
 export interface UpdateContainerLayoutPayload {
   id: string
-  containerMode: 'free' | 'flow' | 'grid'
+  containerMode: 'grid'
 }
 
 /**

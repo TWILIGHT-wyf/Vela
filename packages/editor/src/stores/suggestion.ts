@@ -13,7 +13,7 @@ import type {
   AuditRecord,
 } from '@/types/suggestion'
 import type { NodeSchema } from '@vela/core'
-import { generateSuggestion, applyDiffs } from '@/services/suggestService'
+import { generateSuggestion, applyDiffs } from '@/services/suggestionService'
 import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
 import { nanoid } from 'nanoid'

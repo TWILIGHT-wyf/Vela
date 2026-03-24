@@ -1,16 +1,12 @@
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LayoutMode } from '@vela/core'
-import { useComponent } from './component'
-import { useProjectStore } from './project'
-import { convertLayout } from '@/utils/layoutConverter'
 
 /**
  * UI 状态管理 Store
  * 管理画布缩放、平移、面板显示等 UI 状态
  */
 export const useUIStore = defineStore('ui', () => {
-  type EditorCanvasMode = 'free' | 'grid'
+  type EditorCanvasMode = 'grid'
   // ========== Canvas State ==========
 
   /**
@@ -57,10 +53,9 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 右侧面板激活的 Tab
    * - 'properties': 属性面板
-   * - 'animation': 动画面板
    * - 'events': 事件面板
    */
-  const rightPanelTab = ref<'properties' | 'animation' | 'events'>('properties')
+  const rightPanelTab = ref<'properties' | 'events'>('properties')
 
   /**
    * 左侧面板是否折叠
@@ -80,28 +75,10 @@ export const useUIStore = defineStore('ui', () => {
 
   // ========== Derived State ==========
 
-  const projectStore = useProjectStore()
-  const componentStore = useComponent()
-  const { currentPage } = storeToRefs(projectStore)
-  const { rootNode } = storeToRefs(componentStore)
-
   /**
-   * 画布模式（单一真源：rootNode.container.mode）
-   * page.config.defaultLayoutMode 仅作为兜底值
+   * 编辑器画布模式固定为网格编排
    */
-  const canvasMode = computed<EditorCanvasMode>(() => {
-    const rootMode = rootNode.value?.container?.mode
-    if (rootMode === 'free') {
-      return 'free'
-    }
-    if (rootMode === 'flow' || rootMode === 'grid') {
-      return 'grid'
-    }
-
-    const pageMode = currentPage.value?.config?.defaultLayoutMode
-    if (pageMode === 'free') return 'free'
-    return 'grid'
-  })
+  const canvasMode = computed<EditorCanvasMode>(() => 'grid')
 
   // ========== Actions ==========
 
@@ -137,7 +114,7 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 设置右侧面板 Tab
    */
-  function setRightPanelTab(tab: 'properties' | 'animation' | 'events') {
+  function setRightPanelTab(tab: 'properties' | 'events') {
     rightPanelTab.value = tab
   }
 
@@ -153,29 +130,6 @@ export const useUIStore = defineStore('ui', () => {
    */
   function toggleRightPanel() {
     rightPanelCollapsed.value = !rightPanelCollapsed.value
-  }
-
-  /**
-   * 设置画布模式
-   */
-  function setCanvasMode(mode: EditorCanvasMode | LayoutMode) {
-    const normalizedMode: EditorCanvasMode = mode === 'free' ? 'free' : 'grid'
-    const root = rootNode.value
-    if (root && root.container?.mode !== normalizedMode) {
-      const converted = convertLayout(root, normalizedMode)
-      componentStore.setTree(converted)
-      componentStore.syncToProjectStore()
-    }
-    if (currentPage.value?.config?.defaultLayoutMode !== normalizedMode) {
-      projectStore.updatePageConfig({ defaultLayoutMode: normalizedMode })
-    }
-  }
-
-  /**
-   * 切换画布模式
-   */
-  function toggleCanvasMode() {
-    setCanvasMode(canvasMode.value === 'free' ? 'grid' : 'free')
   }
 
   /**
@@ -230,8 +184,6 @@ export const useUIStore = defineStore('ui', () => {
     setRightPanelTab,
     toggleLeftPanel,
     toggleRightPanel,
-    setCanvasMode,
-    toggleCanvasMode,
     toggleSimulationMode,
     setSimulationMode,
     zoomToFit,

@@ -54,15 +54,6 @@
           </div>
 
           <el-form label-position="top" size="small" class="modern-form">
-            <el-form-item label="布局模式">
-              <el-select v-model="layoutMode" class="modern-select">
-                <el-option label="绝对定位 (Free)" value="block" />
-                <el-option label="Flex 水平" value="flex" />
-                <el-option label="Flex 垂直" value="flex" />
-                <el-option label="网格布局 (Grid)" value="grid" />
-              </el-select>
-            </el-form-item>
-
             <div class="form-grid-2">
               <el-form-item label="组件间距 (px)">
                 <el-input-number
@@ -103,15 +94,12 @@
 import { ref } from 'vue'
 import { Document, FolderOpened, InfoFilled } from '@element-plus/icons-vue'
 import type { ElTree } from 'element-plus'
-import {
-  useTreeOperations,
-  useLayoutConfig,
-} from '../composables/useRelations'
+import { useTreeOperations, useLayoutConfig } from '../composables/useRelations'
 
 const { treeData, handleNodeClick, getAllNodeKeys, allowDrop, allowDrag, handleNodeDrop } =
   useTreeOperations()
 
-const { isContainer, layoutMode, layoutGap, layoutAlign, layoutPadding } = useLayoutConfig()
+const { isContainer, layoutGap, layoutAlign, layoutPadding } = useLayoutConfig()
 
 const treeRef = ref<InstanceType<typeof ElTree> | null>(null)
 const allExpanded = ref(false)

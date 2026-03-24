@@ -17,7 +17,6 @@ export const ACTION_TYPE_OPTIONS: ActionTypeOption[] = [
   { label: '切换显隐（toggle-visibility）', value: 'toggle-visibility' },
   { label: '滚动定位（scroll-to）', value: 'scroll-to' },
   { label: '全屏切换（fullscreen）', value: 'fullscreen' },
-  { label: '播放动画（play-animation）', value: 'play-animation' },
   { label: '高亮元素（highlight）', value: 'highlight' },
   { label: '刷新数据（refresh-data）', value: 'refresh-data' },
 ]

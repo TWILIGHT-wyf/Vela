@@ -3,6 +3,40 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 
+const externalPackages = [
+  'vue',
+  'vue-router',
+  'lodash-es',
+  'element-plus',
+  '@element-plus/icons-vue',
+  '@vue/shared',
+  '@vueuse/core',
+  '@vueuse/shared',
+  '@vela/core',
+  '@vela/materials',
+  '@vela/ui',
+]
+
+const externalPathPrefixes = [
+  resolve(__dirname, '../core').replace(/\\/g, '/'),
+  resolve(__dirname, '../materials').replace(/\\/g, '/'),
+  resolve(__dirname, '../ui').replace(/\\/g, '/'),
+]
+
+function isExternal(id: string): boolean {
+  const normalizedId = id.replace(/\\/g, '/')
+
+  if (
+    externalPackages.some(
+      (pkg) => normalizedId === pkg || normalizedId.startsWith(`${pkg}/`),
+    )
+  ) {
+    return true
+  }
+
+  return externalPathPrefixes.some((prefix) => normalizedId.startsWith(prefix))
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -19,19 +53,9 @@ export default defineConfig({
       formats: ['es'],
       fileName: 'index',
     },
+    emptyOutDir: true,
     rollupOptions: {
-      external: [
-        'vue',
-        'vue-router',
-        '@vela/core',
-        '@vela/materials',
-        '@vela/ui',
-      ],
-      output: {
-        preserveModules: true,
-        preserveModulesRoot: 'src',
-        entryFileNames: '[name].js',
-      },
+      external: isExternal,
     },
     sourcemap: true,
     minify: false,
@@ -40,5 +64,6 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
     },
+    preserveSymlinks: true,
   },
 })

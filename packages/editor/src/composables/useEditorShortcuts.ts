@@ -36,14 +36,13 @@ export function useEditorShortcuts(
   } = compStore
 
   const isNodeFreeMovable = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
-    if (node.geometry?.mode === 'free') return true
-    const parent = findParentNode(node.id)
-    return parent?.container?.mode === 'free'
+    void node
+    return false
   }
 
   const isNodeGridLayout = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
-    const parent = findParentNode(node.id)
-    return !parent || parent.container?.mode !== 'free'
+    void node
+    return true
   }
 
   const resolveGridColumnCount = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
@@ -137,23 +136,6 @@ export function useEditorShortcuts(
       if (e.key === 'ArrowDown') dy = 1
 
       if (dx !== 0 || dy !== 0) {
-        const movableNodes = selectedNodes.value.filter((node) => isNodeFreeMovable(node))
-        if (movableNodes.length > 0) {
-          e.preventDefault()
-          const step = e.shiftKey ? (options.nudgeLargeStep ?? 10) : (options.nudgeStep ?? 1)
-          movableNodes.forEach((node) => {
-            const geometry = node.geometry?.mode === 'free' ? node.geometry : undefined
-            const nextX = Math.round(Number(geometry?.x ?? 0) + dx * step)
-            const nextY = Math.round(Number(geometry?.y ?? 0) + dy * step)
-            updateGeometry(node.id, {
-              mode: 'free',
-              x: nextX,
-              y: nextY,
-            })
-          })
-          return
-        }
-
         const gridNodes = selectedNodes.value.filter((node) => isNodeGridLayout(node))
         if (gridNodes.length > 0) {
           e.preventDefault()

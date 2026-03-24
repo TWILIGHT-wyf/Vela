@@ -36,7 +36,7 @@ export interface ComponentStoreAccessor {
   updateDataSourceRaw(id: string, dataSource: Record<string, unknown>): void
   updateGeometryRaw(id: string, geometry: Partial<NodeGeometry>): void
   updateEventsRaw(id: string, events: Record<string, unknown[]>): void
-  updateChildLayoutRaw(id: string, childLayout: 'free' | 'flow' | 'grid' | undefined): void
+  updateChildLayoutRaw(id: string, childLayout: 'grid' | undefined): void
   updateGridTemplateRaw(id: string, columns: string, rows: string): void
 }
 
@@ -444,10 +444,10 @@ export class UpdateChildLayoutCommand implements Command {
   readonly description: string
 
   private id: string
-  private newChildLayout: 'free' | 'flow' | 'grid' | undefined
-  private oldChildLayout?: 'free' | 'flow' | 'grid'
+  private newChildLayout: 'grid' | undefined
+  private oldChildLayout?: 'grid'
 
-  constructor(id: string, childLayout: 'free' | 'flow' | 'grid' | undefined) {
+  constructor(id: string, childLayout: 'grid' | undefined) {
     this.id = id
     this.newChildLayout = childLayout
     this.description = `Update container layout of ${id}`
@@ -458,7 +458,7 @@ export class UpdateChildLayoutCommand implements Command {
     const node = store.findNodeById(null, this.id)
 
     if (node) {
-      this.oldChildLayout = node.container?.mode
+      this.oldChildLayout = node.container?.mode === 'grid' ? 'grid' : undefined
     }
 
     store.updateChildLayoutRaw(this.id, this.newChildLayout)

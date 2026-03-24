@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@vela/core/types': path.resolve(__dirname, 'packages/core/src/types/index.ts'),
-      '@vela/core/runtime': path.resolve(__dirname, 'packages/core/src/runtime/index.ts'),
+      '@vela/core/runtime': path.resolve(__dirname, 'packages/core/src/runtime/operation.ts'),
       '@vela/core/validation': path.resolve(__dirname, 'packages/core/src/validation/index.ts'),
       '@vela/core/contracts': path.resolve(__dirname, 'packages/core/src/contracts/index.ts'),
       '@vela/core/utils': path.resolve(__dirname, 'packages/core/src/utils/index.ts'),

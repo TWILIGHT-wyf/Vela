@@ -59,10 +59,10 @@ const indicatorStyle = computed<CSSProperties>(() => {
 
 <style scoped>
 .drop-indicator {
-  --vela-drop-color: #0d99ff;
-  --vela-drop-color-soft: #60a5fa;
-  --vela-drop-surface: rgba(13, 153, 255, 0.06);
-  --vela-drop-surface-strong: rgba(13, 153, 255, 0.1);
+  --vela-drop-color: var(--drop-color);
+  --vela-drop-color-soft: var(--drop-color-soft);
+  --vela-drop-surface: var(--drop-surface);
+  --vela-drop-surface-strong: var(--drop-surface-strong);
   pointer-events: none;
 }
 

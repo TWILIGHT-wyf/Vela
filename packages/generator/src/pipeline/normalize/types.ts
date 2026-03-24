@@ -3,13 +3,10 @@ import type { LayoutMode, LengthValue, NodeSchema, PageSchema, ProjectSchema } f
 export interface NormalizedNodeLayout {
   mode: LayoutMode
   childMode: LayoutMode
-  x: number
-  y: number
   width?: LengthValue
   height?: LengthValue
   zIndex: number
   rotate: number
-  order?: number
   gridColumnStart?: number
   gridColumnEnd?: number
   gridRowStart?: number

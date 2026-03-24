@@ -16,98 +16,6 @@ import type { ExpressionInput } from './expression'
 import type { LayoutMode, PageCanvasConfig } from './layout'
 
 // ============================================================================
-// 页面 SEO 配置
-// ============================================================================
-
-/**
- * 页面 SEO/Meta 配置
- * 用于搜索引擎优化和社交分享
- */
-export interface PageMetaConfig {
-  /** 页面标题 (覆盖默认 title) */
-  title?: string
-  /** 页面描述 */
-  description?: string
-  /** 关键词 */
-  keywords?: string[]
-  /** Open Graph 图片 (社交分享) */
-  ogImage?: string
-  /** 是否允许搜索引擎索引 */
-  robots?: 'index' | 'noindex' | 'nofollow' | 'none'
-  /** 规范链接 */
-  canonical?: string
-  /** 自定义 meta 标签 */
-  customTags?: Array<{
-    name?: string
-    property?: string
-    content: string
-  }>
-}
-
-// ============================================================================
-// 路由参数配置
-// ============================================================================
-
-/**
- * 路由参数类型
- */
-export type RouteParamType = 'string' | 'number' | 'boolean'
-
-/**
- * 路由参数定义
- * 用于定义动态路由参数 (如 /user/:id)
- */
-export interface RouteParamSchema {
-  /** 参数名 */
-  name: string
-  /** 参数类型 */
-  type?: RouteParamType
-  /** 是否必填 */
-  required?: boolean
-  /** 默认值 */
-  defaultValue?: string | number | boolean
-  /** 验证正则 */
-  pattern?: string
-  /** 参数说明 */
-  description?: string
-}
-
-/**
- * 查询参数定义
- * 用于定义 URL 查询参数 (如 ?page=1&size=10)
- */
-export interface QueryParamSchema {
-  /** 参数名 */
-  name: string
-  /** 参数类型 */
-  type?: RouteParamType
-  /** 默认值 */
-  defaultValue?: string | number | boolean
-  /** 参数说明 */
-  description?: string
-}
-
-// ============================================================================
-// 页面权限配置
-// ============================================================================
-
-/**
- * 页面权限配置
- */
-export interface PageAuthConfig {
-  /** 是否需要登录 */
-  requireAuth?: boolean
-  /** 允许访问的角色列表 (为空表示所有已登录用户) */
-  roles?: string[]
-  /** 允许访问的权限列表 */
-  permissions?: string[]
-  /** 无权限时的重定向路径 */
-  redirectTo?: string
-  /** 无权限时显示的消息 */
-  forbiddenMessage?: string
-}
-
-// ============================================================================
 // 页面生命周期 (框架无关)
 // ============================================================================
 
@@ -136,39 +44,6 @@ export interface PageLifecycleConfig {
   onVisibilityChange?: ActionRef
   /** 页面错误捕获 */
   onError?: ActionRef
-}
-
-// ============================================================================
-// 页面过渡动画
-// ============================================================================
-
-/**
- * 过渡动画类型
- */
-export type TransitionType =
-  | 'fade'
-  | 'slide-left'
-  | 'slide-right'
-  | 'slide-up'
-  | 'slide-down'
-  | 'zoom'
-  | 'none'
-
-/**
- * 页面过渡动画配置
- */
-export interface PageTransitionConfig {
-  /** 进入动画 */
-  enter?: TransitionType | string
-  /** 离开动画 */
-  leave?: TransitionType | string
-  /** 动画时长 (ms) */
-  duration?: number
-  /** 动画缓动函数 */
-  easing?: string
-  /** 自定义 CSS 类名 */
-  enterClass?: string
-  leaveClass?: string
 }
 
 // ============================================================================
@@ -364,16 +239,6 @@ export interface RoutePage extends PageSchemaBase {
   path: string
   /** 关联的布局 ID */
   layoutId?: string
-  /** SEO/Meta 配置 */
-  meta?: PageMetaConfig
-  /** 动态路由参数定义 */
-  params?: RouteParamSchema[]
-  /** 查询参数定义 */
-  query?: QueryParamSchema[]
-  /** 页面权限配置 */
-  auth?: PageAuthConfig
-  /** 页面过渡动画 */
-  transition?: PageTransitionConfig
 }
 
 /**

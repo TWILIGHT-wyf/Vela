@@ -49,7 +49,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "build:lib": "vite build --config vite.lib.config.ts",
+    "build:lib": "vite build",
     "prepublishOnly": "pnpm build:lib"
   },
   "peerDependencies": {
@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "@vela/core": "workspace:*",
+    "axios": "^1.13.2",
     "dompurify": "^3.3.1",
     "echarts": "^6.0.0",
     "highlight.js": "^11.11.1",
@@ -65,8 +66,9 @@
     "vue-echarts": "^8.0.1"
   },
   "devDependencies": {
-    "@types/dompurify": "^3.2.0",
+    "@element-plus/icons-vue": "^2.3.2",
     "@vitejs/plugin-vue": "^5.0.0",
+    "element-plus": "^2.13.1",
     "vite": "^5.0.0",
     "vite-plugin-dts": "^4.5.4",
     "vue": "^3.5.22"

@@ -6,33 +6,61 @@
   --bg-glass: rgba(255, 255, 255, 0.65);
   --bg-glass-heavy: rgba(255, 255, 255, 0.85);
   --bg-glass-hover: rgba(255, 255, 255, 0.9);
+  --bg-card: #ffffff;
 
   --backdrop-blur: blur(24px);
 
   /* 2. Brand Colors */
   --color-primary: #0b57d0; /* Vela Blue */
+  --primary-color: var(--color-primary);
   --color-primary-light: #4285f4;
   --color-primary-fade: rgba(11, 87, 208, 0.08);
   --color-accent: #00d2d3; /* Starlight Cyan */
 
   --text-primary: #1f1f1f;
   --text-secondary: #444746;
+  --text-tertiary: #6b7280;
   --text-disabled: #b0b0b0;
 
   /* 3. Aerodynamic Shapes */
   --radius-xs: 8px;
   --radius-sm: 12px;
+  --radius-card: 12px;
   --radius-md: 16px; /* Cards / Panels */
   --radius-lg: 24px; /* Dock / Large Containers */
   --radius-capsule: 999px; /* Buttons */
 
   /* 4. Depth & Shadows (Borderless) */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.1);
   --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.08);
   --shadow-active: 0 12px 48px rgba(11, 87, 208, 0.15);
 
   --border-glass: 1px solid rgba(255, 255, 255, 0.4);
   --border-focus: 1px solid var(--color-primary);
+  --border-light: #e5e7eb;
+
+  /* 5. Sizing & Spacing */
+  --panel-header-height: 44px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  /* 6. Interactive Surfaces */
+  --surface-hover-soft: rgba(255, 255, 255, 0.5);
+  --surface-hover-strong: rgba(255, 255, 255, 0.7);
+  --surface-hover-primary: rgba(11, 87, 208, 0.08);
+  --surface-active-primary: rgba(11, 87, 208, 0.15);
+  --surface-danger-soft: rgba(239, 68, 68, 0.1);
+  --dock-divider: rgba(0, 0, 0, 0.1);
+
+  /* 7. Canvas Indicators */
+  --drop-color: #0d99ff;
+  --drop-color-soft: #60a5fa;
+  --drop-surface: rgba(13, 153, 255, 0.06);
+  --drop-surface-strong: rgba(13, 153, 255, 0.1);
 
   /* Font */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -44,16 +72,34 @@
   --bg-glass: rgba(30, 31, 33, 0.65);
   --bg-glass-heavy: rgba(45, 46, 48, 0.85);
   --bg-glass-hover: rgba(60, 61, 64, 0.9);
+  --bg-card: rgba(45, 46, 48, 0.92);
 
   --color-primary: #8ab4f8;
+  --primary-color: var(--color-primary);
   --color-primary-light: #aecbfa;
   --color-primary-fade: rgba(138, 180, 248, 0.1);
 
   --text-primary: #e3e3e3;
   --text-secondary: #c4c7c5;
+  --text-tertiary: #9ca3af;
 
   --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.12);
   --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.35);
+
+  --surface-hover-soft: rgba(255, 255, 255, 0.08);
+  --surface-hover-strong: rgba(255, 255, 255, 0.14);
+  --surface-hover-primary: rgba(138, 180, 248, 0.16);
+  --surface-active-primary: rgba(138, 180, 248, 0.24);
+  --surface-danger-soft: rgba(248, 113, 113, 0.18);
+  --dock-divider: rgba(255, 255, 255, 0.14);
+
+  --drop-color: #8ab4f8;
+  --drop-color-soft: #aecbfa;
+  --drop-surface: rgba(138, 180, 248, 0.14);
+  --drop-surface-strong: rgba(138, 180, 248, 0.2);
 }
 
 body {

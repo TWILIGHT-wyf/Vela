@@ -43,11 +43,7 @@ export function useComponentTree(
 
     // ── 容器型节点判断 ──
     const isContainerNode = (node: NodeSchema): boolean => {
-      if (
-        node.container?.mode === 'grid' ||
-        node.container?.mode === 'free' ||
-        node.container?.mode === 'flow'
-      ) {
+      if (node.container?.mode === 'grid') {
         return true
       }
       const componentName = node.component || node.componentName
@@ -116,7 +112,9 @@ export function useComponentTree(
       normalizeGridContainer(node)
     }
     if (node.children && node.children.length > 0) {
-      node.children.forEach((child) => normalizeGridHierarchy(child))
+      node.children.forEach((child) => {
+        normalizeGridHierarchy(child)
+      })
     }
   }
 

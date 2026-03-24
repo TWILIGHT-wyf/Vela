@@ -105,34 +105,12 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
   const geometry = params.node.geometry
   const layoutItem = params.node.layoutItem
 
-  const x =
-    nodeMode === 'free'
-      ? geometry?.mode === 'free'
-        ? (geometry.x ?? parseNumber(style?.left, 0))
-        : parseNumber(style?.left, 0)
-      : 0
-  const y =
-    nodeMode === 'free'
-      ? geometry?.mode === 'free'
-        ? (geometry.y ?? parseNumber(style?.top, 0))
-        : parseNumber(style?.top, 0)
-      : 0
+  const width = normalizeLengthValue(geometry?.width ?? style?.width)
+  const height = normalizeLengthValue(geometry?.height ?? style?.height)
 
-  const width =
-    normalizeLengthValue(geometry?.width ?? style?.width) ?? (nodeMode === 'free' ? 100 : undefined)
-  const height =
-    normalizeLengthValue(geometry?.height ?? style?.height) ??
-    (nodeMode === 'free' ? 100 : undefined)
+  const zIndex = parseNumber(style?.zIndex, 0)
 
-  const zIndex =
-    geometry?.mode === 'free'
-      ? (geometry.zIndex ?? parseNumber(style?.zIndex, 0))
-      : parseNumber(style?.zIndex, 0)
-
-  const rotate =
-    geometry?.mode === 'free'
-      ? (geometry.rotate ?? parseRotationFromTransform(style))
-      : parseRotationFromTransform(style)
+  const rotate = parseRotationFromTransform(style)
 
   const gridColumnPlacement =
     layoutItem?.mode === 'grid'
@@ -142,9 +120,7 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
         )
       : geometry?.mode === 'grid'
         ? normalizeGridPlacement(geometry.gridColumnStart, geometry.gridColumnEnd)
-        : nodeMode === 'grid'
-          ? parseGridPlacement(style?.gridColumn)
-          : undefined
+        : parseGridPlacement(style?.gridColumn)
   const gridRowPlacement =
     layoutItem?.mode === 'grid'
       ? normalizeGridPlacement(
@@ -153,20 +129,15 @@ export function resolveLayout(params: ResolveLayoutParams): NormalizedNodeLayout
         )
       : geometry?.mode === 'grid'
         ? normalizeGridPlacement(geometry.gridRowStart, geometry.gridRowEnd)
-        : nodeMode === 'grid'
-          ? parseGridPlacement(style?.gridRow)
-          : undefined
+        : parseGridPlacement(style?.gridRow)
 
   return {
     mode: nodeMode,
     childMode,
-    x,
-    y,
     width,
     height,
     zIndex,
     rotate,
-    order: geometry?.mode === 'flow' ? geometry.order : undefined,
     gridColumnStart: gridColumnPlacement?.start,
     gridColumnEnd: gridColumnPlacement?.end,
     gridRowStart: gridRowPlacement?.start,

@@ -6,7 +6,13 @@
     </template>
 
     <!-- 选中普通组件时显示组件设置面板 -->
-    <el-tabs v-else v-model="activeTab" class="setter-tabs" stretch data-testid="setter-tabs">
+    <el-tabs
+      v-else
+      v-model="activeTab"
+      class="setter-tabs vela-panel-tabs"
+      stretch
+      data-testid="setter-tabs"
+    >
       <el-tab-pane label="属性" name="props">
         <PropsPane :node="selectedComponent" />
       </el-tab-pane>
@@ -17,10 +23,6 @@
 
       <el-tab-pane label="事件" name="events">
         <EventPane :node="selectedComponent" />
-      </el-tab-pane>
-
-      <el-tab-pane label="动画" name="animation">
-        <AnimationPane />
       </el-tab-pane>
 
       <el-tab-pane label="联动" name="relations">
@@ -36,7 +38,6 @@ import { useComponent } from '@/stores/component'
 import PropsPane from './panes/PropsPane.vue'
 import StylePaneEnhanced from './panes/StylePaneEnhanced.vue'
 import EventPane from './panes/EventPane.vue'
-import AnimationPane from './panes/AnimationPane.vue'
 import RelationsPane from './panes/RelationsPane.vue'
 import PageSettingPane from './panes/PageSettingPane.vue'
 
@@ -66,67 +67,7 @@ const activeTab = ref('props')
 
 /* 标签页样式 */
 .setter-tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.setter-tabs :deep(.el-tabs__header) {
-  margin: 0;
-  padding: 0 10px;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.setter-tabs :deep(.el-tabs__nav-wrap::after) {
-  height: 0;
-}
-
-.setter-tabs :deep(.el-tabs__item) {
-  height: 48px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-size: 13px;
-  padding: 0 12px;
-}
-
-.setter-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.advanced-content :deep(.el-collapse-item__header) {
-  font-weight: 500;
-  padding-left: 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.setter-tabs :deep(.el-tabs__nav-wrap::after) {
-  height: 0;
-}
-
-.setter-tabs :deep(.el-tabs__item) {
-  height: 44px;
-  font-weight: 500;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  padding: 0 10px;
-}
-
-.setter-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--el-color-primary);
-  font-weight: 600;
-}
-
-.setter-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  overflow: hidden;
-}
-
-.setter-tabs :deep(.el-tab-pane) {
-  height: 100%;
-  overflow-y: auto;
+  /* 通用 tabs 规则抽离到 patterns.css 的 .vela-panel-tabs */
 }
 
 /* 高级功能内容 */

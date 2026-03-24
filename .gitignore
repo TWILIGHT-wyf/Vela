@@ -52,3 +52,5 @@ packages/visual-lib/docs/.vitepress/cache/
 packages/visual-lib/docs/.vitepress/dist/
 .npmrc
 .gitnexus
+.codex/
+testlog.txt
