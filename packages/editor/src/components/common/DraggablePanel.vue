@@ -228,13 +228,13 @@ onBeforeUnmount(() => {
 }
 
 .panel-header {
-  height: 44px;
+  height: var(--panel-header-height);
   padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: grab;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
   user-select: none;
 }
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--surface-hover-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
 }
 
 .control-dot:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--surface-hover-strong);
   color: var(--text-primary);
 }
 
@@ -290,10 +290,10 @@ onBeforeUnmount(() => {
 }
 
 .panel-resize-handle--right {
-  top: 44px;
+  top: var(--panel-header-height);
   right: 0;
   width: 10px;
-  height: calc(100% - 44px);
+  height: calc(100% - var(--panel-header-height));
   cursor: ew-resize;
 }
 

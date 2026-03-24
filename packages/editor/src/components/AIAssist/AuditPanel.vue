@@ -66,7 +66,9 @@
               class="record-actions"
             >
               <el-button size="small" type="warning" @click="handleRollback(record.id)">
-                <el-icon><RefreshLeft /></el-icon>
+                <el-icon>
+                  <RefreshLeft />
+                </el-icon>
                 回滚到此状态
               </el-button>
             </div>

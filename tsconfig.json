@@ -1,36 +1,15 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "jsx": "preserve",
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "@vela/core": ["packages/core/src"],
-      "@vela/core/*": ["packages/core/src/*"],
-      "@vela/ui": ["packages/ui"],
-      "@vela/ui/*": ["packages/ui/*"],
-      "@vela/ui-react": ["packages/ui-react/src"],
-      "@vela/ui-react/*": ["packages/ui-react/src/*"],
-      "@vela/materials": ["packages/materials/src"],
-      "@vela/materials/*": ["packages/materials/src/*"],
-      "@vela/renderer": ["packages/renderer/src"],
-      "@vela/renderer/*": ["packages/renderer/src/*"],
-      "@vela/generator": ["packages/generator/src"],
-      "@vela/generator/*": ["packages/generator/src/*"],
-      "@vela/editor": ["packages/editor/src"],
-      "@vela/editor/*": ["packages/editor/src/*"]
-    }
-  },
-  "exclude": ["node_modules", "dist", "**/node_modules", "**/dist"]
+  "files": [],
+  "references": [
+    { "path": "./packages/core/tsconfig.json" },
+    { "path": "./packages/ui/tsconfig.json" },
+    { "path": "./packages/ui-react/tsconfig.json" },
+    { "path": "./packages/materials/tsconfig.json" },
+    { "path": "./packages/renderer/tsconfig.json" },
+    { "path": "./packages/generator/tsconfig.json" },
+    { "path": "./packages/editor/tsconfig.app.json" },
+    { "path": "./packages/editor/tsconfig.vitest.json" },
+    { "path": "./packages/editor/tsconfig.node.json" },
+    { "path": "./server/tsconfig.json" }
+  ]
 }

@@ -62,7 +62,7 @@
                 <el-form-item label="动作类型">
                   <el-select
                     :model-value="selectedAction.type"
-                    @change="setActionType(actionScope, selectedActionIndex, $event as string)"
+                    @change="handleActionTypeChange(actionScope, selectedActionIndex, $event)"
                   >
                     <el-option
                       v-for="option in actionTypeOptions"
@@ -199,9 +199,11 @@ import { Plus, Delete } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
-import EventPane from '@/components/SetterPanel/panes/EventPane.vue'
-import type { ActionSchema, AnyActionSchema } from '@vela/core/types/action'
+import * as EventPaneModule from '@/components/SetterPanel/panes/EventPane.vue'
+import type { ActionSchema, AnyActionSchema } from '@vela/core'
 import { ACTION_TYPE_OPTIONS } from '@/constants/action-types'
+
+const EventPane = (EventPaneModule as unknown as { default: unknown }).default
 
 type ActionScope = 'page' | 'global'
 type JsonFieldKey = 'payload' | 'handlers' | 'next'
@@ -226,7 +228,7 @@ function asRecord(value: unknown): Record<string, unknown> {
   return (value as Record<string, unknown>) || {}
 }
 
-function toString(value: unknown): string {
+function toText(value: unknown): string {
   if (typeof value === 'string') return value
   if (value === undefined || value === null) return ''
   return String(value)
@@ -254,7 +256,7 @@ function normalizeActions(actions: unknown): ActionSchema<string>[] {
 }
 
 function parseJson(input: unknown): { ok: true; value: unknown } | { ok: false } {
-  const text = toString(input).trim()
+  const text = toText(input).trim()
   if (!text) return { ok: true, value: undefined }
   try {
     return { ok: true, value: JSON.parse(text) }
@@ -271,6 +273,10 @@ function formatJson(value: unknown): string {
   } catch {
     return ''
   }
+}
+
+function handleActionTypeChange(scope: ActionScope, index: number, value: unknown): void {
+  setActionType(scope, index, toText(value))
 }
 
 function getActions(scope: ActionScope): ActionSchema<string>[] {
@@ -360,7 +366,7 @@ function removeAction(scope: ActionScope, index: number) {
 
 function setActionId(scope: ActionScope, index: number, value: unknown) {
   updateActionAt(scope, index, (action) => {
-    action.id = toString(value).trim()
+    action.id = toText(value).trim()
   })
 }
 
@@ -408,13 +414,13 @@ function getConditionExpression(action: ActionSchema<string>): string {
   const condition = asRecord(action).condition
   if (condition && typeof condition === 'object') {
     const expr = (condition as Record<string, unknown>).value
-    return toString(expr)
+    return toText(expr)
   }
   return ''
 }
 
 function setActionConditionExpression(scope: ActionScope, index: number, value: unknown) {
-  const text = toString(value).trim()
+  const text = toText(value).trim()
   updateActionAt(scope, index, (action) => {
     const record = asRecord(action)
     if (!text) {
@@ -428,11 +434,11 @@ function setActionConditionExpression(scope: ActionScope, index: number, value: 
 function getConfirmMessage(action: ActionSchema<string>): string {
   const confirm = asRecord(action).confirm
   if (!confirm || typeof confirm !== 'object') return ''
-  return toString((confirm as Record<string, unknown>).message)
+  return toText((confirm as Record<string, unknown>).message)
 }
 
 function setActionConfirmMessage(scope: ActionScope, index: number, value: unknown) {
-  const text = toString(value).trim()
+  const text = toText(value).trim()
   updateActionAt(scope, index, (action) => {
     const record = asRecord(action)
     if (!text) {

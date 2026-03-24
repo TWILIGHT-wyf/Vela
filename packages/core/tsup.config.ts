@@ -1,0 +1,40 @@
+import { defineConfig } from 'tsup'
+
+const entries: Record<string, string> = {
+  index: 'src/index.ts',
+  'types/index': 'src/types/index.ts',
+  'contracts/index': 'src/contracts/index.ts',
+  'validation/index': 'src/validation/index.ts',
+  'validation/zod': 'src/validation/zod.ts',
+  'validation/propSchemas': 'src/validation/propSchemas.ts',
+  'types/action': 'src/types/action.ts',
+  'types/data': 'src/types/data.ts',
+  'types/expression': 'src/types/expression.ts',
+  'types/i18n': 'src/types/i18n.ts',
+  'types/layout': 'src/types/layout.ts',
+  'types/material': 'src/types/material.ts',
+  'types/page': 'src/types/page.ts',
+  'types/project': 'src/types/project.ts',
+  'types/schema': 'src/types/schema.ts',
+  'contracts/action-runtime': 'src/contracts/action-runtime.ts',
+  'contracts/api': 'src/contracts/api.ts',
+  'contracts/component-props': 'src/contracts/component-props.ts',
+  'contracts/component-registry': 'src/contracts/component-registry.ts',
+  'utils/grid': 'src/utils/grid.ts',
+  'utils/gridNormalize': 'src/utils/gridNormalize.ts',
+  'utils/id': 'src/utils/id.ts',
+  'utils/style': 'src/utils/style.ts',
+  'utils/sandbox': 'src/utils/sandbox.ts',
+}
+
+export default defineConfig({
+  entry: entries,
+  format: ['esm', 'cjs'],
+  dts: true,
+  bundle: false,
+  clean: true,
+  outDir: 'dist',
+  sourcemap: true,
+  splitting: false,
+  target: 'es2020',
+})

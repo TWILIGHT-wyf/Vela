@@ -8,7 +8,7 @@
     :parent-layout-mode="effectiveParentLayoutMode"
     v-bind="$attrs"
   >
-    <ErrorBoundary :component-name="componentName" @error="handleRenderError">
+    <div class="universal-renderer-body">
       <!-- Actual Component -->
       <component
         v-if="isResolved"
@@ -53,17 +53,16 @@
           />
         </template>
       </div>
-    </ErrorBoundary>
+    </div>
   </component>
 </template>
 
 <script setup lang="ts">
 import { computed, toRef, type Component, type CSSProperties } from 'vue'
-import type { FlowContainerLayout, GridTrack, NodeSchema, GridContainerLayout } from '@vela/core'
+import type { GridTrack, NodeSchema, GridContainerLayout } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
 import { useComponent } from '@/stores/component'
-import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 
 defineOptions({
   name: 'UniversalRenderer',
@@ -73,7 +72,7 @@ defineOptions({
 const props = defineProps<{
   node: NodeSchema
   wrapper: Component
-  parentLayoutMode?: 'free' | 'flow' | 'grid'
+  parentLayoutMode?: 'grid'
 }>()
 
 const componentName = computed(() => props.node.component || props.node.componentName || '')
@@ -86,34 +85,15 @@ const componentRef = computed(() => {
   return getComponent(componentName.value)
 })
 
-// Error Handling
-function handleRenderError(error: Error, info: string) {
-  console.error(
-    `[UniversalRenderer] Component "${componentName.value}" (id: ${props.node.id}) render error:`,
-    error,
-    info,
-  )
-}
-
 // Data Source Adapter
 const nodeRef = toRef(props, 'node')
 const { resolvedProps } = useDataSourceAdapter(nodeRef)
 
 const componentStore = useComponent()
 
-const normalizeLayoutMode = (
-  mode: 'free' | 'flow' | 'grid' | undefined,
-): 'free' | 'flow' | 'grid' => {
-  if (mode === 'free') return 'free'
-  if (mode === 'flow') return 'flow'
-  return 'grid'
-}
-
-const effectiveParentLayoutMode = computed(() => normalizeLayoutMode(props.parentLayoutMode))
+const effectiveParentLayoutMode = computed(() => props.parentLayoutMode ?? 'grid')
 const selfChildrenLayoutMode = computed(() => {
-  const childMode = props.node.container?.mode
-  if (childMode === undefined) return effectiveParentLayoutMode.value
-  return normalizeLayoutMode(childMode)
+  return props.node.container?.mode ?? effectiveParentLayoutMode.value
 })
 
 const trackToCss = (track: GridTrack): string => {
@@ -162,29 +142,6 @@ const innerStyle = computed<CSSProperties>(() => {
   delete style.marginRight
   delete style.marginBottom
   delete style.marginLeft
-
-  // Free layout containers need a positioning context for absolute children
-  if (props.node.container?.mode === 'free') {
-    style.position = 'relative'
-  }
-
-  if (props.node.container?.mode === 'flow') {
-    const flowContainer = props.node.container as FlowContainerLayout
-    style.display = 'flex'
-    style.flexDirection = flowContainer.direction || 'row'
-    style.flexWrap = flowContainer.wrap || 'wrap'
-    style.justifyContent = flowContainer.justify || 'flex-start'
-    style.alignItems = flowContainer.align || 'stretch'
-    style.alignContent = flowContainer.alignContent || 'stretch'
-    if (flowContainer.gap !== undefined) {
-      style.gap =
-        typeof flowContainer.gap === 'number' ? `${flowContainer.gap}px` : flowContainer.gap
-    } else {
-      style.gap = '8px'
-    }
-    style.width = '100%'
-    style.height = '100%'
-  }
 
   // Grid containers: apply the fr-based grid template on the inner component element.
   // This is the element that directly wraps the slot/children, so child NodeWrappers

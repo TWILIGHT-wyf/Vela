@@ -521,30 +521,6 @@ function applyContainerStyle(style, node) {
     return
   }
 
-  if (container.mode === 'flow') {
-    if (style.display === undefined) {
-      style.display = 'flex'
-    }
-    if (style.flexDirection === undefined && typeof container.direction === 'string') {
-      style.flexDirection = container.direction
-    }
-    if (style.flexWrap === undefined && typeof container.wrap === 'string') {
-      style.flexWrap = container.wrap
-    }
-    if (style.justifyContent === undefined && typeof container.justify === 'string') {
-      style.justifyContent = container.justify
-    }
-    if (style.alignItems === undefined && typeof container.align === 'string') {
-      style.alignItems = container.align
-    }
-    if (style.alignContent === undefined && typeof container.alignContent === 'string') {
-      style.alignContent = container.alignContent
-    }
-    const gap = normalizeGapValue(container.gap)
-    if (style.gap === undefined && gap !== undefined) {
-      style.gap = gap
-    }
-  }
 }
 
 function buildNodeStyle(node) {
@@ -569,20 +545,7 @@ function buildNodeStyle(node) {
     style.marginBottom !== undefined ||
     style.marginLeft !== undefined
 
-  if (node.layout.mode === 'free') {
-    style.position = 'absolute'
-    style.left = node.layout.x || 0
-    style.top = node.layout.y || 0
-    if (style.width === undefined && node.layout.width !== undefined) {
-      style.width = node.layout.width
-    }
-    if (style.height === undefined && node.layout.height !== undefined) {
-      style.height = node.layout.height
-    }
-    if (style.zIndex === undefined) {
-      style.zIndex = node.layout.zIndex
-    }
-  } else if (node.layout.mode === 'grid') {
+  if (node.layout.mode === 'grid') {
     const hasGridPlacement =
       Number.isFinite(node.layout.gridColumnStart) &&
       Number.isFinite(node.layout.gridColumnEnd) &&
@@ -601,16 +564,6 @@ function buildNodeStyle(node) {
       if (style.height === undefined) {
         style.height = '100%'
       }
-    }
-  } else {
-    if (style.width === undefined && node.layout.width !== undefined) {
-      style.width = node.layout.width
-    }
-    if (style.height === undefined && node.layout.height !== undefined) {
-      style.height = node.layout.height
-    }
-    if (style.order === undefined && node.layout.order !== undefined) {
-      style.order = node.layout.order
     }
   }
 

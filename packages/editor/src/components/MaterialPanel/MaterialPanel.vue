@@ -12,7 +12,7 @@
     </div>
 
     <!-- 标签页 -->
-    <el-tabs v-model="activeTab" class="modern-tabs" stretch>
+    <el-tabs v-model="activeTab" class="modern-tabs vela-panel-tabs" stretch>
       <el-tab-pane label="基础组件" name="components">
         <div class="component-list">
           <el-collapse v-model="activeNames" class="clean-collapse">
@@ -72,8 +72,8 @@
 
       <el-tab-pane label="自定义" name="custom">
         <div class="custom-placeholder">
-          <el-button class="upload-btn" :icon="Upload" dashed> 导入组件 </el-button>
-          <el-empty description="支持导入 Vue/React 组件或 NPM 包" :image-size="80">
+          <el-button class="upload-btn" :icon="Upload" dashed> 自定义组件扩展规划 </el-button>
+          <el-empty description="面试版仅规划 manifest + 远程 ESM 注册，不承诺源码直传编译" :image-size="80">
             <template #image>
               <el-icon :size="64"><Box /></el-icon>
             </template>
@@ -151,6 +151,37 @@ const componentStore = useComponent()
 const projectStore = useProjectStore()
 const historyStore = useHistoryStore()
 
+const INTERVIEW_MATERIAL_WHITELIST = new Set([
+  'Text',
+  'Button',
+  'TextInput',
+  'TextareaInput',
+  'Select',
+  'Switch',
+  'CheckboxGroup',
+  'RadioGroup',
+  'DatePicker',
+  'SearchBox',
+  'NumberInput',
+  'Table',
+  'List',
+  'Stat',
+  'Image',
+  'Container',
+  'Grid',
+  'Flex',
+  'Panel',
+  'Tabs',
+  'Modal',
+])
+
+const INTERVIEW_TEMPLATE_WHITELIST = new Set([
+  'query-workbench',
+  'approval-center',
+  'secure-login',
+  'project-board',
+])
+
 // --- 从物料包生成组件分类 ---
 const categories = computed<Category[]>(() => {
   const materialsByCategory = getMaterialsByCategory()
@@ -158,8 +189,15 @@ const categories = computed<Category[]>(() => {
 
   Object.entries(materialsByCategory).forEach(([categoryName, materials]) => {
     const config = getCategoryConfig(categoryName) as PanelCategoryConfig
+    const visibleMaterials = materials.filter((meta) =>
+      INTERVIEW_MATERIAL_WHITELIST.has(resolveCanonicalMaterialName(meta.name)),
+    )
 
-    const items = materials.map((meta) => ({
+    if (visibleMaterials.length === 0) {
+      return
+    }
+
+    const items = visibleMaterials.map((meta) => ({
       name: meta.name,
       label: resolveMaterialLabel(meta),
       meta,
@@ -208,17 +246,18 @@ const filteredCategories = computed(() => {
 })
 
 const TEMPLATE_CATEGORY_LABELS: Record<PageTemplate['category'], string> = {
-  dashboard: '数据大屏',
-  analysis: '分析报表',
-  form: '查询表单',
-  management: '项目管理',
+  dashboard: '概览页面',
+  analysis: '分析页面',
+  form: '表单页面',
+  management: '管理页面',
 }
 
 const filteredTemplates = computed(() => {
+  const availableTemplates = pageTemplates.filter((tpl) => INTERVIEW_TEMPLATE_WHITELIST.has(tpl.id))
   const query = searchQuery.value.trim().toLowerCase()
-  if (!query) return pageTemplates
+  if (!query) return availableTemplates
 
-  return pageTemplates.filter((tpl) =>
+  return availableTemplates.filter((tpl) =>
     `${tpl.name} ${tpl.description} ${TEMPLATE_CATEGORY_LABELS[tpl.category]}`
       .toLowerCase()
       .includes(query),
@@ -286,7 +325,7 @@ async function applyTemplate(templateId: string): Promise<void> {
       projectStore.project.logic.actions = cloneDeep(templateInstance.globalActions)
     }
 
-    projectStore.updatePageConfig({ defaultLayoutMode: 'grid' })
+    // 编辑器固定网格模式，不再写入布局模式字段
     historyStore.clear()
 
     ElMessage.success(`已应用模板: ${selectedTemplate.name}`)
@@ -368,7 +407,7 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
 /* 搜索框区域 */
 .search-wrapper {
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-light); /* Refined border */
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.3); /* Slight tint */
@@ -376,16 +415,11 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
 /* 现代化 Tabs */
 .modern-tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  /* 通用 tabs 规则抽离到 patterns.css 的 .vela-panel-tabs */
 }
 
 .modern-tabs :deep(.el-tabs__header) {
-  margin: 0;
-  padding: 0 10px;
-  flex-shrink: 0;
+  border-bottom: none;
 }
 
 .modern-tabs :deep(.el-tabs__nav-wrap::after) {
@@ -395,24 +429,10 @@ const onDrag = (event: DragEvent, item: (typeof categories.value)[0]['items'][0]
 
 .modern-tabs :deep(.el-tabs__item) {
   height: 48px; /* Taller click area */
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color 0.2s;
 }
 
 .modern-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--el-color-primary);
-  font-weight: 600;
-}
-
-.modern-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  overflow: hidden;
-}
-
-.modern-tabs :deep(.el-tab-pane) {
-  height: 100%;
-  overflow-y: auto;
+  color: var(--color-primary);
 }
 
 /* 现代化 Collapse */

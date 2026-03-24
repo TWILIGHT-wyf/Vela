@@ -1,5 +1,5 @@
-// Protocol-only public barrel.
-// Non-protocol types should be imported from explicit subpaths:
+// 仅导出协议层类型。
+// 非协议类型请从明确子路径导入：
 // - contracts: @vela/core/contracts
 // - runtime: @vela/core/runtime
 // - validation: @vela/core/validation

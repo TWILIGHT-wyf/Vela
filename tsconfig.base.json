@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@vela/core": ["packages/core/src"],
+      "@vela/core/types": ["packages/core/src/types/index.ts"],
+      "@vela/core/contracts": ["packages/core/src/contracts/index.ts"],
+      "@vela/core/runtime": ["packages/core/src/runtime/operation.ts"],
+      "@vela/core/validation": ["packages/core/src/validation/index.ts"],
+      "@vela/core/utils": ["packages/core/src/utils/index.ts"],
+      "@vela/core/constants": ["packages/core/src/constants/index.ts"],
+      "@vela/core/*": ["packages/core/src/*"],
+      "@vela/ui": ["packages/ui"],
+      "@vela/ui/*": ["packages/ui/*"],
+      "@vela/ui-react": ["packages/ui-react/src"],
+      "@vela/ui-react/*": ["packages/ui-react/src/*"],
+      "@vela/materials": ["packages/materials/src"],
+      "@vela/materials/*": ["packages/materials/src/*"],
+      "@vela/renderer": ["packages/renderer/src"],
+      "@vela/renderer/*": ["packages/renderer/src/*"],
+      "@vela/generator": ["packages/generator/src"],
+      "@vela/generator/*": ["packages/generator/src/*"],
+      "@vela/editor": ["packages/editor/src"],
+      "@vela/editor/*": ["packages/editor/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "**/node_modules", "**/dist"]
+}

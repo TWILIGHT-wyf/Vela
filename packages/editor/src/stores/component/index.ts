@@ -49,18 +49,6 @@ export const useComponent = defineStore('component', () => {
     const currentPage = projectStore.currentPage
     if (currentPage && treeCtx.rootNode.value) {
       currentPage.children = cloneDeep(treeCtx.rootNode.value)
-      const rootMode = treeCtx.rootNode.value.container?.mode
-      if (rootMode === 'free' || rootMode === 'flow' || rootMode === 'grid') {
-        // @deprecated flow 模式已弃用，统一映射为 grid 模式。
-        // 存量 flow 数据在加载时自动升级为 grid。
-        const normalizedMode = rootMode === 'free' ? 'free' : 'grid'
-        if (!currentPage.config) {
-          currentPage.config = {}
-        }
-        if (currentPage.config.defaultLayoutMode !== normalizedMode) {
-          currentPage.config.defaultLayoutMode = normalizedMode
-        }
-      }
       projectStore.saveStatus = 'unsaved'
     }
   }
@@ -167,9 +155,9 @@ export const useComponent = defineStore('component', () => {
   }
 
   /**
-   * 更新组件的布局模式（通过命令执行，支持撤销）
+   * 统一设置容器为网格编排（通过命令执行，支持撤销）
    */
-  function updateContainerLayout(id: string, layoutMode: 'free' | 'flow' | 'grid') {
+  function updateContainerLayout(id: string, layoutMode: 'grid') {
     const node = indexCtx.nodeIndex.get(id)
     if (!node) {
       console.warn(`[ComponentStore] Node not found: ${id}`)
@@ -216,7 +204,9 @@ export const useComponent = defineStore('component', () => {
    * 批量删除组件
    */
   function deleteComponents(ids: string[]) {
-    ids.forEach((id) => deleteComponent(id))
+    ids.forEach((id) => {
+      deleteComponent(id)
+    })
   }
 
   /**
@@ -305,27 +295,6 @@ export const useComponent = defineStore('component', () => {
    */
   function getComponentById(id: string): NodeSchema | null {
     return indexCtx.nodeIndex.get(id) || null
-  }
-
-  /**
-   * Update component position in geometry
-   */
-  function updateComponentPosition(id: string, x: number, y: number) {
-    updateGeometry(id, { mode: 'free', x, y })
-  }
-
-  /**
-   * Update component size in geometry
-   */
-  function updateComponentSize(id: string, width: number, height: number) {
-    updateGeometry(id, { mode: 'free', width, height })
-  }
-
-  /**
-   * Update component rotation in geometry
-   */
-  function updateComponentRotation(id: string, rotate: number) {
-    updateGeometry(id, { mode: 'free', rotate })
   }
 
   // ========== 响应式属性引用工厂（包装） ==========
@@ -514,9 +483,6 @@ export const useComponent = defineStore('component', () => {
     componentStore,
     selectedComponent,
     isSelected: selectionCtx.isSelected,
-    updateComponentPosition,
-    updateComponentSize,
-    updateComponentRotation,
 
     // 响应式属性引用工厂
     createPropRef,

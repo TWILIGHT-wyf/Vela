@@ -12,6 +12,7 @@ import App from './App.vue'
 import router from './router'
 import './styles/animations.css'
 import './styles/theme.css'
+import './styles/patterns.css'
 
 // 导入物料包
 import { componentMap } from '@vela/materials'

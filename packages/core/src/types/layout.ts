@@ -1,10 +1,7 @@
 /**
- * 布局模式
- * - free: 自由布局（画布绝对定位）
- * - flow: 历史兼容模式（已下线，不再作为编辑入口）
- * - grid: 网格编排（整个画布为 CSS Grid，组件以 fr 比例填满）
+ * 布局模式（当前仅保留网格编排）
  */
-export type LayoutMode = 'free' | 'flow' | 'grid'
+export type LayoutMode = 'grid'
 
 /**
  * 长度值
@@ -25,31 +22,6 @@ export interface NodeSize {
 }
 
 /**
- * 自由布局几何信息（编辑器画布）
- */
-export interface FreeNodeGeometry extends NodeSize {
-  mode: 'free'
-  x?: number
-  y?: number
-  zIndex?: number
-  rotate?: number
-  scaleX?: number
-  scaleY?: number
-  locked?: boolean
-  hidden?: boolean
-}
-
-/**
- * 历史 flow 几何信息（编辑器画布）
- * 说明：类型名沿用 FlowNodeGeometry 以保持兼容
- * @deprecated flow 模式已弃用，新组件应使用 grid 模式。运行时会自动映射 flow → grid。
- */
-export interface FlowNodeGeometry extends NodeSize {
-  mode: 'flow'
-  order?: number
-}
-
-/**
  * 网格编排几何信息（编辑器画布）
  * 组件通过 gridColumnStart/End、gridRowStart/End 占据精确区域
  */
@@ -59,6 +31,10 @@ export interface GridNodeGeometry extends NodeSize {
   gridColumnEnd: number // 1-based column line (exclusive)
   gridRowStart: number // 1-based row line
   gridRowEnd: number // 1-based row line (exclusive)
+  zIndex?: number
+  rotate?: number
+  locked?: boolean
+  hidden?: boolean
 }
 
 /**
@@ -108,32 +84,7 @@ export interface GridItemLayout {
 /**
  * 节点几何定义（仅编辑器使用）
  */
-export type NodeGeometry = FreeNodeGeometry | FlowNodeGeometry | GridNodeGeometry
-
-/**
- * 自由容器布局配置
- */
-export interface FreeContainerLayout {
-  mode: 'free'
-  snapToGrid?: boolean
-  gridSize?: number
-  allowOverlap?: boolean
-}
-
-/**
- * 历史 flow 容器布局配置
- * 说明：接口名沿用 FlowContainerLayout 以保持兼容
- * @deprecated flow 模式已弃用，新组件应使用 grid 模式。运行时会自动映射 flow → grid。
- */
-export interface FlowContainerLayout {
-  mode: 'flow'
-  direction?: 'row' | 'column'
-  wrap?: 'nowrap' | 'wrap' | 'wrap-reverse'
-  justify?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly'
-  align?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline'
-  alignContent?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'space-between' | 'space-around'
-  gap?: LengthValue
-}
+export type NodeGeometry = GridNodeGeometry
 
 /**
  * 网格编排容器布局配置
@@ -159,7 +110,7 @@ export interface GridContainerLayout {
 /**
  * 容器对子节点的布局定义
  */
-export type NodeContainerLayout = FreeContainerLayout | FlowContainerLayout | GridContainerLayout
+export type NodeContainerLayout = GridContainerLayout
 
 /**
  * 页面画布模式

@@ -127,10 +127,6 @@ function ensureEditableRootGridContainer(
   }
 }
 
-function normalizeLayoutMode(mode: PageConfig['defaultLayoutMode']): 'free' | 'grid' {
-  return mode === 'free' ? 'free' : 'grid'
-}
-
 export const useProjectStore = defineStore('project', () => {
   // State
   const project = ref<ProjectSchema>({
@@ -191,20 +187,15 @@ export const useProjectStore = defineStore('project', () => {
   function normalizePageLayouts() {
     if (!Array.isArray(project.value.pages)) return
     for (const page of project.value.pages) {
-      if (!page.config) page.config = { defaultLayoutMode: 'grid' }
-      page.config.defaultLayoutMode = normalizeLayoutMode(page.config.defaultLayoutMode)
+      if (!page.config) page.config = {}
       if (page.children) {
-        const normalizedContainer: NodeSchema['container'] =
-          page.config.defaultLayoutMode === 'free'
-            ? ({ mode: 'free' } as const)
-            : createGridContainer(page.children.container)
-        page.children.container =
-          page.config.defaultLayoutMode === 'free'
-            ? normalizedContainer
-            : ensureEditableRootGridContainer(
-                normalizedContainer,
-                Array.isArray(page.children.children) ? page.children.children.length : 0,
-              )
+        const normalizedContainer: NodeSchema['container'] = createGridContainer(
+          page.children.container,
+        )
+        page.children.container = ensureEditableRootGridContainer(
+          normalizedContainer,
+          Array.isArray(page.children.children) ? page.children.children.length : 0,
+        )
       }
     }
   }
@@ -216,9 +207,7 @@ export const useProjectStore = defineStore('project', () => {
       type: 'page',
       name: 'Home',
       path: '/',
-      config: {
-        defaultLayoutMode: 'grid',
-      },
+      config: {},
       state: [],
       apis: [],
       children: {
@@ -255,9 +244,7 @@ export const useProjectStore = defineStore('project', () => {
       type: 'page',
       name,
       path: `/${name.toLowerCase()}`,
-      config: {
-        defaultLayoutMode: 'grid',
-      },
+      config: {},
       state: [],
       apis: [],
       children: {
@@ -391,25 +378,6 @@ export const useProjectStore = defineStore('project', () => {
     saveStatus.value = 'unsaved'
   }
 
-  function changePageLayout(pageId: string, layout: 'free' | 'grid'): boolean {
-    const page = project.value.pages.find((p) => p.id === pageId)
-    if (!page) return false
-
-    if (!page.config) {
-      page.config = {}
-    }
-    const normalizedLayout = normalizeLayoutMode(layout)
-    page.config.defaultLayoutMode = normalizedLayout
-    if (page.children) {
-      page.children.container =
-        normalizedLayout === 'free'
-          ? { mode: 'free' }
-          : createGridContainer(page.children.container)
-    }
-    saveStatus.value = 'unsaved'
-    return true
-  }
-
   return {
     project,
     currentPageId,
@@ -424,6 +392,5 @@ export const useProjectStore = defineStore('project', () => {
     renamePage,
     saveProject,
     updatePageConfig,
-    changePageLayout,
   }
 })

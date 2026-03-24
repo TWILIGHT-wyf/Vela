@@ -4,12 +4,13 @@ import { ElMessage } from 'element-plus'
 import {
   createSandboxProxy,
   evaluate as evaluateSandboxExpression,
+  ACTION_TARGET_DATA_ATTRIBUTES,
+  ACTION_CONFIRM_DEFAULT_MESSAGE,
   type AnyActionSchema,
   type NodeSchema,
   validateCode,
 } from '@vela/core'
-import { ACTION_TARGET_DATA_ATTRIBUTES, ACTION_CONFIRM_DEFAULT_MESSAGE } from '@vela/core/contracts'
-import type { Page } from '../types'
+import type { Page } from './types'
 
 type UnknownRecord = Record<string, unknown>
 

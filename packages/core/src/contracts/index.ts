@@ -1,4 +1,4 @@
 export * from './api'
 export * from './component-registry'
-export * from './component-props'
+export type { CSSLength } from './component-props'
 export * from './action-runtime'

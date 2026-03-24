@@ -214,25 +214,6 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
-  // ========== 向后兼容 API ==========
-
-  /**
-   * @deprecated Use executeCommand instead
-   * 保留用于向后兼容，现在是空操作
-   */
-  function init(): void {
-    console.log('[History] Initialized (command mode)')
-  }
-
-  /**
-   * @deprecated Use executeCommand instead
-   * 保留用于向后兼容，现在是空操作
-   */
-  function commit(): void {
-    // 命令模式下不需要手动提交
-    console.log('[History] commit() is deprecated in command mode')
-  }
-
   return {
     // State
     undoStack,
@@ -255,9 +236,5 @@ export const useHistoryStore = defineStore('history', () => {
     resume,
     withoutHistory,
     getDebugInfo,
-
-    // Compatibility
-    init,
-    commit,
   }
 })

@@ -17,7 +17,7 @@
       <!-- Content -->
       <slot />
 
-      <!-- Overlay layer (Selection, SnapLines) -->
+      <!-- Overlay layer (Selection) -->
       <!-- Moved INSIDE world to sync pan/zoom transform automatically -->
       <div class="canvas-overlay">
         <slot name="overlay" />

@@ -27,6 +27,8 @@
     "@vela/core": "workspace:*",
     "@vela/materials": "workspace:*",
     "@vela/ui": "workspace:*",
+    "element-plus": "^2.13.1",
+    "lodash-es": "^4.17.21",
     "vue-router": "^4.6.0"
   },
   "devDependencies": {

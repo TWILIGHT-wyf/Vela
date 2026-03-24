@@ -88,7 +88,7 @@ export type ContainerDetector = (node: NodeSchema) => boolean
 /** 最小化的容器判断：只看 container.mode 和 children */
 export function defaultContainerDetector(node: NodeSchema): boolean {
   const mode = node.container?.mode
-  if (mode === 'grid' || mode === 'free' || mode === 'flow') return true
+  if (mode === 'grid') return true
   return Array.isArray(node.children)
 }
 

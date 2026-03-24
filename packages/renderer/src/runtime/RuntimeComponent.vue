@@ -6,7 +6,7 @@
     :data-id="node.id"
     :data-component="resolvedComponent"
     :class="computedClasses"
-    :style="computedStyle as any"
+    :style="computedStyle"
     v-bind="componentProps"
     v-on="eventHandlers"
   >
@@ -36,10 +36,10 @@
 import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
 import { getComponent, hasComponent } from '@vela/materials'
 import { getNodeComponent, type NodeSchema } from '@vela/core'
-import { isWrapperComponent } from '@vela/core/contracts'
-import { useComponentStyle } from '../composables/useComponentStyle'
+import { isWrapperComponent } from '../../../core/src/contracts'
+import { useComponentStyle } from './useComponentStyle'
 import { useComponentDataSource } from './useComponentDataSource'
-import type { RuntimeMode } from '../types'
+import type { RuntimeMode } from './types'
 
 /**
  * Unified Runtime Component
@@ -389,11 +389,6 @@ watch(
 <style scoped>
 .runtime-component {
   box-sizing: border-box;
-}
-
-/* Editor mode - no pointer events on content, let overlay handle */
-.runtime-component--editor {
-  /* Content still renders, but interactions handled by overlay */
 }
 
 /* Animation effects */

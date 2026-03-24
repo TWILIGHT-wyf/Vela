@@ -1,21 +1,12 @@
 /**
- * Unified Component Registry — Single Source of Truth
+ * 统一组件注册表（单一真相源）。
  *
- * This module defines the canonical mapping between internal component names
- * (as stored in NodeSchema.component), and their framework-specific tag names
- * for Vue (@vela/ui) and React (@vela/ui-react).
- *
- * ALL other mapping tables in the codebase should derive from this registry:
- * - packages/generator/src/emitters/vue3/emitProject.ts   → VUE_COMPONENT_MAP
- * - packages/generator/src/emitters/react/emitProject.ts  → REACT_COMPONENT_MAP
- * - packages/materials/src/registry.ts                     → ALIAS_MAP
- * - packages/materials/src/metadata-registry.ts            → aliases
- * - packages/renderer/src/runtime/RuntimeComponent.vue     → typeMap
- * - packages/editor/src/main.ts                            → RESERVED_NAMES
+ * 维护 NodeSchema.component 的规范名与 Vue/React 实现名映射，
+ * 其余映射表应由这里派生，避免多处维护导致漂移。
  */
 
 // ============================================================================
-// Types
+// 类型
 // ============================================================================
 
 export type ComponentCategory =
@@ -33,20 +24,20 @@ export type ComponentCategory =
   | 'v2'
 
 export interface ComponentDefinition {
-  /** Canonical schema name used in NodeSchema.component */
+  /** NodeSchema.component 使用的规范组件名 */
   name: string
-  /** Component category for grouping */
+  /** 组件分组 */
   category: ComponentCategory
-  /** Vue component tag name in @vela/ui (e.g. 'vText', 'lineChart') */
+  /** @vela/ui 中的 Vue 组件标签名 */
   vueTag: string
-  /** React component name in @vela/ui-react (null = not yet implemented) */
+  /** @vela/ui-react 中的 React 组件名（null 表示未实现） */
   reactComponent: string | null
-  /** Whether the component is a container that can hold children */
+  /** 是否为可承载子节点的容器组件 */
   isContainer?: boolean
 }
 
 // ============================================================================
-// Component Registry — the single source of truth
+// 组件注册表（单一真相源）
 // ============================================================================
 
 export const COMPONENT_REGISTRY: readonly ComponentDefinition[] = [
@@ -183,7 +174,7 @@ export const COMPONENT_REGISTRY: readonly ComponentDefinition[] = [
 ] as const
 
 // ============================================================================
-// Legacy Aliases — map old schema names to canonical names
+// 旧别名映射：历史名称 -> 规范名称
 // ============================================================================
 
 export const COMPONENT_ALIASES: Readonly<Record<string, string>> = {
@@ -211,7 +202,7 @@ export const COMPONENT_ALIASES: Readonly<Record<string, string>> = {
 }
 
 // ============================================================================
-// Wrapper Components — resolve to 'div' in code generation
+// 包装组件：代码生成时解析为 div
 // ============================================================================
 
 export const WRAPPER_COMPONENTS: ReadonlySet<string> = new Set([
@@ -222,7 +213,7 @@ export const WRAPPER_COMPONENTS: ReadonlySet<string> = new Set([
 ])
 
 // ============================================================================
-// HTML Tags — native elements, not library components
+// HTML 原生标签（非组件库组件）
 // ============================================================================
 
 export const HTML_TAGS: ReadonlySet<string> = new Set([
@@ -263,18 +254,18 @@ export const HTML_TAGS: ReadonlySet<string> = new Set([
 ])
 
 // ============================================================================
-// Derived Lookup Maps (computed once at module load)
+// 派生查找表（模块加载时一次性构建）
 // ============================================================================
 
-/** Internal name → ComponentDefinition */
+/** 规范名 -> ComponentDefinition */
 const _definitionMap = new Map<string, ComponentDefinition>()
 for (const def of COMPONENT_REGISTRY) {
   _definitionMap.set(def.name, def)
 }
 
-/** Internal name → Vue tag */
+/** 规范名 -> Vue 标签名 */
 const _vueTagMap: Record<string, string> = {}
-/** Internal name → React component name */
+/** 规范名 -> React 组件名 */
 const _reactComponentMap: Record<string, string> = {}
 
 for (const def of COMPONENT_REGISTRY) {
@@ -284,29 +275,23 @@ for (const def of COMPONENT_REGISTRY) {
   }
 }
 
-/** Frozen derived maps for external consumption */
+/** 冻结后对外暴露的映射表 */
 export const VUE_TAG_MAP: Readonly<Record<string, string>> = Object.freeze(_vueTagMap)
 export const REACT_TAG_MAP: Readonly<Record<string, string>> = Object.freeze(_reactComponentMap)
 
 // ============================================================================
-// Helper Functions
+// 辅助函数
 // ============================================================================
 
 /**
- * Resolve a possibly-aliased component name to its canonical internal name.
- *
- * @example
- * resolveComponentAlias('KpiText')   // → 'Text'
- * resolveComponentAlias('flexbox')   // → 'flex'
- * resolveComponentAlias('lineChart') // → 'lineChart' (identity)
+ * 将可能的别名解析为规范组件名。
  */
 export function resolveComponentAlias(name: string): string {
   return COMPONENT_ALIASES[name] ?? name
 }
 
 /**
- * Get the Vue tag name for a given internal component name.
- * Returns the name itself if not found in the registry.
+ * 获取 Vue 标签名；未命中时回退原值。
  */
 export function getVueTagName(schemaName: string): string {
   const canonical = resolveComponentAlias(schemaName)
@@ -314,8 +299,7 @@ export function getVueTagName(schemaName: string): string {
 }
 
 /**
- * Get the React component name for a given internal component name.
- * Returns null if the component has no React implementation.
+ * 获取 React 组件名；若未实现则返回 null。
  */
 export function getReactComponentName(schemaName: string): string | null {
   const canonical = resolveComponentAlias(schemaName)
@@ -323,7 +307,7 @@ export function getReactComponentName(schemaName: string): string | null {
 }
 
 /**
- * Get the ComponentDefinition for a given name (resolves aliases).
+ * 获取组件定义（自动解析别名）。
  */
 export function getComponentDefinition(name: string): ComponentDefinition | undefined {
   const canonical = resolveComponentAlias(name)
@@ -331,30 +315,29 @@ export function getComponentDefinition(name: string): ComponentDefinition | unde
 }
 
 /**
- * Get all components in a given category.
+ * 按分类获取组件定义。
  */
 export function getComponentsByCategory(category: ComponentCategory): ComponentDefinition[] {
   return COMPONENT_REGISTRY.filter((def) => def.category === category)
 }
 
 /**
- * Check if a name refers to a wrapper component (page, fragment, layout, dialog).
- * These are rendered as 'div' in generated code.
+ * 判断是否为包装组件（page/fragment/layout/dialog）。
  */
 export function isWrapperComponent(name: string): boolean {
   return WRAPPER_COMPONENTS.has(name.toLowerCase())
 }
 
 /**
- * Check if a name is a native HTML tag.
+ * 判断是否为原生 HTML 标签。
  */
 export function isHtmlTag(name: string): boolean {
   return HTML_TAGS.has(name.toLowerCase())
 }
 
 /**
- * Resolve a component name for Vue code generation.
- * Wrapper components → 'div', HTML tags → identity, others → VUE_TAG_MAP lookup.
+ * 为 Vue 代码生成解析组件标签名。
+ * 包装组件 -> div，原生标签 -> 原值，其余走注册表映射。
  */
 export function resolveVueComponentTag(name: string): string {
   if (!name || typeof name !== 'string') return 'div'
@@ -368,8 +351,8 @@ export function resolveVueComponentTag(name: string): string {
 }
 
 /**
- * Resolve a component name for React code generation.
- * Wrapper components → 'div', HTML tags → identity, others → REACT_TAG_MAP lookup.
+ * 为 React 代码生成解析组件名。
+ * 包装组件 -> div，原生标签 -> 小写原值，其余走注册表映射。
  */
 export function resolveReactComponentTag(name: string): string {
   if (!name || typeof name !== 'string') return 'div'
@@ -383,7 +366,7 @@ export function resolveReactComponentTag(name: string): string {
 }
 
 /**
- * Check if a component is known in the registry (including aliases).
+ * 判断组件是否已注册（含别名）。
  */
 export function isRegisteredComponent(name: string): boolean {
   const canonical = resolveComponentAlias(name)
@@ -391,16 +374,15 @@ export function isRegisteredComponent(name: string): boolean {
 }
 
 /**
- * Get all canonical component names.
+ * 获取全部规范组件名。
  */
 export function getAllComponentNames(): string[] {
   return COMPONENT_REGISTRY.map((def) => def.name)
 }
 
 /**
- * Reserved names — component names that conflict with HTML tags or
- * framework builtins (e.g. Element Plus). Used by the editor to add
- * a prefix when registering global components.
+ * 保留组件名集合。
+ * 与 HTML 标签或框架内置名冲突时，编辑器注册全局组件会加前缀。
  */
 export const RESERVED_COMPONENT_NAMES: ReadonlySet<string> = new Set([
   'Button',

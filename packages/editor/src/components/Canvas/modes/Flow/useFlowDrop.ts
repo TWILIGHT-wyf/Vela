@@ -16,7 +16,6 @@ import {
   placementToGeometry,
   type GridPlacement,
 } from '@/utils/gridPlacement'
-import { useCanvasContext } from '../../composables/useCanvasContext'
 import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
 
 /**
@@ -79,14 +78,10 @@ function isContainerNode(node: NodeSchema): boolean {
 }
 
 type FlowDirection = 'row' | 'column'
-type EditorLayoutMode = 'free' | 'flow' | 'grid'
+type EditorLayoutMode = 'grid'
 
 export function inferDropDirectionForParent(node: NodeSchema | null | undefined): FlowDirection {
   if (!node) return 'column'
-
-  if (node.container?.mode === 'flow') {
-    return node.container.direction === 'column' ? 'column' : 'row'
-  }
 
   const style = node.style || {}
   const display = String(style.display || '').toLowerCase()
@@ -108,9 +103,8 @@ export function inferDropDirectionForParent(node: NodeSchema | null | undefined)
   return 'column'
 }
 
-function normalizeLayoutMode(mode: 'free' | 'flow' | 'grid' | undefined): EditorLayoutMode {
-  if (mode === 'free') return 'free'
-  if (mode === 'flow') return 'flow'
+function normalizeLayoutMode(mode: 'grid' | undefined): EditorLayoutMode {
+  void mode
   return 'grid'
 }
 
@@ -132,7 +126,6 @@ function escapeCssAttrValue(value: string): string {
  */
 export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   const componentStore = useComponent()
-  const { scale: canvasScale } = useCanvasContext()
 
   const getRootNode = () => componentStore.rootNode
 
@@ -827,8 +820,6 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     const effectiveParentId = position === 'inside' ? targetId : targetParentId || rootNode.id
     const effectiveParent = componentStore.findNodeById(rootNode, effectiveParentId)
     const effectiveParentMode = resolveLayoutMode(rootNode, effectiveParentId)
-    const isFreeContainer = position === 'inside' && effectiveParentMode === 'free'
-    const isFlowContainer = position === 'inside' && effectiveParentMode === 'flow'
 
     const componentName = dropData.component || dropData.componentName
     if (!componentName) {
@@ -912,87 +903,6 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       return false
     }
 
-    // Apply scale compensation for free containers
-    const s = canvasScale.value || 1
-    let x = 0
-    let y = 0
-    if (isFreeContainer && state.rect) {
-      x = Math.max(0, Math.round((clientX - state.rect.left) / s))
-      y = Math.max(0, Math.round((clientY - state.rect.top) / s))
-    }
-
-    // Resolve numeric dimensions for free-mode geometry
-    const defaultW =
-      dropData.width ?? (typeof dropData.style?.width === 'number' ? dropData.style.width : 120)
-    const defaultH =
-      dropData.height ?? (typeof dropData.style?.height === 'number' ? dropData.style.height : 80)
-
-    // 创建新组件
-    const newComponent: NodeSchema = {
-      id: `comp_${crypto.randomUUID()}`,
-      component: componentName,
-      props: dropData.props ?? {},
-      style: {
-        width: isFreeContainer ? defaultW : isFlowContainer ? undefined : '100%',
-        minHeight: isFreeContainer ? undefined : isFlowContainer ? undefined : '100%',
-        height: isFreeContainer ? defaultH : undefined,
-        flexBasis: isFlowContainer
-          ? ((dropData.style?.flexBasis as string | number | undefined) ?? '280px')
-          : undefined,
-        gridColumn:
-          !isFreeContainer &&
-          !isFlowContainer &&
-          (dropData.style?.gridColumn as string | undefined) === undefined
-            ? 'span 3'
-            : (dropData.style?.gridColumn as string | undefined),
-        gridRow:
-          !isFreeContainer &&
-          !isFlowContainer &&
-          (dropData.style?.gridRow as string | undefined) === undefined
-            ? 'span 4'
-            : (dropData.style?.gridRow as string | undefined),
-        ...(dropData.style || {}),
-      },
-      geometry: isFreeContainer
-        ? {
-            mode: 'free' as const,
-            x,
-            y,
-            width: defaultW,
-            height: defaultH,
-          }
-        : undefined,
-      children: isContainerComponent ? [] : undefined,
-    }
-
-    // 计算父节点和索引
-    let parentId: string | null
-    let index: number | undefined
-
-    if (position === 'inside') {
-      parentId = targetId
-      index = undefined // 添加到末尾
-    } else {
-      parentId = targetParentId
-      const parent = parentId ? componentStore.findNodeById(rootNode, parentId) : rootNode
-
-      if (parent?.children) {
-        const targetIndex = parent.children.findIndex((c: NodeSchema) => c.id === targetId)
-        index = position === 'before' ? targetIndex : targetIndex + 1
-      }
-    }
-
-    console.log(`[useFlowDrop] Adding ${newComponent.component} to ${parentId} at index ${index}`)
-    const newId = componentStore.addComponent(parentId, newComponent, index)
-
-    if (newId) {
-      // 使用 nextTick 确保 DOM 渲染完成后再选中，避免选中框与渲染层不同步
-      nextTick(() => {
-        componentStore.selectComponent(newId)
-      })
-      return true
-    }
-
     return false
   }
 
@@ -1036,18 +946,6 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     const rootNode = getRootNode()
     const rootLayoutMode = normalizeLayoutMode(rootNode?.container?.mode)
-    // Apply scale compensation for free layout drop coordinates
-    const s = canvasScale.value || 1
-    let x = 0
-    let y = 0
-    if (rootLayoutMode === 'free') {
-      const target = e.currentTarget as HTMLElement | null
-      const rect = target?.getBoundingClientRect()
-      if (rect) {
-        x = Math.max(0, Math.round((e.clientX - rect.left) / s))
-        y = Math.max(0, Math.round((e.clientY - rect.top) / s))
-      }
-    }
 
     if (rootLayoutMode === 'grid' && rootNode) {
       const colCount = resolveGridColumnCount(rootNode)
@@ -1129,63 +1027,6 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
         return true
       }
       return false
-    }
-
-    // 如果是移动操作
-    if (dropData.nodeId && draggingId.value === dropData.nodeId && rootNode) {
-      componentStore.moveComponent(dropData.nodeId, rootNode.id, rootNode.children?.length || 0)
-      return true
-    }
-
-    // 添加新组件到根节点
-    // Resolve numeric dimensions for free-mode geometry
-    const defaultW =
-      dropData.width ?? (typeof dropData.style?.width === 'number' ? dropData.style.width : 120)
-    const defaultH =
-      dropData.height ?? (typeof dropData.style?.height === 'number' ? dropData.style.height : 80)
-
-    const newComponent: NodeSchema = {
-      id: `comp_${crypto.randomUUID()}`,
-      component: componentName,
-      props: dropData.props ?? {},
-      style: {
-        width:
-          rootLayoutMode === 'free' ? defaultW : rootLayoutMode === 'flow' ? undefined : '100%',
-        minHeight:
-          rootLayoutMode === 'free' ? undefined : rootLayoutMode === 'flow' ? undefined : '100%',
-        height: rootLayoutMode === 'free' ? defaultH : undefined,
-        flexBasis:
-          rootLayoutMode === 'flow'
-            ? ((dropData.style?.flexBasis as string | number | undefined) ?? '280px')
-            : undefined,
-        gridColumn:
-          rootLayoutMode === 'grid'
-            ? (dropData.style?.gridColumn as string | undefined)
-            : undefined,
-        gridRow:
-          rootLayoutMode === 'grid' ? (dropData.style?.gridRow as string | undefined) : undefined,
-        ...(dropData.style || {}),
-      },
-      geometry:
-        rootLayoutMode === 'free'
-          ? {
-              mode: 'free' as const,
-              x,
-              y,
-              width: defaultW,
-              height: defaultH,
-            }
-          : undefined,
-      children: isContainerComponent ? [] : undefined,
-    }
-
-    const newId = componentStore.addComponent(null, newComponent)
-    if (newId) {
-      // 使用 nextTick 确保 DOM 渲染完成后再选中，避免选中框与渲染层不同步
-      nextTick(() => {
-        componentStore.selectComponent(newId)
-      })
-      return true
     }
 
     return false
