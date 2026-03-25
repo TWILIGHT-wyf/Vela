@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { nanoid } from 'nanoid'
-import type { ProjectSchema, PageSchema, NodeSchema, PageConfig } from '@vela/core'
-import { countTracks } from '@vela/core'
+import type {
+  ProjectSchema,
+  PageSchema,
+  NodeSchema,
+  PageConfig,
+  PageType,
+  DialogPage,
+} from '@vela/core'
+import { countTracks, createDialogPage, createFragmentPage, createRoutePage } from '@vela/core'
+import type { ApiSchema, VariableSchema } from '@vela/core/types/data'
 
 const STORAGE_KEY = 'vela_project'
 export type SaveStatus = 'saved' | 'saving' | 'unsaved'
@@ -127,6 +135,65 @@ function ensureEditableRootGridContainer(
   }
 }
 
+type ManagedPageType = Extract<PageType, 'page' | 'dialog' | 'fragment'>
+
+interface AddPageOptions {
+  type?: ManagedPageType
+  path?: string
+}
+
+function toRoutePath(name: string, path?: string): string {
+  const trimmed = path?.trim()
+  if (trimmed) {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  }
+
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return `/${slug || 'page'}`
+}
+
+function enrichPageDefaults(page: PageSchema): PageSchema {
+  page.config = {
+    defaultLayoutMode: 'grid',
+    ...(page.config || {}),
+  }
+  page.state = page.state || []
+  page.apis = page.apis || []
+
+  if (page.children) {
+    page.children.props = page.children.props || {}
+    page.children.style = {
+      width: '100%',
+      height: '100%',
+      position: 'relative',
+      ...(page.children.style || {}),
+    }
+    page.children.container = createGridContainer(page.children.container)
+  }
+
+  return page
+}
+
+function createManagedPage(name: string, options: AddPageOptions = {}): PageSchema {
+  const pageId = nanoid()
+  const type = options.type || 'page'
+
+  switch (type) {
+    case 'dialog':
+      return enrichPageDefaults(createDialogPage(pageId, name))
+    case 'fragment':
+      return enrichPageDefaults(createFragmentPage(pageId, name))
+    case 'page':
+    default:
+      return enrichPageDefaults(createRoutePage(pageId, toRoutePath(name, options.path), name))
+  }
+}
+
 export const useProjectStore = defineStore('project', () => {
   // State
   const project = ref<ProjectSchema>({
@@ -201,28 +268,17 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function createDefaultProject() {
-    const pageId = nanoid()
-    const defaultPage: PageSchema = {
-      id: pageId,
+    const defaultPage = createManagedPage('Home', {
       type: 'page',
-      name: 'Home',
       path: '/',
-      config: {},
-      state: [],
-      apis: [],
-      children: {
-        id: 'root',
-        component: 'Page',
-        container: createGridContainer(),
-        props: {},
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-          backgroundColor: '#ffffff',
-        },
-        children: [],
-      },
+    })
+
+    if (defaultPage.children) {
+      defaultPage.children.id = 'root'
+      defaultPage.children.style = {
+        ...(defaultPage.children.style || {}),
+        backgroundColor: '#ffffff',
+      }
     }
 
     project.value = {
@@ -234,34 +290,13 @@ export const useProjectStore = defineStore('project', () => {
       },
       pages: [defaultPage],
     }
-    currentPageId.value = pageId
+    currentPageId.value = defaultPage.id
   }
 
-  function addPage(name: string) {
-    const pageId = nanoid()
-    const newPage: PageSchema = {
-      id: pageId,
-      type: 'page',
-      name,
-      path: `/${name.toLowerCase()}`,
-      config: {},
-      state: [],
-      apis: [],
-      children: {
-        id: `root_${pageId}`,
-        component: 'Page',
-        container: createGridContainer(),
-        props: {},
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [],
-      },
-    }
+  function addPage(name: string, options: AddPageOptions = {}) {
+    const newPage = createManagedPage(name, options)
     project.value.pages.push(newPage)
-    currentPageId.value = pageId
+    currentPageId.value = newPage.id
     saveStatus.value = 'unsaved'
   }
 
@@ -378,6 +413,65 @@ export const useProjectStore = defineStore('project', () => {
     saveStatus.value = 'unsaved'
   }
 
+  function updateCurrentPageMeta(meta: {
+    name?: string
+    title?: string
+    description?: string
+  }) {
+    if (!currentPage.value) return
+
+    if (meta.name !== undefined) {
+      currentPage.value.name = meta.name
+    }
+    if (meta.title !== undefined) {
+      currentPage.value.title = meta.title
+    }
+    if (meta.description !== undefined) {
+      currentPage.value.description = meta.description
+    }
+
+    saveStatus.value = 'unsaved'
+  }
+
+  function updateCurrentPagePath(path: string) {
+    if (!currentPage.value || currentPage.value.type !== 'page') return
+    currentPage.value.path = path.startsWith('/') ? path : `/${path}`
+    saveStatus.value = 'unsaved'
+  }
+
+  function updateCurrentPageRuntime(runtime: Partial<NonNullable<PageConfig['runtime']>>) {
+    if (!currentPage.value) return
+    if (!currentPage.value.config) {
+      currentPage.value.config = {}
+    }
+    currentPage.value.config.runtime = {
+      ...(currentPage.value.config.runtime || {}),
+      ...runtime,
+    }
+    saveStatus.value = 'unsaved'
+  }
+
+  function updateCurrentPageState(state: VariableSchema[]) {
+    if (!currentPage.value) return
+    currentPage.value.state = state
+    saveStatus.value = 'unsaved'
+  }
+
+  function updateCurrentPageApis(apis: ApiSchema[]) {
+    if (!currentPage.value) return
+    currentPage.value.apis = apis
+    saveStatus.value = 'unsaved'
+  }
+
+  function updateCurrentDialogConfig(config: Partial<NonNullable<DialogPage['dialogConfig']>>) {
+    if (!currentPage.value || currentPage.value.type !== 'dialog') return
+    currentPage.value.dialogConfig = {
+      ...(currentPage.value.dialogConfig || {}),
+      ...config,
+    }
+    saveStatus.value = 'unsaved'
+  }
+
   return {
     project,
     currentPageId,
@@ -392,5 +486,11 @@ export const useProjectStore = defineStore('project', () => {
     renamePage,
     saveProject,
     updatePageConfig,
+    updateCurrentPageMeta,
+    updateCurrentPagePath,
+    updateCurrentPageRuntime,
+    updateCurrentPageState,
+    updateCurrentPageApis,
+    updateCurrentDialogConfig,
   }
 })
