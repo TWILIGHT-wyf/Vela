@@ -41,6 +41,12 @@ interface InlineActionRecord extends UnknownRecord {
   code: string
 }
 
+interface DialogCloseDetail extends UnknownRecord {
+  dialogId?: string
+  result?: unknown
+  data?: unknown
+}
+
 export interface EventExecutorContext {
   components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>
   pages: Ref<Page[]> | ComputedRef<Page[]>
@@ -321,6 +327,10 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function cloneValue<T>(value: T): T {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value))
+}
+
 export function useEventExecutor(context: EventExecutorContext) {
   const { components, pages, state, isProjectMode, router, onNavigate } = context
 
@@ -407,6 +417,25 @@ export function useEventExecutor(context: EventExecutorContext) {
       event,
       timestamp: Date.now(),
     }
+  }
+
+  function waitForDialogClose(dialogId: string): Promise<DialogCloseDetail> {
+    if (!dialogId || typeof window === 'undefined') {
+      return Promise.resolve({ dialogId })
+    }
+
+    return new Promise((resolve) => {
+      const handler = (event: Event) => {
+        const detail = ((event as CustomEvent<DialogCloseDetail>).detail || {}) as DialogCloseDetail
+        if (toStringValue(detail.dialogId, '') !== dialogId) {
+          return
+        }
+        window.removeEventListener('vela:dialog:closed', handler as EventListener)
+        resolve(detail)
+      }
+
+      window.addEventListener('vela:dialog:closed', handler as EventListener)
+    })
   }
 
   async function executeActionLike(
@@ -578,25 +607,14 @@ export function useEventExecutor(context: EventExecutorContext) {
         handleEmit(action, sourceNode, event, runtimeStateOverride)
         break
       case 'showDialog':
-        dispatchRuntimeEvent('vela:dialog:open', {
-          dialogId: extractPayload(action).dialogId,
-          title: resolveValue(
-            extractPayload(action).title,
-            createScope(sourceNode, event, runtimeStateOverride),
-          ),
-          content: resolveValue(
-            extractPayload(action).content,
-            createScope(sourceNode, event, runtimeStateOverride),
-          ),
-          data: resolveValue(
-            extractPayload(action).data,
-            createScope(sourceNode, event, runtimeStateOverride),
-          ),
-        })
+        await handleShowDialog(action, sourceNode, nodeId, event, runtimeStateOverride)
         break
       case 'closeDialog':
         dispatchRuntimeEvent('vela:dialog:close', {
-          dialogId: extractPayload(action).dialogId,
+          dialogId: resolveValue(
+            extractPayload(action).dialogId,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
           result: resolveValue(
             extractPayload(action).result,
             createScope(sourceNode, event, runtimeStateOverride),
@@ -758,6 +776,49 @@ export function useEventExecutor(context: EventExecutorContext) {
     }
 
     setByPath(resolveRuntimeState(runtimeStateOverride), path, resolvedValue, merge)
+  }
+
+  async function handleShowDialog(
+    action: ActionRecord,
+    sourceNode: NodeSchema | undefined,
+    nodeId: string,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): Promise<void> {
+    const payload = extractPayload(action)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
+    const dialogId = toStringValue(resolveValue(payload.dialogId, scope), '')
+    const dialogData = resolveValue(payload.data, scope)
+
+    dispatchRuntimeEvent('vela:dialog:open', {
+      dialogId,
+      title: resolveValue(payload.title, scope),
+      content: resolveValue(payload.content, scope),
+      data: dialogData,
+    })
+
+    const resultPath = toStringValue(payload.resultPath, '')
+    const shouldWaitForClose =
+      Boolean(payload.waitForClose) || Boolean(resultPath) || payload.onClose !== undefined
+
+    if (!dialogId || !shouldWaitForClose) {
+      return
+    }
+
+    const detail = await waitForDialogClose(dialogId)
+    const runtimeState = resolveRuntimeState(runtimeStateOverride)
+    const clonedResult = cloneValue(detail.result)
+
+    setByPath(runtimeState, 'dialogResult', { dialogId, result: clonedResult }, false)
+    setByPath(runtimeState, `dialogResults.${dialogId}`, clonedResult, false)
+
+    if (resultPath) {
+      setByPath(runtimeState, resultPath, clonedResult, false)
+    }
+
+    if (payload.onClose !== undefined) {
+      await executeActionCallbacks(payload.onClose, sourceNode, nodeId, event, runtimeStateOverride)
+    }
   }
 
   async function handleNavigate(

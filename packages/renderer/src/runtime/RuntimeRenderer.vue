@@ -465,13 +465,39 @@ function openDialog(detail: DialogRuntimeEventDetail) {
   activeDialogs.value.push(nextDialog)
 }
 
-function closeDialog(dialogId?: string) {
-  if (!dialogId) {
-    activeDialogs.value = activeDialogs.value.slice(0, -1)
+function dispatchDialogClosed(dialog: ActiveDialogEntry, result?: unknown) {
+  if (typeof window === 'undefined') {
     return
   }
 
-  activeDialogs.value = activeDialogs.value.filter((item) => item.dialogId !== dialogId)
+  window.dispatchEvent(
+    new CustomEvent('vela:dialog:closed', {
+      detail: {
+        dialogId: dialog.dialogId,
+        result: cloneValue(result),
+        data: cloneValue(dialog.data),
+      },
+    }),
+  )
+}
+
+function closeDialog(dialogId?: string, result?: unknown) {
+  let closedDialog: ActiveDialogEntry | undefined
+
+  if (!dialogId) {
+    closedDialog = activeDialogs.value[activeDialogs.value.length - 1]
+    activeDialogs.value = activeDialogs.value.slice(0, -1)
+  } else {
+    const currentIndex = activeDialogs.value.findIndex((item) => item.dialogId === dialogId)
+    if (currentIndex >= 0) {
+      closedDialog = activeDialogs.value[currentIndex]
+      activeDialogs.value = activeDialogs.value.filter((item) => item.dialogId !== dialogId)
+    }
+  }
+
+  if (closedDialog) {
+    dispatchDialogClosed(closedDialog, result)
+  }
 }
 
 function handleDialogOpen(event: Event) {
@@ -481,7 +507,7 @@ function handleDialogOpen(event: Event) {
 
 function handleDialogClose(event: Event) {
   const detail = (event as CustomEvent<DialogRuntimeEventDetail>).detail || {}
-  closeDialog(toStringValue(detail.dialogId, ''))
+  closeDialog(toStringValue(detail.dialogId, ''), detail.result)
 }
 
 function registerDialogListeners() {

@@ -81,6 +81,17 @@
                     />
                   </el-form-item>
 
+                  <el-form-item label="结果写回路径" size="small">
+                    <el-input
+                      :model-value="getDialogPayloadField(action, 'resultPath')"
+                      placeholder="例如 detailResult / form.detail"
+                      @update:model-value="setNodeDialogPayloadField(index, 'resultPath', $event)"
+                    />
+                    <div class="field-hint">
+                      配置后会在弹窗关闭时写回当前页面状态，后续 next 动作会等待关闭后继续。
+                    </div>
+                  </el-form-item>
+
                   <div class="flow-grid">
                     <el-form-item label="显示取消按钮" size="small">
                       <el-switch
@@ -363,6 +374,19 @@
                           setDialogPayloadField(section.key, index, 'title', $event)
                         "
                       />
+                    </el-form-item>
+
+                    <el-form-item label="结果写回路径" size="small">
+                      <el-input
+                        :model-value="getDialogPayloadField(action, 'resultPath')"
+                        placeholder="例如 detailResult / form.detail"
+                        @update:model-value="
+                          setDialogPayloadField(section.key, index, 'resultPath', $event)
+                        "
+                      />
+                      <div class="field-hint">
+                        配置后会在弹窗关闭时写回当前页面状态，后续 next 动作会等待关闭后继续。
+                      </div>
                     </el-form-item>
 
                     <div class="flow-grid">
@@ -923,7 +947,7 @@ function getPayloadRecord(action: ActionSchema<string>): Record<string, unknown>
 
 function getDialogPayloadField(
   action: ActionSchema<string>,
-  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText' | 'resultPath',
 ): string {
   return toString(getPayloadRecord(action)[key])
 }
@@ -1092,7 +1116,7 @@ function setJsonField(
 function setDialogPayloadField(
   eventName: SupportedEventName,
   index: number,
-  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText' | 'resultPath',
   value: unknown,
 ) {
   updateInline(eventName, index, (action) => {
@@ -1367,7 +1391,7 @@ function setNodeActionType(index: number, value: string) {
 
 function setNodeDialogPayloadField(
   index: number,
-  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText' | 'resultPath',
   value: unknown,
 ) {
   updateNodeActionAt(index, (action) => {
@@ -1606,6 +1630,13 @@ function setNodeActionExtraFields(index: number, value: unknown) {
   color: var(--el-text-color-secondary);
   font-size: 11px;
   line-height: 18px;
+}
+
+.field-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
 .action-item :deep(.el-form-item) {
