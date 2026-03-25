@@ -16,7 +16,7 @@ import {
   placementToGeometry,
   type GridPlacement,
 } from '@/utils/gridPlacement'
-import type { DropIndicatorState, DropPosition, FlowDropData } from './types'
+import type { CanvasDropData, DropIndicatorState, DropPosition } from './types'
 
 /**
  * 容器类型组件列表
@@ -124,7 +124,7 @@ function escapeCssAttrValue(value: string): string {
  * 3. 处理拖放完成后的组件移动/添加
  * 4. 自动滚动视口
  */
-export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
+export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
   const componentStore = useComponent()
 
   const getRootNode = () => componentStore.rootNode
@@ -201,7 +201,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     if (position === 'inside') {
       const depth = getNodeDepth(targetId)
       if (depth >= MAX_NESTING_DEPTH - 1) {
-        console.warn(`[useFlowDrop] Nesting depth limit reached: ${depth}`)
+        console.warn(`[useCanvasDrop] Nesting depth limit reached: ${depth}`)
         return false
       }
     }
@@ -533,6 +533,9 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    */
   function setDraggingId(id: string | null) {
     draggingId.value = id
+    if (!id) {
+      hideIndicator()
+    }
   }
 
   /**
@@ -572,6 +575,11 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
         isShiftPressed,
       )
 
+      if (!canDropIntoTarget(node.id, position)) {
+        hideIndicator()
+        return
+      }
+
       // 更新指示器状态
       indicatorState.value = {
         visible: true,
@@ -597,18 +605,29 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   function handleDragOver(e: DragEvent, node: NodeSchema, element: HTMLElement) {
     // 忽略拖拽到自身
     if (draggingId.value && node.id === draggingId.value) {
+      hideIndicator()
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'none'
+      }
       return
     }
 
     // 检查是否拖拽到自己的子节点（防止循环嵌套）
     if (draggingId.value && isDescendantOf(node.id, draggingId.value)) {
       // 拖拽到自己的子节点，忽略
+      hideIndicator()
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'none'
+      }
       return
     }
 
     // 允许拖放
     e.preventDefault()
     e.stopPropagation()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
 
     updateIndicatorState(e.clientX, e.clientY, node, element, e.altKey, e.shiftKey)
   }
@@ -657,18 +676,18 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     // 验证状态
     const rootNode = getRootNode()
     if (!state.targetId || !rootNode) {
-      console.warn('[useFlowDrop] Invalid drop state')
+      console.warn('[useCanvasDrop] Invalid drop state')
       return false
     }
 
     // 获取拖拽数据
     const dataStr = e.dataTransfer?.getData('application/x-vela') || '{}'
-    let dropData: FlowDropData
+    let dropData: CanvasDropData
 
     try {
-      dropData = JSON.parse(dataStr) as FlowDropData
+      dropData = JSON.parse(dataStr) as CanvasDropData
     } catch {
-      console.warn('[useFlowDrop] Invalid drop data')
+      console.warn('[useCanvasDrop] Invalid drop data')
       return false
     }
 
@@ -677,13 +696,13 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     const targetNode = componentStore.findNodeById(rootNode, state.targetId)
 
     if (!targetNode) {
-      console.warn('[useFlowDrop] Target node not found')
+      console.warn('[useCanvasDrop] Target node not found')
       return false
     }
 
     // 检查嵌套深度
     if (!canDropIntoTarget(state.targetId, state.position)) {
-      console.warn('[useFlowDrop] Nesting depth limit exceeded')
+      console.warn('[useCanvasDrop] Nesting depth limit exceeded')
       return false
     }
 
@@ -711,7 +730,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     const { position, targetId, targetParentId } = state
     const movingNode = componentStore.findNodeById(rootNode, nodeId)
     if (!movingNode) {
-      console.warn('[useFlowDrop] Moving node not found')
+      console.warn('[useCanvasDrop] Moving node not found')
       return false
     }
 
@@ -730,13 +749,13 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       const parent = componentStore.findNodeById(rootNode, newParentId)
 
       if (!parent?.children) {
-        console.warn('[useFlowDrop] Parent has no children array')
+        console.warn('[useCanvasDrop] Parent has no children array')
         return false
       }
 
       const targetIndex = parent.children.findIndex((c) => c.id === targetId)
       if (targetIndex < 0) {
-        console.warn('[useFlowDrop] Target index not found in parent')
+        console.warn('[useCanvasDrop] Target index not found in parent')
         return false
       }
       newIndex = position === 'before' ? targetIndex : targetIndex + 1
@@ -798,7 +817,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
       return true
     }
 
-    console.log(`[useFlowDrop] Moving ${nodeId} to ${newParentId} at index ${newIndex}`)
+    console.log(`[useCanvasDrop] Moving ${nodeId} to ${newParentId} at index ${newIndex}`)
     componentStore.moveComponent(nodeId, newParentId, newIndex)
 
     return true
@@ -808,7 +827,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
    * 处理新组件添加
    */
   function handleAddComponent(
-    dropData: FlowDropData,
+    dropData: CanvasDropData,
     state: DropIndicatorState,
     clientX: number,
     clientY: number,
@@ -823,7 +842,7 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     const componentName = dropData.component || dropData.componentName
     if (!componentName) {
-      console.warn('[useFlowDrop] Missing component name in drop payload')
+      console.warn('[useCanvasDrop] Missing component name in drop payload')
       return false
     }
     const isContainerComponent = isContainerNode({ component: componentName } as NodeSchema)
@@ -930,10 +949,10 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
     hideIndicator()
 
     const dataStr = e.dataTransfer?.getData('application/x-vela') || '{}'
-    let dropData: FlowDropData
+    let dropData: CanvasDropData
 
     try {
-      dropData = JSON.parse(dataStr) as FlowDropData
+      dropData = JSON.parse(dataStr) as CanvasDropData
     } catch {
       return false
     }
@@ -1056,4 +1075,4 @@ export function useFlowDrop(viewportRef?: Ref<HTMLElement | null>) {
   }
 }
 
-export type UseFlowDropReturn = ReturnType<typeof useFlowDrop>
+export type UseCanvasDropReturn = ReturnType<typeof useCanvasDrop>

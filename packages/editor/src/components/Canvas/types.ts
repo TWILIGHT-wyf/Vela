@@ -43,7 +43,7 @@ export interface DropIndicatorState {
 /**
  * 拖拽数据格式（通过 dataTransfer 传递）
  */
-export interface FlowDropData {
+export interface CanvasDropData {
   /** 组件名称 (来自 NodeSchema.component) */
   component?: string
   /** 组件名称（旧字段，保持兼容） */

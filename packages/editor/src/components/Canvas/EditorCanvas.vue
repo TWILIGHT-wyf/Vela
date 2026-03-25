@@ -1,12 +1,12 @@
 <template>
   <div
-    class="flow-viewport editor-canvas-viewport"
+    class="editor-canvas editor-canvas-viewport"
     :class="{ 'is-embedded': embedded }"
     ref="viewportRef"
     @click="handleBackgroundClick"
     @contextmenu.prevent="handleContextMenu"
   >
-    <div class="flow-workspace" :style="workspaceStyle">
+    <div class="canvas-workspace" :style="workspaceStyle">
       <div
         class="simulation-page canvas-stage"
         :class="{
@@ -59,11 +59,11 @@
     </div>
 
     <!-- Drop Indicator (Teleport to body) -->
-    <DropIndicator
-      :visible="flowDrop.indicator.value.visible"
-      :rect="flowDrop.indicator.value.rect"
-      :position="flowDrop.indicator.value.position"
-      :direction="flowDrop.indicator.value.direction"
+    <CanvasDropIndicator
+      :visible="canvasDrop.indicator.value.visible"
+      :rect="canvasDrop.indicator.value.rect"
+      :position="canvasDrop.indicator.value.position"
+      :direction="canvasDrop.indicator.value.direction"
     />
 
     <!-- Context Menu -->
@@ -97,10 +97,10 @@ import { useUIStore } from '@/stores/ui'
 import { useSizeStore } from '@/stores/size'
 import UniversalRenderer from '@/components/Canvas/UniversalRenderer.vue'
 import NodeWrapper from './NodeWrapper.vue'
-import DropIndicator from './DropIndicator.vue'
+import CanvasDropIndicator from './CanvasDropIndicator.vue'
 import ContextMenu from './ContextMenu.vue'
 import SelectionLayer from '@/components/Canvas/selection/SelectionLayer.vue'
-import { useFlowDrop } from './useFlowDrop'
+import { useCanvasDrop } from './useCanvasDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
 
@@ -132,11 +132,11 @@ useEditorShortcuts({
   closeMenu: closeContextMenu,
 })
 
-// ========== Flow Drop Logic ==========
-const flowDrop = useFlowDrop(viewportRef)
+// ========== Canvas Drop Logic ==========
+const canvasDrop = useCanvasDrop(viewportRef)
 
-// Provide flowDrop to child components (NodeWrapper)
-provide('flowDrop', flowDrop)
+// Provide shared canvas drop state to child components
+provide('canvasDrop', canvasDrop)
 
 // ========== Root drag state ==========
 const isRootDragOver = ref(false)
@@ -150,11 +150,11 @@ const hasRootChildren = computed(() => {
 })
 
 const showRootDropHint = computed(() => {
-  return isRootDragOver.value && hasRootChildren.value && !flowDrop.indicator.value.visible
+  return isRootDragOver.value && hasRootChildren.value && !canvasDrop.indicator.value.visible
 })
 
 const showEmptyDropHint = computed(() => {
-  return isRootDragOver.value && !flowDrop.indicator.value.visible
+  return isRootDragOver.value && !canvasDrop.indicator.value.visible
 })
 
 const trackToCss = (track: GridTrack): string => {
@@ -375,8 +375,8 @@ const handleRootDragOver = (e: DragEvent) => {
 
   const target = e.target as HTMLElement | null
   const overNode = target?.closest('[data-id]')
-  if (!overNode && flowDrop.indicator.value.visible) {
-    flowDrop.hideIndicator()
+  if (!overNode && canvasDrop.indicator.value.visible) {
+    canvasDrop.hideIndicator()
   }
 }
 
@@ -399,13 +399,13 @@ const handleRootDragLeave = (e: DragEvent) => {
  */
 const handleRootDrop = (e: DragEvent) => {
   isRootDragOver.value = false
-  flowDrop.handleDropOnRoot(e)
+  canvasDrop.handleDropOnRoot(e)
 }
 </script>
 
 <style scoped>
 /* 最外层视口 - 提供滚动容器 */
-.flow-viewport {
+.editor-canvas {
   width: 100%;
   height: 100%;
   overflow: auto;
@@ -416,21 +416,21 @@ const handleRootDrop = (e: DragEvent) => {
   position: relative;
 }
 
-.flow-viewport.is-embedded {
+.editor-canvas.is-embedded {
   overflow: visible;
   background: transparent;
   align-items: flex-start;
 }
 
 /* 工作区 - 提供页面周围的边距 */
-.flow-workspace {
+.canvas-workspace {
   padding: 40px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
 
-.flow-viewport.is-embedded .flow-workspace {
+.editor-canvas.is-embedded .canvas-workspace {
   padding: 40px;
   justify-content: flex-start;
 }

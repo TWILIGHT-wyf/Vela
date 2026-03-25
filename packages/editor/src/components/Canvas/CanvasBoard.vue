@@ -2,15 +2,15 @@
   <div class="canvas-board-wrapper" data-testid="canvas-board">
     <!-- Infinite canvas viewport (Figma-like) -->
     <CanvasViewport>
-      <!-- Flow 画布嵌入在无限画布内 -->
-      <FlowCanvas embedded />
+      <!-- 默认编辑画布嵌入在无限画布内 -->
+      <EditorCanvas embedded />
     </CanvasViewport>
   </div>
 </template>
 
 <script setup lang="ts">
 import CanvasViewport from './CanvasViewport.vue'
-import FlowCanvas from './modes/Flow/FlowCanvas.vue'
+import EditorCanvas from './EditorCanvas.vue'
 </script>
 
 <style scoped>

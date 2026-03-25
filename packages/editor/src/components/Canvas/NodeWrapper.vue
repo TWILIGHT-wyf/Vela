@@ -214,7 +214,7 @@ import {
   type NodeSchema,
   type NodeStyle,
 } from '@vela/core'
-import type { UseFlowDropReturn } from './useFlowDrop'
+import type { UseCanvasDropReturn } from './useCanvasDrop'
 
 interface Props {
   nodeId: string
@@ -234,7 +234,7 @@ const emit = defineEmits<{
 }>()
 
 // ========== Inject Flow Drop Logic ==========
-const flowDrop = inject<UseFlowDropReturn>('flowDrop')
+const canvasDrop = inject<UseCanvasDropReturn>('canvasDrop')
 
 // ========== Canvas Context (for scale compensation) ==========
 const { scale: canvasScale } = useCanvasContext()
@@ -294,8 +294,8 @@ const componentLabel = computed(() => {
 })
 
 const isDragFeedbackActive = computed(() => {
-  const dragging = Boolean(flowDrop?.draggingId.value)
-  const indicatorVisible = Boolean(flowDrop?.indicator.value?.visible)
+  const dragging = Boolean(canvasDrop?.draggingId.value)
+  const indicatorVisible = Boolean(canvasDrop?.indicator.value?.visible)
   return dragging || indicatorVisible || isDragOver.value
 })
 
@@ -550,7 +550,7 @@ onBeforeUnmount(() => {
 
 /** 判断是否为容器组件 */
 const isContainer = computed(() => {
-  return flowDrop?.isContainerNode(currentNode.value as NodeSchema) || false
+  return canvasDrop?.isContainerNode(currentNode.value as NodeSchema) || false
 })
 
 /** 判断是否为空容器 */
@@ -725,7 +725,7 @@ const handleDragStart = (e: DragEvent) => {
   e.dataTransfer.effectAllowed = 'move'
 
   // 通知 flowDrop 当前正在拖拽的组件
-  flowDrop?.setDraggingId(props.nodeId)
+  canvasDrop?.setDraggingId(props.nodeId)
 
   // 设置拖拽图像
   if (wrapperRef.value) {
@@ -736,7 +736,7 @@ const handleDragStart = (e: DragEvent) => {
   const onKeyDown = (ev: KeyboardEvent) => {
     if (ev.key === 'Escape') {
       dragCancelled = true
-      flowDrop?.hideIndicator()
+      canvasDrop?.hideIndicator()
       window.removeEventListener('keydown', onKeyDown)
     }
   }
@@ -756,15 +756,15 @@ const handleDragEnd = () => {
   isDragOver.value = false
   dragCancelled = false
   setNativeDragSuppressed(false)
-  flowDrop?.setDraggingId(null)
-  flowDrop?.hideIndicator()
+  canvasDrop?.setDraggingId(null)
+  canvasDrop?.hideIndicator()
 }
 
 const handleDragOver = (e: DragEvent) => {
   if (isFreeParent.value) return
-  if (!flowDrop || !currentNode.value || !wrapperRef.value) return
+  if (!canvasDrop || !currentNode.value || !wrapperRef.value) return
   isDragOver.value = true
-  flowDrop.handleDragOver(e, currentNode.value, wrapperRef.value)
+  canvasDrop.handleDragOver(e, currentNode.value, wrapperRef.value)
 }
 
 const handleDragLeave = (e: DragEvent) => {
@@ -776,19 +776,19 @@ const handleDragLeave = (e: DragEvent) => {
     return
   }
   isDragOver.value = false
-  flowDrop?.handleDragLeave(e)
+  canvasDrop?.handleDragLeave(e)
 }
 
 const handleDrop = (e: DragEvent) => {
   if (isFreeParent.value) return
   isDragOver.value = false
-  if (!flowDrop || !currentNode.value) return
+  if (!canvasDrop || !currentNode.value) return
   // 如果拖拽被取消，不执行放置
   if (dragCancelled) {
     dragCancelled = false
     return
   }
-  flowDrop.handleDrop(e)
+  canvasDrop.handleDrop(e)
 }
 
 type FlowResizeHandle = 'n' | 'e' | 's' | 'w' | 'nw' | 'ne' | 'se' | 'sw'
