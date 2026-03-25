@@ -8,6 +8,7 @@
     "jsx": "preserve",
     "sourceMap": true,
     "resolveJsonModule": true,
+    "allowArbitraryExtensions": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
@@ -16,6 +17,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["packages/editor/src/*"],
       "@vela/core": ["packages/core/src"],
       "@vela/core/types": ["packages/core/src/types/index.ts"],
       "@vela/core/contracts": ["packages/core/src/contracts/index.ts"],

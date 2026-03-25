@@ -55,6 +55,97 @@
                   </el-select>
                 </el-form-item>
 
+                <template v-if="action.type === 'showDialog'">
+                  <el-form-item label="目标弹窗页" size="small">
+                    <el-select
+                      :model-value="getDialogPayloadField(action, 'dialogId')"
+                      filterable
+                      clearable
+                      placeholder="选择一个弹窗页"
+                      @change="setNodeDialogPayloadField(index, 'dialogId', $event)"
+                    >
+                      <el-option
+                        v-for="page in dialogPageOptions"
+                        :key="`node-dialog-${page.id}`"
+                        :label="`${page.name} (${page.id})`"
+                        :value="page.id"
+                      />
+                    </el-select>
+                  </el-form-item>
+
+                  <el-form-item label="弹窗标题" size="small">
+                    <el-input
+                      :model-value="getDialogPayloadField(action, 'title')"
+                      placeholder="可选，支持纯文本标题"
+                      @update:model-value="setNodeDialogPayloadField(index, 'title', $event)"
+                    />
+                  </el-form-item>
+
+                  <div class="flow-grid">
+                    <el-form-item label="显示取消按钮" size="small">
+                      <el-switch
+                        :model-value="getDialogBooleanPayloadField(action, 'showCancel', true)"
+                        @change="setNodeDialogBooleanPayloadField(index, 'showCancel', $event)"
+                      />
+                    </el-form-item>
+
+                    <el-form-item label="确认按钮文本" size="small">
+                      <el-input
+                        :model-value="getDialogPayloadField(action, 'confirmText')"
+                        placeholder="确认"
+                        @update:model-value="setNodeDialogPayloadField(index, 'confirmText', $event)"
+                      />
+                    </el-form-item>
+
+                    <el-form-item label="取消按钮文本" size="small">
+                      <el-input
+                        :model-value="getDialogPayloadField(action, 'cancelText')"
+                        placeholder="取消"
+                        @update:model-value="setNodeDialogPayloadField(index, 'cancelText', $event)"
+                      />
+                    </el-form-item>
+                  </div>
+
+                  <el-form-item label="传入数据(JSON)" size="small">
+                    <el-input
+                      :model-value="formatJson(getDialogPayloadJsonField(action, 'data'))"
+                      type="textarea"
+                      :rows="3"
+                      placeholder='{"recordId":"{{row.id}}"}'
+                      @change="setNodeDialogPayloadJsonField(index, 'data', $event)"
+                    />
+                  </el-form-item>
+                </template>
+
+                <template v-else-if="action.type === 'closeDialog'">
+                  <el-form-item label="目标弹窗页" size="small">
+                    <el-select
+                      :model-value="getDialogPayloadField(action, 'dialogId')"
+                      filterable
+                      clearable
+                      placeholder="留空则关闭当前弹窗"
+                      @change="setNodeDialogPayloadField(index, 'dialogId', $event)"
+                    >
+                      <el-option
+                        v-for="page in dialogPageOptions"
+                        :key="`node-close-dialog-${page.id}`"
+                        :label="`${page.name} (${page.id})`"
+                        :value="page.id"
+                      />
+                    </el-select>
+                  </el-form-item>
+
+                  <el-form-item label="返回数据(JSON)" size="small">
+                    <el-input
+                      :model-value="formatJson(getDialogPayloadJsonField(action, 'result'))"
+                      type="textarea"
+                      :rows="3"
+                      placeholder='{"success":true}'
+                      @change="setNodeDialogPayloadJsonField(index, 'result', $event)"
+                    />
+                  </el-form-item>
+                </template>
+
                 <el-form-item label="payload(JSON)" size="small">
                   <el-input
                     :model-value="formatJson(asRecord(action).payload)"
@@ -209,6 +300,97 @@
                       />
                     </el-select>
                   </el-form-item>
+
+                  <template v-if="action.type === 'showDialog'">
+                    <el-form-item label="目标弹窗页" size="small">
+                      <el-select
+                        :model-value="getDialogPayloadField(action, 'dialogId')"
+                        filterable
+                        clearable
+                        placeholder="选择一个弹窗页"
+                        @change="setDialogPayloadField(section.key, index, 'dialogId', $event)"
+                      >
+                        <el-option
+                          v-for="page in dialogPageOptions"
+                          :key="`dialog-${page.id}`"
+                          :label="`${page.name} (${page.id})`"
+                          :value="page.id"
+                        />
+                      </el-select>
+                    </el-form-item>
+
+                    <el-form-item label="弹窗标题" size="small">
+                      <el-input
+                        :model-value="getDialogPayloadField(action, 'title')"
+                        placeholder="可选，支持纯文本标题"
+                        @update:model-value="setDialogPayloadField(section.key, index, 'title', $event)"
+                      />
+                    </el-form-item>
+
+                    <div class="flow-grid">
+                      <el-form-item label="显示取消按钮" size="small">
+                        <el-switch
+                          :model-value="getDialogBooleanPayloadField(action, 'showCancel', true)"
+                          @change="setDialogBooleanPayloadField(section.key, index, 'showCancel', $event)"
+                        />
+                      </el-form-item>
+
+                      <el-form-item label="确认按钮文本" size="small">
+                        <el-input
+                          :model-value="getDialogPayloadField(action, 'confirmText')"
+                          placeholder="确认"
+                          @update:model-value="setDialogPayloadField(section.key, index, 'confirmText', $event)"
+                        />
+                      </el-form-item>
+
+                      <el-form-item label="取消按钮文本" size="small">
+                        <el-input
+                          :model-value="getDialogPayloadField(action, 'cancelText')"
+                          placeholder="取消"
+                          @update:model-value="setDialogPayloadField(section.key, index, 'cancelText', $event)"
+                        />
+                      </el-form-item>
+                    </div>
+
+                    <el-form-item label="传入数据(JSON)" size="small">
+                      <el-input
+                        :model-value="formatJson(getDialogPayloadJsonField(action, 'data'))"
+                        type="textarea"
+                        :rows="3"
+                        placeholder='{"recordId":"{{row.id}}"}'
+                        @change="setDialogPayloadJsonField(section.key, index, 'data', $event)"
+                      />
+                    </el-form-item>
+                  </template>
+
+                  <template v-else-if="action.type === 'closeDialog'">
+                    <el-form-item label="目标弹窗页" size="small">
+                      <el-select
+                        :model-value="getDialogPayloadField(action, 'dialogId')"
+                        filterable
+                        clearable
+                        placeholder="留空则关闭当前弹窗"
+                        @change="setDialogPayloadField(section.key, index, 'dialogId', $event)"
+                      >
+                        <el-option
+                          v-for="page in dialogPageOptions"
+                          :key="`close-dialog-${page.id}`"
+                          :label="`${page.name} (${page.id})`"
+                          :value="page.id"
+                        />
+                      </el-select>
+                    </el-form-item>
+
+                    <el-form-item label="返回数据(JSON)" size="small">
+                      <el-input
+                        :model-value="formatJson(getDialogPayloadJsonField(action, 'result'))"
+                        type="textarea"
+                        :rows="3"
+                        placeholder='{"success":true}'
+                        @change="setDialogPayloadJsonField(section.key, index, 'result', $event)"
+                      />
+                    </el-form-item>
+                  </template>
 
                   <el-form-item label="payload(JSON)" size="small">
                     <el-input
@@ -404,7 +586,7 @@ import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, Select } from '@element-plus/icons-vue'
-import type { NodeSchema } from '@vela/core'
+import type { DialogPage, NodeSchema } from '@vela/core'
 import type { ActionSchema, AnyActionSchema, ScopedActionRef } from '@vela/core/types/action'
 import type { NodeEventAction } from '@vela/core/types/schema'
 import { storeToRefs } from 'pinia'
@@ -511,6 +693,10 @@ function collectNodeIds(node: NodeSchema | null | undefined, output: string[]) {
 
 const pageIdOptions = computed(() => {
   return Array.from(new Set((project.value.pages || []).map((item) => item.id).filter(Boolean)))
+})
+
+const dialogPageOptions = computed(() => {
+  return (project.value.pages || []).filter((item): item is DialogPage => item.type === 'dialog')
 })
 
 const nodeIdOptions = computed(() => {
@@ -629,7 +815,93 @@ function setActionId(eventName: SupportedEventName, index: number, value: unknow
 function setActionType(eventName: SupportedEventName, index: number, value: string) {
   updateInline(eventName, index, (action) => {
     action.type = value
+    if (value === 'showDialog') {
+      action.payload = {
+        dialogId: getDefaultDialogPageId(),
+        showCancel: true,
+      }
+      return
+    }
+    if (value === 'closeDialog') {
+      action.payload = {}
+      return
+    }
   })
+}
+
+function getDefaultDialogPageId(): string {
+  return dialogPageOptions.value[0]?.id || ''
+}
+
+function getPayloadRecord(action: ActionSchema<string>): Record<string, unknown> {
+  const payload = asRecord(action).payload
+  return isRecord(payload) ? payload : {}
+}
+
+function getDialogPayloadField(
+  action: ActionSchema<string>,
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+): string {
+  return toString(getPayloadRecord(action)[key])
+}
+
+function getDialogBooleanPayloadField(
+  action: ActionSchema<string>,
+  key: 'showCancel',
+  fallback: boolean,
+): boolean {
+  const value = getPayloadRecord(action)[key]
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function getDialogPayloadJsonField(
+  action: ActionSchema<string>,
+  key: 'data' | 'result',
+): unknown {
+  return getPayloadRecord(action)[key]
+}
+
+function setPayloadFieldOnAction(
+  action: ActionSchema<string>,
+  key: string,
+  value: unknown,
+) {
+  const record = asRecord(action)
+  const payload = { ...getPayloadRecord(action) }
+  const text = typeof value === 'string' ? value.trim() : value
+
+  if (text === undefined || text === null || text === '') {
+    delete payload[key]
+  } else {
+    payload[key] = text
+  }
+
+  if (Object.keys(payload).length === 0) {
+    delete record.payload
+    return
+  }
+
+  record.payload = payload
+}
+
+function setPayloadBooleanFieldOnAction(
+  action: ActionSchema<string>,
+  key: string,
+  value: unknown,
+) {
+  const record = asRecord(action)
+  const payload = { ...getPayloadRecord(action), [key]: Boolean(value) }
+  record.payload = payload
+}
+
+function setPayloadJsonFieldOnAction(
+  action: ActionSchema<string>,
+  key: string,
+  value: unknown,
+) {
+  const parsed = parseJson(value)
+  if (!parsed.ok) return
+  setPayloadFieldOnAction(action, key, parsed.value)
 }
 
 function setJsonField(
@@ -647,6 +919,39 @@ function setJsonField(
       return
     }
     record[key] = parsed.value
+  })
+}
+
+function setDialogPayloadField(
+  eventName: SupportedEventName,
+  index: number,
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+  value: unknown,
+) {
+  updateInline(eventName, index, (action) => {
+    setPayloadFieldOnAction(action, key, value)
+  })
+}
+
+function setDialogBooleanPayloadField(
+  eventName: SupportedEventName,
+  index: number,
+  key: 'showCancel',
+  value: unknown,
+) {
+  updateInline(eventName, index, (action) => {
+    setPayloadBooleanFieldOnAction(action, key, value)
+  })
+}
+
+function setDialogPayloadJsonField(
+  eventName: SupportedEventName,
+  index: number,
+  key: 'data' | 'result',
+  value: unknown,
+) {
+  updateInline(eventName, index, (action) => {
+    setPayloadJsonFieldOnAction(action, key, value)
   })
 }
 
@@ -868,6 +1173,43 @@ function setNodeActionId(index: number, value: unknown) {
 function setNodeActionType(index: number, value: string) {
   updateNodeActionAt(index, (action) => {
     action.type = value
+    if (value === 'showDialog') {
+      action.payload = {
+        dialogId: getDefaultDialogPageId(),
+        showCancel: true,
+      }
+      return
+    }
+    if (value === 'closeDialog') {
+      action.payload = {}
+      return
+    }
+  })
+}
+
+function setNodeDialogPayloadField(
+  index: number,
+  key: 'dialogId' | 'title' | 'confirmText' | 'cancelText',
+  value: unknown,
+) {
+  updateNodeActionAt(index, (action) => {
+    setPayloadFieldOnAction(action, key, value)
+  })
+}
+
+function setNodeDialogBooleanPayloadField(index: number, key: 'showCancel', value: unknown) {
+  updateNodeActionAt(index, (action) => {
+    setPayloadBooleanFieldOnAction(action, key, value)
+  })
+}
+
+function setNodeDialogPayloadJsonField(
+  index: number,
+  key: 'data' | 'result',
+  value: unknown,
+) {
+  updateNodeActionAt(index, (action) => {
+    setPayloadJsonFieldOnAction(action, key, value)
   })
 }
 

@@ -1,4 +1,4 @@
-import type { NodeSchema, NodeStyle } from '@vela/core'
+import { expr, type NodeSchema, type NodeStyle } from '@vela/core'
 import type { AnyActionSchema } from '@vela/core/types/action'
 import type { NodeEventAction } from '@vela/core/types/schema'
 import {
@@ -27,6 +27,7 @@ interface TemplateNodePreset {
   component: string
   area: GridArea
   props?: Record<string, unknown>
+  dataSource?: Record<string, unknown>
   style?: Partial<NodeStyle>
   actions?: AnyActionSchema[]
   events?: Record<string, NodeEventAction[]>
@@ -79,6 +80,23 @@ function createSurfaceStyle(
   }
 }
 
+const DEFAULT_ORDER_TABLE_URL = '/api/mock/orders?status=all'
+const DEFAULT_ORDER_SUMMARY_URL = '/api/mock/orders/summary?status=all'
+const DEFAULT_ORDER_INSIGHT_URL = '/api/mock/orders/insights?status=all'
+
+function buildOrderQueryUrl(endpoint: string) {
+  return expr(
+    `(() => {
+      const keyword = String(components.find((item) => item.id === 'tpl_query_keyword')?.props?.modelValue ?? '').trim()
+      const status = String(components.find((item) => item.id === 'tpl_query_status')?.props?.modelValue ?? 'all')
+      const range = components.find((item) => item.id === 'tpl_query_range')?.props?.modelValue
+      const startDate = Array.isArray(range) ? String(range[0] ?? '') : ''
+      const endDate = Array.isArray(range) ? String(range[1] ?? '') : ''
+      return '${endpoint}?keyword=' + keyword + '&status=' + status + '&startDate=' + startDate + '&endDate=' + endDate
+    })()`,
+  )
+}
+
 function buildGridNode(preset: TemplateNodePreset): NodeSchema {
   const canonicalName = resolveCanonicalMaterialName(preset.component)
   const materialMeta = materialMetaMap.get(canonicalName)
@@ -93,6 +111,7 @@ function buildGridNode(preset: TemplateNodePreset): NodeSchema {
       ...defaultProps,
       ...(preset.props || {}),
     } as NodeSchema['props'],
+    dataSource: preset.dataSource,
     style: {
       ...defaultStyles,
       width: '100%',
@@ -382,7 +401,7 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
   return {
     root: {
       columns: buildFrTracks(12),
-      rows: buildFrTracks(8),
+      rows: buildFrTracks(9),
       gap: 12,
       style: { backgroundColor: '#f8fafc' },
     },
@@ -403,15 +422,25 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         id: 'tpl_query_help',
         component: 'Button',
         area: [10, 13, 1, 2],
-        props: { text: '查询说明', type: 'default' },
-        events: { click: [{ type: 'ref', scope: 'global', id: 'global_query_help_link' }] },
+        props: { text: '筛选说明', type: 'default' },
+        actions: [
+          {
+            id: 'node_query_help_notice',
+            type: 'showToast',
+            payload: {
+              message: '支持按订单号、客户名、状态和日期区间筛选',
+              type: 'info',
+            },
+          },
+        ],
+        events: { click: ['node_query_help_notice'] },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
         id: 'tpl_query_keyword',
         component: 'TextInput',
         area: [1, 4, 2, 3],
-        props: { placeholder: '输入订单号/客户名', clearable: true },
+        props: { placeholder: '输入订单号/客户名', clearable: true, modelValue: '' },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
@@ -420,12 +449,15 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         area: [4, 7, 2, 3],
         props: {
           placeholder: '订单状态',
-          options: [
-            { label: '全部', value: 'all' },
-            { label: '待支付', value: 'pending' },
-            { label: '待发货', value: 'shipping' },
-            { label: '已完成', value: 'done' },
-          ],
+          modelValue: 'all',
+          labelField: 'label',
+          valueField: 'value',
+        },
+        dataSource: {
+          enabled: true,
+          url: '/api/mock/orders/status-options',
+          method: 'GET',
+          dataPath: 'data',
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
@@ -433,7 +465,11 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         id: 'tpl_query_range',
         component: 'dateRange',
         area: [7, 10, 2, 3],
-        props: { startPlaceholder: '开始日期', endPlaceholder: '结束日期' },
+        props: {
+          startPlaceholder: '开始日期',
+          endPlaceholder: '结束日期',
+          modelValue: null,
+        },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
@@ -443,28 +479,64 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         props: { text: '查询', type: 'primary' },
         actions: [
           {
-            id: 'node_query_call_api',
-            type: 'callApi',
+            id: 'node_query_set_table_url',
+            type: 'setState',
+            targetId: 'tpl_query_table',
             payload: {
-              apiId: 'https://jsonplaceholder.typicode.com/todos/1',
-              method: 'GET',
-              resultPath: 'orders.lastQuery',
+              path: 'dataSource.url',
+              value: buildOrderQueryUrl('/api/mock/orders'),
             },
-            handlers: {
-              success: 'page_query_success',
-              fail: 'page_query_fail',
-              complete: 'node_query_complete',
-            },
-            debounce: 300,
           },
           {
-            id: 'node_query_complete',
+            id: 'node_query_set_summary_url',
             type: 'setState',
-            payload: { path: 'orders.loading', value: false },
+            targetId: 'tpl_query_stat',
+            payload: {
+              path: 'dataSource.url',
+              value: buildOrderQueryUrl('/api/mock/orders/summary'),
+            },
+          },
+          {
+            id: 'node_query_set_insight_url',
+            type: 'setState',
+            targetId: 'tpl_query_insight',
+            payload: {
+              path: 'dataSource.url',
+              value: buildOrderQueryUrl('/api/mock/orders/insights'),
+            },
+          },
+          {
+            id: 'node_query_refresh_table',
+            type: 'refresh-data',
+            targetId: 'tpl_query_table',
+          },
+          {
+            id: 'node_query_refresh_summary',
+            type: 'refresh-data',
+            targetId: 'tpl_query_stat',
+          },
+          {
+            id: 'node_query_refresh_insight',
+            type: 'refresh-data',
+            targetId: 'tpl_query_insight',
+          },
+          {
+            id: 'node_query_success_notice',
+            type: 'showToast',
+            payload: { message: '筛选条件已应用', type: 'success' },
           },
         ],
         events: {
-          click: ['node_query_call_api', { type: 'ref', scope: 'global', id: 'global_query_emit' }],
+          click: [
+            'node_query_set_table_url',
+            'node_query_set_summary_url',
+            'node_query_set_insight_url',
+            'node_query_refresh_table',
+            'node_query_refresh_summary',
+            'node_query_refresh_insight',
+            'node_query_success_notice',
+            { type: 'ref', scope: 'global', id: 'global_query_emit' },
+          ],
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
@@ -475,18 +547,82 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         props: { text: '重置', type: 'default' },
         actions: [
           {
-            id: 'node_query_reset_filters',
+            id: 'node_query_reset_keyword',
             type: 'setState',
-            payload: { path: 'orders.filters', value: {} },
-            next: 'node_query_reset_notice',
+            targetId: 'tpl_query_keyword',
+            payload: { path: 'props.modelValue', value: '' },
+          },
+          {
+            id: 'node_query_reset_status',
+            type: 'setState',
+            targetId: 'tpl_query_status',
+            payload: { path: 'props.modelValue', value: 'all' },
+          },
+          {
+            id: 'node_query_reset_range',
+            type: 'setState',
+            targetId: 'tpl_query_range',
+            payload: { path: 'props.modelValue', value: null },
+          },
+          {
+            id: 'node_query_reset_table_url',
+            type: 'setState',
+            targetId: 'tpl_query_table',
+            payload: { path: 'dataSource.url', value: DEFAULT_ORDER_TABLE_URL },
+          },
+          {
+            id: 'node_query_reset_summary_url',
+            type: 'setState',
+            targetId: 'tpl_query_stat',
+            payload: { path: 'dataSource.url', value: DEFAULT_ORDER_SUMMARY_URL },
+          },
+          {
+            id: 'node_query_reset_insight_url',
+            type: 'setState',
+            targetId: 'tpl_query_insight',
+            payload: { path: 'dataSource.url', value: DEFAULT_ORDER_INSIGHT_URL },
+          },
+          {
+            id: 'node_query_reset_refresh_table',
+            type: 'refresh-data',
+            targetId: 'tpl_query_table',
+          },
+          {
+            id: 'node_query_reset_refresh_summary',
+            type: 'refresh-data',
+            targetId: 'tpl_query_stat',
+          },
+          {
+            id: 'node_query_reset_refresh_insight',
+            type: 'refresh-data',
+            targetId: 'tpl_query_insight',
           },
           {
             id: 'node_query_reset_notice',
             type: 'showToast',
-            payload: { message: '筛选条件已重置', type: 'success' },
+            payload: { message: '已恢复默认筛选条件', type: 'success' },
+          },
+          {
+            id: 'node_query_reset_state',
+            type: 'setState',
+            payload: { path: 'orders.filters', value: {} },
           },
         ],
-        events: { click: ['node_query_reset_filters'] },
+        events: {
+          click: [
+            'node_query_reset_keyword',
+            'node_query_reset_status',
+            'node_query_reset_range',
+            'node_query_reset_table_url',
+            'node_query_reset_summary_url',
+            'node_query_reset_insight_url',
+            'node_query_reset_refresh_table',
+            'node_query_reset_refresh_summary',
+            'node_query_reset_refresh_insight',
+            'node_query_reset_notice',
+            'node_query_reset_state',
+          ],
+        },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
@@ -505,74 +641,75 @@ function buildQueryWorkbenchTemplate(): PageTemplateInstance {
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
+        id: 'tpl_query_stat',
+        component: 'stat',
+        area: [1, 4, 3, 5],
+        props: {
+          title: '匹配订单',
+          value: 0,
+          change: 0,
+          showChange: true,
+          valueColor: '#2563eb',
+          titleColor: '#475569',
+        },
+        dataSource: {
+          enabled: true,
+          url: DEFAULT_ORDER_SUMMARY_URL,
+          method: 'GET',
+          titlePath: 'data.title',
+          valuePath: 'data.value',
+          changePath: 'data.change',
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_query_insight',
+        component: 'list',
+        area: [4, 13, 3, 5],
+        props: {
+          showExtra: true,
+          showAction: false,
+          data: [],
+        },
+        dataSource: {
+          enabled: true,
+          url: DEFAULT_ORDER_INSIGHT_URL,
+          method: 'GET',
+          dataPath: 'data',
+        },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
         id: 'tpl_query_table',
         component: 'table',
-        area: [1, 13, 3, 9],
+        area: [1, 13, 5, 10],
         props: {
           border: true,
           stripe: true,
           columns: [
             { prop: 'orderNo', label: '订单号' },
             { prop: 'customer', label: '客户' },
+            { prop: 'owner', label: '负责人' },
             { prop: 'amount', label: '金额' },
             { prop: 'status', label: '状态' },
             { prop: 'createdAt', label: '下单时间' },
           ],
-          data: [
-            {
-              orderNo: 'Q-10021',
-              customer: '张三',
-              amount: '¥2,380',
-              status: '待支付',
-              createdAt: '2026-02-17 14:12',
-            },
-            {
-              orderNo: 'Q-10022',
-              customer: '李四',
-              amount: '¥1,120',
-              status: '待发货',
-              createdAt: '2026-02-18 09:40',
-            },
-            {
-              orderNo: 'Q-10023',
-              customer: '王五',
-              amount: '¥4,560',
-              status: '已完成',
-              createdAt: '2026-02-18 18:08',
-            },
-          ],
+          data: [],
+        },
+        dataSource: {
+          enabled: true,
+          url: DEFAULT_ORDER_TABLE_URL,
+          method: 'GET',
+          dataPath: 'data',
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
-    ],
-    pageActions: [
-      {
-        id: 'page_query_success',
-        type: 'showToast',
-        payload: { message: '查询成功，表格已刷新', type: 'success' },
-        next: 'page_query_refresh',
-      },
-      {
-        id: 'page_query_fail',
-        type: 'showToast',
-        payload: { message: '查询失败，请稍后重试', type: 'error' },
-      },
-      {
-        id: 'page_query_refresh',
-        type: 'refresh-data',
-        targetId: 'tpl_query_table',
-      },
     ],
     globalActions: [
       {
         id: 'global_query_emit',
         type: 'emit',
-        payload: { event: 'orders:query', data: { from: 'query-workbench-template' } },
-      },
-      {
-        id: 'global_query_help_link',
-        type: 'openUrl',
-        payload: { url: 'https://example.com/query-help', target: '_blank' },
+        payload: { event: 'orders:query', data: { from: 'order-management-template' } },
       },
     ],
   }
@@ -590,34 +727,43 @@ function buildApprovalCenterTemplate(): PageTemplateInstance {
       buildGridNode({
         id: 'tpl_approval_title',
         component: 'Text',
-        area: [1, 9, 1, 2],
-        props: { content: '审批中心', fontSize: 30, color: '#0f172a', fontWeight: 700 },
+        area: [1, 8, 1, 2],
+        props: { content: '用户管理页', fontSize: 30, color: '#0f172a', fontWeight: 700 },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
         id: 'tpl_approval_pass',
         component: 'Button',
-        area: [9, 11, 1, 2],
-        props: { text: '通过', type: 'success' },
+        area: [8, 10, 1, 2],
+        props: { text: '刷新列表', type: 'primary' },
         actions: [
           {
-            id: 'node_approval_pass_api',
-            type: 'callApi',
-            payload: {
-              apiId: 'https://jsonplaceholder.typicode.com/posts/1',
-              method: 'GET',
-              resultPath: 'approval.lastResult',
-            },
-            confirm: { message: '确认通过当前审批？' },
-            handlers: {
-              success: 'page_approval_success',
-              fail: 'page_approval_fail',
-            },
+            id: 'node_approval_refresh_users',
+            type: 'refresh-data',
+            targetId: 'tpl_approval_table',
+          },
+          {
+            id: 'node_approval_refresh_summary',
+            type: 'refresh-data',
+            targetId: 'tpl_approval_summary',
+          },
+          {
+            id: 'node_approval_refresh_activity',
+            type: 'refresh-data',
+            targetId: 'tpl_approval_timeline',
+          },
+          {
+            id: 'node_approval_refresh_notice',
+            type: 'showToast',
+            payload: { message: '用户列表已刷新', type: 'success' },
           },
         ],
         events: {
           click: [
-            'node_approval_pass_api',
+            'node_approval_refresh_users',
+            'node_approval_refresh_summary',
+            'node_approval_refresh_activity',
+            'node_approval_refresh_notice',
             { type: 'ref', scope: 'global', id: 'global_approval_emit' },
           ],
         },
@@ -626,97 +772,102 @@ function buildApprovalCenterTemplate(): PageTemplateInstance {
       buildGridNode({
         id: 'tpl_approval_reject',
         component: 'Button',
-        area: [11, 13, 1, 2],
-        props: { text: '驳回', type: 'danger' },
+        area: [10, 13, 1, 2],
+        props: { text: '同步状态', type: 'default' },
         actions: [
           {
-            id: 'node_approval_reject_script',
-            type: 'runScript',
-            payload: { code: "console.warn('[template] reject approval request')" },
-            confirm: { message: '确认驳回当前审批？' },
-            next: 'page_approval_reject_notice',
+            id: 'node_approval_sync_api',
+            type: 'callApi',
+            payload: {
+              apiId: '/api/mock/counter',
+              method: 'GET',
+              resultPath: 'users.syncCounter',
+            },
+            handlers: {
+              success: 'page_approval_success',
+              fail: 'page_approval_fail',
+            },
           },
         ],
-        events: { click: ['node_approval_reject_script'] },
+        events: { click: ['node_approval_sync_api'] },
+        style: createSurfaceStyle('#ffffff', '#0f172a'),
+      }),
+      buildGridNode({
+        id: 'tpl_approval_summary',
+        component: 'stat',
+        area: [1, 4, 2, 4],
+        props: {
+          title: '正常账号',
+          value: 0,
+          change: 0,
+          showChange: true,
+          valueColor: '#16a34a',
+          titleColor: '#475569',
+        },
+        dataSource: {
+          enabled: true,
+          url: '/api/mock/users/summary',
+          method: 'GET',
+          titlePath: 'data.title',
+          valuePath: 'data.value',
+          changePath: 'data.change',
+        },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
         id: 'tpl_approval_table',
         component: 'table',
-        area: [1, 13, 2, 7],
+        area: [4, 13, 2, 7],
         props: {
           border: true,
           stripe: true,
           columns: [
-            { prop: 'requestId', label: '单号' },
-            { prop: 'applicant', label: '申请人' },
-            { prop: 'type', label: '类型' },
-            { prop: 'priority', label: '优先级' },
+            { prop: 'name', label: '用户名' },
+            { prop: 'department', label: '部门' },
+            { prop: 'role', label: '角色' },
             { prop: 'status', label: '状态' },
-            { prop: 'createdAt', label: '创建时间' },
+            { prop: 'lastLoginAt', label: '最近登录' },
+            { prop: 'email', label: '邮箱' },
           ],
-          data: [
-            {
-              requestId: 'APR-0901',
-              applicant: 'Alex',
-              type: '预算',
-              priority: '高',
-              status: '待审',
-              createdAt: '2026-02-16 09:12',
-            },
-            {
-              requestId: 'APR-0902',
-              applicant: 'Mia',
-              type: '权限',
-              priority: '中',
-              status: '待审',
-              createdAt: '2026-02-16 10:38',
-            },
-            {
-              requestId: 'APR-0903',
-              applicant: 'Leo',
-              type: '采购',
-              priority: '低',
-              status: '待审',
-              createdAt: '2026-02-16 14:02',
-            },
-          ],
+          data: [],
+        },
+        dataSource: {
+          enabled: true,
+          url: '/api/mock/users',
+          method: 'GET',
+          dataPath: 'data',
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
         id: 'tpl_approval_timeline',
         component: 'list',
-        area: [1, 8, 7, 10],
+        area: [1, 7, 7, 10],
         props: {
-          data: [
-            {
-              title: '提交申请',
-              timestamp: '2026-02-16 09:12',
-              content: '申请人提交',
-              type: 'primary',
-            },
-            {
-              title: '主管审核',
-              timestamp: '2026-02-16 10:00',
-              content: '待处理',
-              type: 'warning',
-            },
-            { title: '财务复核', timestamp: '2026-02-16 13:00', content: '待处理', type: 'info' },
-          ],
+          showExtra: true,
+          showAction: false,
+          data: [],
+        },
+        dataSource: {
+          enabled: true,
+          url: '/api/mock/users/activity',
+          method: 'GET',
+          dataPath: 'data',
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
       buildGridNode({
         id: 'tpl_approval_notice',
         component: 'list',
-        area: [8, 13, 7, 10],
+        area: [7, 13, 7, 10],
         props: {
           data: [
-            { title: '高优申请', description: '今日剩余 2 条', extra: '高' },
-            { title: '逾期审批', description: '超过 24h 1 条', extra: '中' },
-            { title: '系统公告', description: '审批规则已更新', extra: '低' },
+            { title: '冻结账号', description: '当前 1 个账号处于冻结状态', extra: '需复核' },
+            { title: '待激活账号', description: '当前 1 个新账号待首登激活', extra: '关注' },
+            { title: '角色同步', description: '最近一次同步已完成', extra: '完成' },
           ],
+          showExtra: true,
+          showAction: false,
         },
         style: createSurfaceStyle('#ffffff', '#0f172a'),
       }),
@@ -725,30 +876,37 @@ function buildApprovalCenterTemplate(): PageTemplateInstance {
       {
         id: 'page_approval_success',
         type: 'showToast',
-        payload: { message: '审批通过', type: 'success' },
+        payload: { message: '同步完成，正在刷新数据', type: 'success' },
         next: 'page_approval_refresh',
       },
       {
         id: 'page_approval_fail',
         type: 'showToast',
-        payload: { message: '审批失败，请重试', type: 'error' },
-      },
-      {
-        id: 'page_approval_reject_notice',
-        type: 'showToast',
-        payload: { message: '已驳回申请', type: 'warning' },
+        payload: { message: '同步失败，请重试', type: 'error' },
       },
       {
         id: 'page_approval_refresh',
         type: 'refresh-data',
         targetId: 'tpl_approval_table',
+        next: 'page_approval_refresh_summary',
+      },
+      {
+        id: 'page_approval_refresh_summary',
+        type: 'refresh-data',
+        targetId: 'tpl_approval_summary',
+        next: 'page_approval_refresh_activity',
+      },
+      {
+        id: 'page_approval_refresh_activity',
+        type: 'refresh-data',
+        targetId: 'tpl_approval_timeline',
       },
     ],
     globalActions: [
       {
         id: 'global_approval_emit',
         type: 'emit',
-        payload: { event: 'approval:changed', data: { source: 'approval-template' } },
+        payload: { event: 'users:changed', data: { source: 'user-management-template' } },
       },
     ],
   }
@@ -1013,16 +1171,16 @@ export const templates: PageTemplate[] = [
   },
   {
     id: 'query-workbench',
-    name: '查询列表工作台',
-    description: '筛选区 + 数据表，预置查询、重置、导出等动作链路。',
+    name: '订单管理页',
+    description: '筛选表单 + 汇总卡片 + 明细表，使用本地 mock API 演示真实查询刷新。',
     category: 'form',
     preview: ['#f8fafc', '#cbd5e1'],
     build: buildQueryWorkbenchTemplate,
   },
   {
     id: 'approval-center',
-    name: '审批中心',
-    description: '审批通过/驳回/刷新流程完整，适合事件联调和状态演示。',
+    name: '用户管理页',
+    description: '用户表格 + 状态同步 + 活动动态，适合演示数据源与事件联动。',
     category: 'management',
     preview: ['#f1f5f9', '#94a3b8'],
     build: buildApprovalCenterTemplate,

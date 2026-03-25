@@ -73,7 +73,7 @@
       <el-tab-pane label="自定义" name="custom">
         <div class="custom-placeholder">
           <el-button class="upload-btn" :icon="Upload" dashed> 自定义组件扩展规划 </el-button>
-          <el-empty description="面试版仅规划 manifest + 远程 ESM 注册，不承诺源码直传编译" :image-size="80">
+          <el-empty description="当前版本仅规划 manifest + 远程 ESM 注册，不承诺源码直传编译" :image-size="80">
             <template #image>
               <el-icon :size="64"><Box /></el-icon>
             </template>
@@ -151,7 +151,7 @@ const componentStore = useComponent()
 const projectStore = useProjectStore()
 const historyStore = useHistoryStore()
 
-const INTERVIEW_MATERIAL_WHITELIST = new Set([
+const CURATED_MATERIAL_WHITELIST = new Set([
   'Text',
   'Button',
   'TextInput',
@@ -161,6 +161,7 @@ const INTERVIEW_MATERIAL_WHITELIST = new Set([
   'CheckboxGroup',
   'RadioGroup',
   'DatePicker',
+  'dateRange',
   'SearchBox',
   'NumberInput',
   'Table',
@@ -175,7 +176,7 @@ const INTERVIEW_MATERIAL_WHITELIST = new Set([
   'Modal',
 ])
 
-const INTERVIEW_TEMPLATE_WHITELIST = new Set([
+const CURATED_TEMPLATE_WHITELIST = new Set([
   'query-workbench',
   'approval-center',
   'secure-login',
@@ -190,7 +191,7 @@ const categories = computed<Category[]>(() => {
   Object.entries(materialsByCategory).forEach(([categoryName, materials]) => {
     const config = getCategoryConfig(categoryName) as PanelCategoryConfig
     const visibleMaterials = materials.filter((meta) =>
-      INTERVIEW_MATERIAL_WHITELIST.has(resolveCanonicalMaterialName(meta.name)),
+      CURATED_MATERIAL_WHITELIST.has(resolveCanonicalMaterialName(meta.name)),
     )
 
     if (visibleMaterials.length === 0) {
@@ -253,7 +254,7 @@ const TEMPLATE_CATEGORY_LABELS: Record<PageTemplate['category'], string> = {
 }
 
 const filteredTemplates = computed(() => {
-  const availableTemplates = pageTemplates.filter((tpl) => INTERVIEW_TEMPLATE_WHITELIST.has(tpl.id))
+  const availableTemplates = pageTemplates.filter((tpl) => CURATED_TEMPLATE_WHITELIST.has(tpl.id))
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return availableTemplates
 

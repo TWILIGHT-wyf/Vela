@@ -37,7 +37,7 @@ interface DataSourceConfig {
  */
 export function useComponentDataSource(component: Ref<NodeSchema>) {
   const dataSourceRef = computed(() => component.value.dataSource)
-  const { data: remoteData, loading, error } = useDataSource(dataSourceRef)
+  const { data: remoteData, loading, error, fetchData } = useDataSource(dataSourceRef)
 
   const dataSourceProps = computed(() => {
     const comp = component.value
@@ -135,6 +135,7 @@ export function useComponentDataSource(component: Ref<NodeSchema>) {
         case 'Table':
         case 'List':
           // Most list/table components expect 'data' prop
+          props.loading = loading.value
           if (ds.dataPath) props.data = getValueByPath(data, ds.dataPath)
           break
 
@@ -170,5 +171,5 @@ export function useComponentDataSource(component: Ref<NodeSchema>) {
     return props
   })
 
-  return { dataSourceProps, remoteData, loading, error }
+  return { dataSourceProps, remoteData, loading, error, refreshData: fetchData }
 }

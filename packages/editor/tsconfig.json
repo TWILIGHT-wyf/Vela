@@ -4,6 +4,7 @@
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
     "baseUrl": ".",
+    "allowArbitraryExtensions": true,
     "paths": {
       "@/*": ["./src/*"],
       "@vela/editor": ["./src"],

@@ -21,6 +21,10 @@
         <StylePaneEnhanced :node="selectedComponent" />
       </el-tab-pane>
 
+      <el-tab-pane label="数据源" name="dataSource">
+        <DataSourcePane :node="selectedComponent" />
+      </el-tab-pane>
+
       <el-tab-pane label="事件" name="events">
         <EventPane :node="selectedComponent" />
       </el-tab-pane>
@@ -37,6 +41,7 @@ import { ref, computed } from 'vue'
 import { useComponent } from '@/stores/component'
 import PropsPane from './panes/PropsPane.vue'
 import StylePaneEnhanced from './panes/StylePaneEnhanced.vue'
+import DataSourcePane from './panes/DataSourcePane.vue'
 import EventPane from './panes/EventPane.vue'
 import RelationsPane from './panes/RelationsPane.vue'
 import PageSettingPane from './panes/PageSettingPane.vue'

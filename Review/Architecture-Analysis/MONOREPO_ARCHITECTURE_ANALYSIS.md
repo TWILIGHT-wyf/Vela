@@ -196,7 +196,7 @@ packages:
 
 ---
 
-## 9. 面试可复述版（1 分钟）
+## 9. 项目可复述版（1 分钟）
 
 我们采用 monorepo 不是因为传统 `pages/utils/store` 做不到，而是因为这是低代码平台：同一份模型要同时服务编辑、运行和导出。我们把能力拆成 `core/materials/renderer/generator/editor`，其中 `core` 是契约中心，`materials` 是扩展面，`renderer` 负责运行时，`generator` 负责导出，`editor` 做交互编排。这样做的价值是把原本靠规范约束的边界，变成工程可验证的边界，减少 schema 漂移、编辑态污染运行态、导出链路脆弱等问题。我们也承认 monorepo 有治理成本，但在平台化特征明确时，这种结构的长期收益更高。
 

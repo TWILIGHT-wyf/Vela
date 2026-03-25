@@ -33,10 +33,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch, toRef } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, toRef } from 'vue'
 import { getComponent, hasComponent } from '@vela/materials'
 import { getNodeComponent, type NodeSchema } from '@vela/core'
-import { isWrapperComponent } from '../../../core/src/contracts'
+import { isWrapperComponent } from '@vela/core/contracts'
 import { useComponentStyle } from './useComponentStyle'
 import { useComponentDataSource } from './useComponentDataSource'
 import type { RuntimeMode } from './types'
@@ -130,7 +130,7 @@ const { computedStyle: baseComputedStyle, locked } = useComponentStyle(nodeRef, 
 })
 
 // ========== Data Source ==========
-const { dataSourceProps } = useComponentDataSource(nodeRef)
+const { dataSourceProps, refreshData } = useComponentDataSource(nodeRef)
 
 // ========== Animation State ==========
 const componentRef = ref<HTMLElement | { $el: HTMLElement } | null>(null)
@@ -367,11 +367,35 @@ function shouldAutoPlayAnimation(): boolean {
   return trigger === 'init' || trigger === 'visible'
 }
 
+function handleRefreshEvent(event: Event) {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) {
+    return
+  }
+
+  const targetId = target.getAttribute('data-id') || target.id || ''
+  if (targetId !== props.node.id) {
+    return
+  }
+
+  void refreshData()
+}
+
 // ========== Lifecycle ==========
 onMounted(() => {
   // Auto-play init/visible-triggered animations
   if (shouldAutoPlayAnimation() && isInteractive.value) {
     playAnimation()
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('data-refresh', handleRefreshEvent as EventListener)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('data-refresh', handleRefreshEvent as EventListener)
   }
 })
 

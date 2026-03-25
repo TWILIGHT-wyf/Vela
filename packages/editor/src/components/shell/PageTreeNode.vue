@@ -15,6 +15,8 @@
 
         <el-icon class="type-icon" :class="node.type">
           <Folder v-if="node.type === 'folder'" />
+          <MessageBox v-else-if="node.type === 'dialog'" />
+          <CollectionTag v-else-if="node.type === 'fragment'" />
           <Document v-else />
         </el-icon>
       </div>
@@ -40,11 +42,20 @@
           <el-tag v-if="node.isHome" size="small" type="info" effect="plain" class="home-tag"
             >首页</el-tag
           >
+          <el-tag
+            v-if="node.type !== 'folder'"
+            size="small"
+            effect="plain"
+            class="page-type-tag"
+            :type="node.type === 'dialog' ? 'warning' : node.type === 'fragment' ? 'success' : 'primary'"
+          >
+            {{ pageTypeLabel }}
+          </el-tag>
         </div>
         <div class="route-row">
           <!-- 编辑模式 -->
           <el-input
-            v-if="isEditing"
+            v-if="isEditing && supportsRoute"
             v-model="editRoute"
             size="small"
             @blur="handleRouteBlur"
@@ -56,8 +67,8 @@
             maxlength="50"
           />
           <!-- 显示模式 -->
-          <span v-else>{{ node.path }}</span>
-          <span v-if="isEditing && routeError" class="route-error">{{ routeError }}</span>
+          <span v-else>{{ secondaryText }}</span>
+          <span v-if="isEditing && supportsRoute && routeError" class="route-error">{{ routeError }}</span>
         </div>
       </div>
 
@@ -73,7 +84,7 @@
           <el-icon class="action-icon cancel" @click="cancelEdit"><Close /></el-icon>
         </el-tooltip>
         <el-tooltip
-          v-if="node.path && !isEditing"
+          v-if="supportsRoute && node.path && !isEditing"
           content="复制路由"
           placement="top"
           :show-after="500"
@@ -113,6 +124,8 @@ import {
   ArrowDown,
   Folder,
   Document,
+  MessageBox,
+  CollectionTag,
   Delete,
   CopyDocument,
   Edit,
@@ -128,11 +141,12 @@ defineOptions({
 interface TreeNode {
   id: string
   name: string
-  type: 'folder' | 'page'
+  type: 'folder' | 'page' | 'dialog' | 'fragment'
   path?: string
   expanded?: boolean
   isHome?: boolean
   children?: TreeNode[]
+  subtitle?: string
 }
 
 interface TreeNodeProps {
@@ -155,6 +169,14 @@ const emit = defineEmits<{
 }>()
 
 const paddingLeft = computed(() => props.depth * 16 + 8)
+const supportsRoute = computed(() => props.node.type === 'page')
+const pageTypeLabel = computed(() => {
+  if (props.node.type === 'dialog') return '弹窗'
+  if (props.node.type === 'fragment') return '片段'
+  if (props.node.type === 'page') return '页面'
+  return '目录'
+})
+const secondaryText = computed(() => props.node.subtitle || props.node.path || '')
 
 // 编辑状态
 const isEditing = ref(false)
@@ -190,7 +212,7 @@ function validateRoute(route: string): string {
 function startEdit() {
   isEditing.value = true
   editName.value = props.node.name
-  editRoute.value = props.node.path || ''
+  editRoute.value = supportsRoute.value ? props.node.path || '' : ''
   routeError.value = ''
 
   nextTick(() => {
@@ -213,16 +235,18 @@ function confirmEdit() {
     return
   }
 
-  const routeValidation = validateRoute(route)
-  if (routeValidation) {
-    routeError.value = routeValidation
-    return
+  if (supportsRoute.value) {
+    const routeValidation = validateRoute(route)
+    if (routeValidation) {
+      routeError.value = routeValidation
+      return
+    }
   }
 
   emit('edit', {
     id: props.node.id,
     name,
-    route: route || undefined,
+    route: supportsRoute.value ? route || undefined : undefined,
   })
 
   isEditing.value = false
@@ -253,6 +277,11 @@ function handleRouteBlur() {
 }
 
 function handleRouteConfirm() {
+  if (!supportsRoute.value) {
+    confirmEdit()
+    return
+  }
+
   const routeValidation = validateRoute(editRoute.value.trim())
   if (routeValidation) {
     routeError.value = routeValidation
@@ -345,6 +374,13 @@ function handleClick() {
 }
 
 .home-tag {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 10px;
+  border-radius: 4px;
+}
+
+.page-type-tag {
   height: 18px;
   padding: 0 6px;
   font-size: 10px;

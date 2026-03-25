@@ -75,7 +75,7 @@
         <el-form-item label="页面名称" required>
           <el-input
             v-model="newPageForm.name"
-            placeholder="例如：关于我们、联系方式"
+            placeholder="例如：用户管理、详情弹窗"
             maxlength="30"
             show-word-limit
             size="large"
@@ -86,7 +86,24 @@
           </el-input>
         </el-form-item>
 
-        <el-form-item label="路由路径 (可选)">
+        <el-form-item label="页面类型">
+          <el-radio-group v-model="newPageForm.type" class="page-type-group">
+            <el-radio-button label="page" value="page">路由页</el-radio-button>
+            <el-radio-button label="dialog" value="dialog">弹窗页</el-radio-button>
+            <el-radio-button label="fragment" value="fragment">片段页</el-radio-button>
+          </el-radio-group>
+          <div class="form-tip">
+            {{
+              newPageForm.type === 'page'
+                ? '用于独立路由页面'
+                : newPageForm.type === 'dialog'
+                  ? '用于详情弹窗或抽屉内容'
+                  : '用于可复用局部区块'
+            }}
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="newPageForm.type === 'page'" label="路由路径 (可选)">
           <el-input
             v-model="newPageForm.route"
             placeholder="如：/about、/contact"
@@ -119,14 +136,15 @@ import { useProjectStore } from '@/stores/project'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageTreeNode from './PageTreeNode.vue'
 import { Files, ArrowDown, DocumentAdd, Link } from '@element-plus/icons-vue'
-import type { PageSchema } from '@vela/core'
+import type { PageSchema, PageType } from '@vela/core'
 
 // 定义页面树节点类型
 interface PageTreeNode {
   id: string
   name: string
-  type: 'page'
-  path: string
+  type: Extract<PageType, 'page' | 'dialog' | 'fragment'>
+  path?: string
+  subtitle: string
   expanded: boolean
   isHome: boolean
 }
@@ -138,11 +156,16 @@ const isPageMenuOpen = ref(false)
 const managerRef = ref<HTMLElement | null>(null)
 const searchQuery = ref('')
 const showAddPageDialog = ref(false)
-const newPageForm = ref({ name: '', route: '' })
+const newPageForm = ref({
+  name: '',
+  route: '',
+  type: 'page' as Extract<PageType, 'page' | 'dialog' | 'fragment'>,
+})
 
 // 从 Store 获取真实页面列表
 const pagesFromStore = computed(() => projectStore.project?.pages || [])
 const activePageId = computed(() => projectStore.activePageId || '')
+const homePageId = computed(() => pagesFromStore.value.find((page) => page.type === 'page')?.id || '')
 
 const activePage = computed(() => {
   return pagesFromStore.value.find((p: PageSchema) => p.id === activePageId.value)
@@ -153,17 +176,27 @@ const pageTree = computed<PageTreeNode[]>(() => {
   return pagesFromStore.value.map((page: PageSchema, index: number) => ({
     id: page.id,
     name: page.name,
-    type: 'page' as const,
-    path: page.path || `/${page.name.toLowerCase().replace(/\s+/g, '-')}`,
+    type: page.type === 'dialog' || page.type === 'fragment' ? page.type : 'page',
+    path: page.type === 'page' ? page.path || `/${page.name.toLowerCase().replace(/\s+/g, '-')}` : '',
+    subtitle:
+      page.type === 'page'
+        ? page.path || `/${page.name.toLowerCase().replace(/\s+/g, '-')}`
+        : page.type === 'dialog'
+          ? '弹窗页面'
+          : '片段页面',
     expanded: false,
-    isHome: index === 0,
+    isHome: page.id === homePageId.value && index >= 0,
   }))
 })
 
 const filteredTree = computed(() => {
   if (!searchQuery.value) return pageTree.value
-  return pageTree.value.filter((node) =>
-    node.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  const keyword = searchQuery.value.toLowerCase()
+  return pageTree.value.filter(
+    (node) =>
+      node.name.toLowerCase().includes(keyword) ||
+      node.subtitle.toLowerCase().includes(keyword) ||
+      node.type.toLowerCase().includes(keyword),
   )
 })
 
@@ -179,18 +212,27 @@ function selectPage(pageId: string) {
 
 async function handleAddPage() {
   showAddPageDialog.value = true
-  newPageForm.value = { name: '', route: '' }
+  newPageForm.value = { name: '', route: '', type: 'page' }
 }
 
 async function submitAddPage() {
   const name = newPageForm.value.name?.trim()
+  const route = newPageForm.value.route?.trim()
 
   if (!name) {
     ElMessage.warning('页面名称不能为空')
     return
   }
 
-  projectStore.addPage(name)
+  if (newPageForm.value.type === 'page' && route && !route.startsWith('/')) {
+    ElMessage.warning('路由路径必须以 / 开头')
+    return
+  }
+
+  projectStore.addPage(name, {
+    type: newPageForm.value.type,
+    path: newPageForm.value.type === 'page' ? route || undefined : undefined,
+  })
   ElMessage.success('页面创建成功')
   showAddPageDialog.value = false
   isPageMenuOpen.value = false
@@ -405,6 +447,15 @@ onUnmounted(() => {
 
 .add-page-form :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.15);
+}
+
+.page-type-group {
+  display: flex;
+  width: 100%;
+}
+
+.page-type-group :deep(.el-radio-button__inner) {
+  min-width: 92px;
 }
 
 .form-tip {

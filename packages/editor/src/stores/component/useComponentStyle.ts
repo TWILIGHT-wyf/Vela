@@ -113,7 +113,24 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     const node = nodeIndex.get(id)
     if (!node) return
 
-    node.dataSource = { ...node.dataSource, ...dataSource }
+    const nextDataSource: Record<string, unknown> = {
+      ...(node.dataSource || {}),
+      ...dataSource,
+    }
+
+    for (const [key, value] of Object.entries(dataSource)) {
+      if (value === undefined) {
+        delete nextDataSource[key]
+      }
+    }
+
+    if (Object.keys(nextDataSource).length === 0) {
+      delete node.dataSource
+    } else {
+      node.dataSource = nextDataSource
+    }
+
+    incrementVersion(id)
     syncToProjectStore()
   }
 
