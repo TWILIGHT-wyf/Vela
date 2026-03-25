@@ -24,7 +24,8 @@ export function useComponentTree(
   selectionCtx: ComponentSelectionContext,
   syncToProjectStore: () => void,
 ) {
-  const { nodeIndex, parentIndex, traverse, rebuildIndex, indexNode, unindexNode } = indexCtx
+  const { nodeIndex, parentIndex, traverse, rebuildIndex, touchIndex, indexNode, unindexNode } =
+    indexCtx
   const { clearDeletedSelection, clearSelection } = selectionCtx
 
   /**
@@ -258,6 +259,7 @@ export function useComponentTree(
     newParent.children.splice(newIndex, 0, node)
     parentIndex.set(id, newParentId)
     normalizeGridContainer(newParent)
+    touchIndex()
 
     syncToProjectStore()
   }

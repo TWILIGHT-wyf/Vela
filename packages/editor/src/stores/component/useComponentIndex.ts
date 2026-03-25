@@ -28,6 +28,10 @@ export function useComponentIndex() {
     indexVersion.value += 1
   }
 
+  function touchIndex() {
+    bumpIndexVersion()
+  }
+
   /**
    * 递归遍历树
    */
@@ -153,6 +157,7 @@ export function useComponentIndex() {
     indexVersion,
     traverse,
     rebuildIndex,
+    touchIndex,
     indexNode,
     unindexNode,
     findNodeById,
