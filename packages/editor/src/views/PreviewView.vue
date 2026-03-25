@@ -298,17 +298,21 @@ const { rootNode } = storeToRefs(componentStore)
 const { currentPage } = storeToRefs(projectStore)
 const runtimePlugins = useRuntimePlugins()
 const runtimePages = computed(() =>
-  projectStore.project.pages
-    .filter((page) => page.type === 'page')
-    .map((page) => ({
-      id: page.id,
-      name: page.name,
-      route: page.path,
-      path: page.path,
-      actions: page.actions || [],
-    })),
+  projectStore.project.pages.map((page) => ({
+    id: page.id,
+    name: page.name,
+    type: page.type,
+    title: page.title,
+    route: page.type === 'page' ? page.path : undefined,
+    path: page.type === 'page' ? page.path : undefined,
+    actions: page.actions || [],
+    children: page.children,
+    dialogConfig: page.type === 'dialog' ? page.dialogConfig : undefined,
+  })),
 )
-const runtimeProjectMode = computed(() => runtimePages.value.length > 1)
+const runtimeProjectMode = computed(
+  () => runtimePages.value.filter((page) => page.type === 'page').length > 1,
+)
 
 // 预览视口尺寸跟随画布设置
 const viewportStyle = computed(() => ({

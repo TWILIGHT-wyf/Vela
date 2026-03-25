@@ -16,11 +16,51 @@
       @trigger-event="handleComponentEvent"
       @update-prop="handleUpdateProp"
     />
+
+    <div
+      v-for="dialog in activeDialogs"
+      :key="dialog.dialogId"
+      class="dialog-overlay"
+      :class="{ 'dialog-overlay--maskless': dialog.mask === false }"
+      @click="handleDialogMaskClick(dialog)"
+    >
+      <div
+        class="dialog-panel"
+        :style="getDialogPanelStyle(dialog)"
+        @click.stop
+      >
+        <div v-if="dialog.showHeader" class="dialog-header">
+          <div class="dialog-title">{{ dialog.title }}</div>
+          <button
+            v-if="dialog.closable"
+            type="button"
+            class="dialog-close"
+            @click="closeDialog(dialog.dialogId)"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="dialog-body">
+          <p v-if="dialog.content" class="dialog-description">{{ dialog.content }}</p>
+
+          <RuntimeComponent
+            v-if="dialog.rootNode"
+            :node="dialog.rootNode"
+            :mode="mode"
+            @trigger-event="handleComponentEvent"
+            @update-prop="handleUpdateProp"
+          />
+
+          <div v-else class="dialog-empty">当前弹窗页暂无内容</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, provide, onBeforeUnmount, type Ref } from 'vue'
+import { ref, computed, watch, provide, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
 import type { NodeSchema } from '@vela/core'
@@ -93,12 +133,35 @@ const emit = defineEmits<{
   'select-component': [componentId: string]
 }>()
 
+interface DialogRuntimeEventDetail {
+  dialogId?: string
+  title?: unknown
+  content?: unknown
+  data?: unknown
+  result?: unknown
+}
+
+interface ActiveDialogEntry {
+  dialogId: string
+  title: string
+  content: string
+  rootNode: NodeSchema | null
+  mask: boolean
+  maskClosable: boolean
+  closable: boolean
+  width?: number | string
+  height?: number | string
+  showHeader: boolean
+  data?: unknown
+}
+
 const router = useRouter()
 const stageRef = ref<HTMLDivElement | null>(null)
 
 // ========== Local State ==========
 // Local reactive copy of the tree for mutation (data binding)
 const localRootNode = ref<NodeSchema | null>(null)
+const activeDialogs = ref<ActiveDialogEntry[]>([])
 
 // ========== Computed ==========
 const hasContent = computed(() => {
@@ -126,6 +189,16 @@ const rendererStyle = computed(() => {
   return style
 })
 
+const dialogPageMap = computed(() => {
+  const pageMap = new Map<string, Page>()
+  for (const page of props.pages) {
+    if (page.type === 'dialog') {
+      pageMap.set(page.id, page)
+    }
+  }
+  return pageMap
+})
+
 // ========== Plugin System ==========
 const componentEventSubscribers = new Set<
   (payload: { componentId: string; eventType: string; actions: unknown[]; event?: Event }) => void
@@ -145,6 +218,12 @@ const nodeIndex = computed(() => {
 
   if (localRootNode.value) {
     traverse(localRootNode.value)
+  }
+
+  for (const dialog of activeDialogs.value) {
+    if (dialog.rootNode) {
+      traverse(dialog.rootNode)
+    }
   }
 
   return index
@@ -208,6 +287,7 @@ watch(
 onBeforeUnmount(() => {
   cleanupPlugins()
   componentEventSubscribers.clear()
+  removeDialogListeners()
 })
 
 // ========== Event Handling ==========
@@ -245,6 +325,139 @@ watch(
   { immediate: true, deep: false },
 )
 
+watch(
+  () => props.pages,
+  () => {
+    activeDialogs.value = activeDialogs.value
+      .map((dialog) => buildActiveDialog(dialog.dialogId, dialog))
+      .filter((dialog): dialog is ActiveDialogEntry => dialog !== null)
+  },
+  { deep: false },
+)
+
+function cloneNode<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function toStringValue(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value
+  if (value === undefined || value === null) return fallback
+  return String(value)
+}
+
+function buildActiveDialog(
+  dialogId: string,
+  detail: Partial<DialogRuntimeEventDetail> = {},
+): ActiveDialogEntry | null {
+  const page = dialogPageMap.value.get(dialogId)
+  if (!page) {
+    console.warn(`[RuntimeRenderer] dialog page "${dialogId}" not found`)
+    return null
+  }
+
+  const dialogConfig = page.dialogConfig || {}
+  const title = toStringValue(detail.title, page.title || page.name || '弹窗')
+  const content = toStringValue(detail.content, '')
+
+  return {
+    dialogId,
+    title,
+    content,
+    rootNode: page.children ? cloneNode(page.children) : null,
+    mask: dialogConfig.mask !== false,
+    maskClosable: dialogConfig.maskClosable !== false,
+    closable: dialogConfig.closable !== false,
+    width: dialogConfig.width,
+    height: dialogConfig.height,
+    showHeader: Boolean(title) || dialogConfig.closable !== false,
+    data: detail.data,
+  }
+}
+
+function openDialog(detail: DialogRuntimeEventDetail) {
+  const dialogId = toStringValue(detail.dialogId, '')
+  if (!dialogId) {
+    return
+  }
+
+  const nextDialog = buildActiveDialog(dialogId, detail)
+  if (!nextDialog) {
+    return
+  }
+
+  const currentIndex = activeDialogs.value.findIndex((item) => item.dialogId === dialogId)
+  if (currentIndex >= 0) {
+    activeDialogs.value.splice(currentIndex, 1, nextDialog)
+    return
+  }
+
+  activeDialogs.value.push(nextDialog)
+}
+
+function closeDialog(dialogId?: string) {
+  if (!dialogId) {
+    activeDialogs.value = activeDialogs.value.slice(0, -1)
+    return
+  }
+
+  activeDialogs.value = activeDialogs.value.filter((item) => item.dialogId !== dialogId)
+}
+
+function handleDialogOpen(event: Event) {
+  const detail = (event as CustomEvent<DialogRuntimeEventDetail>).detail || {}
+  openDialog(detail)
+}
+
+function handleDialogClose(event: Event) {
+  const detail = (event as CustomEvent<DialogRuntimeEventDetail>).detail || {}
+  closeDialog(toStringValue(detail.dialogId, ''))
+}
+
+function registerDialogListeners() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.addEventListener('vela:dialog:open', handleDialogOpen as EventListener)
+  window.addEventListener('vela:dialog:close', handleDialogClose as EventListener)
+}
+
+function removeDialogListeners() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.removeEventListener('vela:dialog:open', handleDialogOpen as EventListener)
+  window.removeEventListener('vela:dialog:close', handleDialogClose as EventListener)
+}
+
+function getDialogPanelStyle(dialog: ActiveDialogEntry): Record<string, string> {
+  const style: Record<string, string> = {}
+
+  if (dialog.width !== undefined && dialog.width !== null && dialog.width !== '') {
+    style.width = typeof dialog.width === 'number' ? `${dialog.width}px` : String(dialog.width)
+  } else {
+    style.width = '520px'
+  }
+
+  if (dialog.height !== undefined && dialog.height !== null && dialog.height !== '') {
+    style.height = typeof dialog.height === 'number' ? `${dialog.height}px` : String(dialog.height)
+  }
+
+  return style
+}
+
+function handleDialogMaskClick(dialog: ActiveDialogEntry) {
+  if (dialog.mask === false || dialog.maskClosable === false) {
+    return
+  }
+  closeDialog(dialog.dialogId)
+}
+
+onMounted(() => {
+  registerDialogListeners()
+})
+
 // ========== Provide Context ==========
 provide(
   'runtimeMode',
@@ -260,6 +473,84 @@ provide('nodeIndex', nodeIndex)
   height: 100%;
   background: transparent;
   overflow: hidden;
+}
+
+.dialog-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 2000;
+}
+
+.dialog-overlay--maskless {
+  background: transparent;
+}
+
+.dialog-panel {
+  display: flex;
+  flex-direction: column;
+  max-width: min(92vw, 960px);
+  max-height: calc(100% - 48px);
+  min-width: 360px;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dialog-close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  color: #111827;
+}
+
+.dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+}
+
+.dialog-description {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.dialog-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: #9ca3af;
+  font-size: 14px;
 }
 
 /* Empty state */

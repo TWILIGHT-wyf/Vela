@@ -1,13 +1,17 @@
 import type { Ref, ComputedRef } from 'vue'
 import type { Router } from 'vue-router'
-import type { AnyActionSchema, NodeSchema } from '@vela/core'
+import type { AnyActionSchema, DialogPage, NodeSchema, PageSchema } from '@vela/core'
 
 export interface Page {
   id: string
   name: string
+  type?: PageSchema['type']
+  title?: string
   route?: string
   path?: string
   actions?: AnyActionSchema[]
+  children?: NodeSchema
+  dialogConfig?: DialogPage['dialogConfig']
 }
 
 /**
