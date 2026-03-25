@@ -71,6 +71,7 @@
               v-if="rootNode"
               :root-node="rootNode"
               :pages="runtimePages"
+              :current-page-id="currentPage?.id"
               :is-project-mode="runtimeProjectMode"
               mode="preview"
               :plugins="runtimePlugins"
@@ -308,6 +309,7 @@ const runtimePages = computed(() =>
     actions: page.actions || [],
     children: page.children,
     dialogConfig: page.type === 'dialog' ? page.dialogConfig : undefined,
+    state: page.state,
   })),
 )
 const runtimeProjectMode = computed(

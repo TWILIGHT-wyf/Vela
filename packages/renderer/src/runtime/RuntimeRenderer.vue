@@ -13,6 +13,7 @@
       :key="child.id"
       :node="child"
       :mode="mode"
+      :runtime-state="mainRuntimeState"
       @trigger-event="handleComponentEvent"
       @update-prop="handleUpdateProp"
     />
@@ -24,11 +25,7 @@
       :class="{ 'dialog-overlay--maskless': dialog.mask === false }"
       @click="handleDialogMaskClick(dialog)"
     >
-      <div
-        class="dialog-panel"
-        :style="getDialogPanelStyle(dialog)"
-        @click.stop
-      >
+      <div class="dialog-panel" :style="getDialogPanelStyle(dialog)" @click.stop>
         <div v-if="dialog.showHeader" class="dialog-header">
           <div class="dialog-title">{{ dialog.title }}</div>
           <button
@@ -48,6 +45,7 @@
             v-if="dialog.rootNode"
             :node="dialog.rootNode"
             :mode="mode"
+            :runtime-state="dialog.runtimeState"
             @trigger-event="handleComponentEvent"
             @update-prop="handleUpdateProp"
           />
@@ -63,7 +61,7 @@
 import { ref, computed, watch, provide, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { set } from 'lodash-es'
-import type { NodeSchema } from '@vela/core'
+import type { NodeSchema, VariableSchema } from '@vela/core'
 import type { Page, RuntimePlugin, RuntimeContext, RuntimeMode } from './types'
 
 /**
@@ -90,6 +88,11 @@ const props = withDefaults(
      * Page configuration for multi-page support
      */
     pages?: Page[]
+
+    /**
+     * Active route page id for the current root tree
+     */
+    currentPageId?: string
 
     /**
      * Whether running in project mode (multi-page) or single page
@@ -119,6 +122,7 @@ const props = withDefaults(
   }>(),
   {
     pages: () => [],
+    currentPageId: undefined,
     isProjectMode: false,
     mode: 'runtime',
     plugins: () => [],
@@ -146,6 +150,7 @@ interface ActiveDialogEntry {
   title: string
   content: string
   rootNode: NodeSchema | null
+  runtimeState: Record<string, unknown>
   mask: boolean
   maskClosable: boolean
   closable: boolean
@@ -162,6 +167,7 @@ const stageRef = ref<HTMLDivElement | null>(null)
 // Local reactive copy of the tree for mutation (data binding)
 const localRootNode = ref<NodeSchema | null>(null)
 const activeDialogs = ref<ActiveDialogEntry[]>([])
+const mainRuntimeState = ref<Record<string, unknown>>({})
 
 // ========== Computed ==========
 const hasContent = computed(() => {
@@ -199,9 +205,22 @@ const dialogPageMap = computed(() => {
   return pageMap
 })
 
+const currentPage = computed(() => {
+  if (!props.currentPageId) {
+    return props.pages.find((page) => page.type === 'page')
+  }
+  return props.pages.find((page) => page.id === props.currentPageId)
+})
+
 // ========== Plugin System ==========
 const componentEventSubscribers = new Set<
-  (payload: { componentId: string; eventType: string; actions: unknown[]; event?: Event }) => void
+  (payload: {
+    componentId: string
+    eventType: string
+    actions: unknown[]
+    event?: Event
+    runtimeState?: Record<string, unknown>
+  }) => void
 >()
 const pluginCleanups: Array<() => void> = []
 
@@ -238,6 +257,7 @@ const context: RuntimeContext = {
     return nodes
   }) as unknown as Ref<NodeSchema[]>,
   pages: computed(() => props.pages),
+  state: mainRuntimeState,
   isProjectMode: computed(() => props.isProjectMode),
   router,
   subscribeComponentEvent: (handler) => {
@@ -296,13 +316,24 @@ function handleComponentEvent(payload: {
   eventType: string
   actions: unknown[]
   event?: Event
+  runtimeState?: Record<string, unknown>
 }) {
   // Dispatch to all subscribed plugins
   componentEventSubscribers.forEach((handler) => handler(payload))
 }
 
-function handleUpdateProp(payload: { componentId: string; path: string; value: unknown }) {
+function handleUpdateProp(payload: {
+  componentId: string
+  path: string
+  value: unknown
+  runtimeState?: Record<string, unknown>
+}) {
   if (props.mode === 'editor') return
+
+  if (payload.path.startsWith('state.') && payload.runtimeState) {
+    set(payload.runtimeState, payload.path.slice('state.'.length), payload.value)
+    return
+  }
 
   // Find the node and update it
   const node = nodeIndex.value.get(payload.componentId)
@@ -339,10 +370,49 @@ function cloneNode<T>(value: T): T {
   return JSON.parse(JSON.stringify(value))
 }
 
+function cloneValue<T>(value: T): T {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value))
+}
+
 function toStringValue(value: unknown, fallback = ''): string {
   if (typeof value === 'string') return value
   if (value === undefined || value === null) return fallback
   return String(value)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function buildRuntimeState(
+  variables: VariableSchema[] | undefined,
+  payloadData?: unknown,
+  dialogId?: string,
+): Record<string, unknown> {
+  const state: Record<string, unknown> = {}
+
+  for (const variable of variables || []) {
+    state[variable.key] = cloneValue(variable.defaultValue)
+  }
+
+  if (payloadData !== undefined) {
+    state.dialogData = cloneValue(payloadData)
+    if (isRecord(payloadData)) {
+      for (const variable of variables || []) {
+        if (payloadData[variable.key] !== undefined) {
+          state[variable.key] = cloneValue(payloadData[variable.key])
+        }
+      }
+    }
+  }
+
+  state.dialog = {
+    id: dialogId || '',
+    visible: Boolean(dialogId),
+    data: cloneValue(payloadData),
+  }
+
+  return state
 }
 
 function buildActiveDialog(
@@ -364,6 +434,7 @@ function buildActiveDialog(
     title,
     content,
     rootNode: page.children ? cloneNode(page.children) : null,
+    runtimeState: buildRuntimeState(page.state, detail.data, dialogId),
     mask: dialogConfig.mask !== false,
     maskClosable: dialogConfig.maskClosable !== false,
     closable: dialogConfig.closable !== false,
@@ -457,6 +528,14 @@ function handleDialogMaskClick(dialog: ActiveDialogEntry) {
 onMounted(() => {
   registerDialogListeners()
 })
+
+watch(
+  currentPage,
+  (page) => {
+    mainRuntimeState.value = buildRuntimeState(page?.state)
+  },
+  { immediate: true },
+)
 
 // ========== Provide Context ==========
 provide(

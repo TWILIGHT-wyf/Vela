@@ -1,6 +1,12 @@
 import type { Ref, ComputedRef } from 'vue'
 import type { Router } from 'vue-router'
-import type { AnyActionSchema, DialogPage, NodeSchema, PageSchema } from '@vela/core'
+import type {
+  AnyActionSchema,
+  DialogPage,
+  NodeSchema,
+  PageSchema,
+  VariableSchema,
+} from '@vela/core'
 
 export interface Page {
   id: string
@@ -12,6 +18,7 @@ export interface Page {
   actions?: AnyActionSchema[]
   children?: NodeSchema
   dialogConfig?: DialogPage['dialogConfig']
+  state?: VariableSchema[]
 }
 
 /**
@@ -28,6 +35,11 @@ export interface RuntimeContext {
    * Available pages
    */
   pages: Ref<Page[]> | ComputedRef<Page[]>
+
+  /**
+   * Shared runtime state for the active page tree.
+   */
+  state: Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
 
   /**
    * Whether running in multi-page project mode
@@ -48,6 +60,7 @@ export interface RuntimeContext {
       eventType: string
       actions: unknown[]
       event?: Event
+      runtimeState?: Record<string, unknown>
     }) => void,
   ) => () => void
 

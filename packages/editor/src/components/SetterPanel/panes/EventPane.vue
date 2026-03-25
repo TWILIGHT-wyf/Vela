@@ -93,7 +93,9 @@
                       <el-input
                         :model-value="getDialogPayloadField(action, 'confirmText')"
                         placeholder="确认"
-                        @update:model-value="setNodeDialogPayloadField(index, 'confirmText', $event)"
+                        @update:model-value="
+                          setNodeDialogPayloadField(index, 'confirmText', $event)
+                        "
                       />
                     </el-form-item>
 
@@ -106,12 +108,46 @@
                     </el-form-item>
                   </div>
 
-                  <el-form-item label="传入数据(JSON)" size="small">
+                  <div v-if="getDialogStateFields(action).length" class="dialog-state-card">
+                    <div class="dialog-state-card__header">目标弹窗状态映射</div>
+                    <div class="dialog-state-card__hint">
+                      配置后会写入目标弹窗页的页面状态。支持固定值、JSON，或
+                      <code v-pre>{{ state.xxx }}</code>
+                      模板表达式。
+                    </div>
+
+                    <div class="dialog-state-grid">
+                      <el-form-item
+                        v-for="field in getDialogStateFields(action)"
+                        :key="`node-dialog-state-${action.id}-${field.key}`"
+                        size="small"
+                      >
+                        <template #label>
+                          <span class="dialog-state-label">
+                            <span>{{ field.key }}</span>
+                            <span class="dialog-state-type">{{ field.type }}</span>
+                          </span>
+                        </template>
+                        <el-input
+                          :model-value="getDialogStateFieldValue(action, field)"
+                          :placeholder="getDialogStateFieldPlaceholder(field)"
+                          @update:model-value="setNodeDialogStateField(index, field, $event)"
+                        />
+                      </el-form-item>
+                    </div>
+                  </div>
+
+                  <el-form-item
+                    :label="
+                      getDialogStateFields(action).length ? '额外传入数据(JSON)' : '传入数据(JSON)'
+                    "
+                    size="small"
+                  >
                     <el-input
                       :model-value="formatJson(getDialogPayloadJsonField(action, 'data'))"
                       type="textarea"
                       :rows="3"
-                      placeholder='{"recordId":"{{row.id}}"}'
+                      placeholder='{"recordId":"{{state.dialogData.id}}"}'
                       @change="setNodeDialogPayloadJsonField(index, 'data', $event)"
                     />
                   </el-form-item>
@@ -323,7 +359,9 @@
                       <el-input
                         :model-value="getDialogPayloadField(action, 'title')"
                         placeholder="可选，支持纯文本标题"
-                        @update:model-value="setDialogPayloadField(section.key, index, 'title', $event)"
+                        @update:model-value="
+                          setDialogPayloadField(section.key, index, 'title', $event)
+                        "
                       />
                     </el-form-item>
 
@@ -331,7 +369,9 @@
                       <el-form-item label="显示取消按钮" size="small">
                         <el-switch
                           :model-value="getDialogBooleanPayloadField(action, 'showCancel', true)"
-                          @change="setDialogBooleanPayloadField(section.key, index, 'showCancel', $event)"
+                          @change="
+                            setDialogBooleanPayloadField(section.key, index, 'showCancel', $event)
+                          "
                         />
                       </el-form-item>
 
@@ -339,7 +379,9 @@
                         <el-input
                           :model-value="getDialogPayloadField(action, 'confirmText')"
                           placeholder="确认"
-                          @update:model-value="setDialogPayloadField(section.key, index, 'confirmText', $event)"
+                          @update:model-value="
+                            setDialogPayloadField(section.key, index, 'confirmText', $event)
+                          "
                         />
                       </el-form-item>
 
@@ -347,17 +389,57 @@
                         <el-input
                           :model-value="getDialogPayloadField(action, 'cancelText')"
                           placeholder="取消"
-                          @update:model-value="setDialogPayloadField(section.key, index, 'cancelText', $event)"
+                          @update:model-value="
+                            setDialogPayloadField(section.key, index, 'cancelText', $event)
+                          "
                         />
                       </el-form-item>
                     </div>
 
-                    <el-form-item label="传入数据(JSON)" size="small">
+                    <div v-if="getDialogStateFields(action).length" class="dialog-state-card">
+                      <div class="dialog-state-card__header">目标弹窗状态映射</div>
+                      <div class="dialog-state-card__hint">
+                        配置后会写入目标弹窗页的页面状态。支持固定值、JSON，或
+                        <code v-pre>{{ state.xxx }}</code>
+                        模板表达式。
+                      </div>
+
+                      <div class="dialog-state-grid">
+                        <el-form-item
+                          v-for="field in getDialogStateFields(action)"
+                          :key="`dialog-state-${action.id}-${field.key}`"
+                          size="small"
+                        >
+                          <template #label>
+                            <span class="dialog-state-label">
+                              <span>{{ field.key }}</span>
+                              <span class="dialog-state-type">{{ field.type }}</span>
+                            </span>
+                          </template>
+                          <el-input
+                            :model-value="getDialogStateFieldValue(action, field)"
+                            :placeholder="getDialogStateFieldPlaceholder(field)"
+                            @update:model-value="
+                              setDialogStateField(section.key, index, field, $event)
+                            "
+                          />
+                        </el-form-item>
+                      </div>
+                    </div>
+
+                    <el-form-item
+                      :label="
+                        getDialogStateFields(action).length
+                          ? '额外传入数据(JSON)'
+                          : '传入数据(JSON)'
+                      "
+                      size="small"
+                    >
                       <el-input
                         :model-value="formatJson(getDialogPayloadJsonField(action, 'data'))"
                         type="textarea"
                         :rows="3"
-                        placeholder='{"recordId":"{{row.id}}"}'
+                        placeholder='{"recordId":"{{state.dialogData.id}}"}'
                         @change="setDialogPayloadJsonField(section.key, index, 'data', $event)"
                       />
                     </el-form-item>
@@ -598,6 +680,7 @@ import { useEventConfiguration, type SupportedEventName } from '../composables/u
 type ActionMode = 'action' | 'ref-string' | 'ref-scoped'
 type RefScope = 'global' | 'page' | 'node'
 type JsonFieldKey = 'payload' | 'handlers' | 'next'
+type DialogStateField = NonNullable<DialogPage['state']>[number]
 
 interface Props {
   node?: NodeSchema | null
@@ -854,18 +937,52 @@ function getDialogBooleanPayloadField(
   return typeof value === 'boolean' ? value : fallback
 }
 
-function getDialogPayloadJsonField(
-  action: ActionSchema<string>,
-  key: 'data' | 'result',
-): unknown {
+function getDialogPayloadJsonField(action: ActionSchema<string>, key: 'data' | 'result'): unknown {
   return getPayloadRecord(action)[key]
 }
 
-function setPayloadFieldOnAction(
-  action: ActionSchema<string>,
-  key: string,
-  value: unknown,
-) {
+function getDialogPageByAction(action: ActionSchema<string>): DialogPage | undefined {
+  const dialogId = getDialogPayloadField(action, 'dialogId')
+  if (!dialogId) {
+    return undefined
+  }
+  return dialogPageOptions.value.find((page) => page.id === dialogId)
+}
+
+function getDialogStateFields(action: ActionSchema<string>): DialogStateField[] {
+  return getDialogPageByAction(action)?.state || []
+}
+
+function getDialogDataRecord(action: ActionSchema<string>): Record<string, unknown> {
+  const value = getDialogPayloadJsonField(action, 'data')
+  return isRecord(value) ? value : {}
+}
+
+function formatDialogStateValue(value: unknown): string {
+  if (value === undefined || value === null) {
+    return ''
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  return formatJson(value)
+}
+
+function getDialogStateFieldValue(action: ActionSchema<string>, field: DialogStateField): string {
+  return formatDialogStateValue(getDialogDataRecord(action)[field.key])
+}
+
+function getDialogStateFieldPlaceholder(field: DialogStateField): string {
+  if (field.type === 'object' || field.type === 'array') {
+    return '支持 JSON 或 {{state.xxx}}'
+  }
+  if (field.type === 'number' || field.type === 'boolean') {
+    return `支持字面量或 {{state.${field.key}}}`
+  }
+  return `例如 {{state.${field.key}}}`
+}
+
+function setPayloadFieldOnAction(action: ActionSchema<string>, key: string, value: unknown) {
   const record = asRecord(action)
   const payload = { ...getPayloadRecord(action) }
   const text = typeof value === 'string' ? value.trim() : value
@@ -884,24 +1001,74 @@ function setPayloadFieldOnAction(
   record.payload = payload
 }
 
-function setPayloadBooleanFieldOnAction(
-  action: ActionSchema<string>,
-  key: string,
-  value: unknown,
-) {
+function setPayloadBooleanFieldOnAction(action: ActionSchema<string>, key: string, value: unknown) {
   const record = asRecord(action)
   const payload = { ...getPayloadRecord(action), [key]: Boolean(value) }
   record.payload = payload
 }
 
-function setPayloadJsonFieldOnAction(
-  action: ActionSchema<string>,
-  key: string,
-  value: unknown,
-) {
+function setPayloadJsonFieldOnAction(action: ActionSchema<string>, key: string, value: unknown) {
   const parsed = parseJson(value)
   if (!parsed.ok) return
   setPayloadFieldOnAction(action, key, parsed.value)
+}
+
+function parseDialogStateInput(field: DialogStateField, value: unknown): unknown {
+  const text = toString(value).trim()
+  if (!text) {
+    return undefined
+  }
+  if (text.includes('{{')) {
+    return text
+  }
+
+  if (field.type === 'number') {
+    const numericValue = Number(text)
+    return Number.isFinite(numericValue) ? numericValue : text
+  }
+
+  if (field.type === 'boolean') {
+    if (text === 'true') return true
+    if (text === 'false') return false
+    return text
+  }
+
+  if (field.type === 'object' || field.type === 'array') {
+    const parsed = parseJson(text)
+    return parsed.ok ? parsed.value : undefined
+  }
+
+  return text
+}
+
+function setDialogStateFieldOnAction(
+  action: ActionSchema<string>,
+  field: DialogStateField,
+  value: unknown,
+) {
+  const record = asRecord(action)
+  const payload = { ...getPayloadRecord(action) }
+  const nextValue = parseDialogStateInput(field, value)
+  const data = { ...getDialogDataRecord(action) }
+
+  if (nextValue === undefined || nextValue === '') {
+    delete data[field.key]
+  } else {
+    data[field.key] = nextValue
+  }
+
+  if (Object.keys(data).length === 0) {
+    delete payload.data
+  } else {
+    payload.data = data
+  }
+
+  if (Object.keys(payload).length === 0) {
+    delete record.payload
+    return
+  }
+
+  record.payload = payload
 }
 
 function setJsonField(
@@ -952,6 +1119,17 @@ function setDialogPayloadJsonField(
 ) {
   updateInline(eventName, index, (action) => {
     setPayloadJsonFieldOnAction(action, key, value)
+  })
+}
+
+function setDialogStateField(
+  eventName: SupportedEventName,
+  index: number,
+  field: DialogStateField,
+  value: unknown,
+) {
+  updateInline(eventName, index, (action) => {
+    setDialogStateFieldOnAction(action, field, value)
   })
 }
 
@@ -1203,13 +1381,15 @@ function setNodeDialogBooleanPayloadField(index: number, key: 'showCancel', valu
   })
 }
 
-function setNodeDialogPayloadJsonField(
-  index: number,
-  key: 'data' | 'result',
-  value: unknown,
-) {
+function setNodeDialogPayloadJsonField(index: number, key: 'data' | 'result', value: unknown) {
   updateNodeActionAt(index, (action) => {
     setPayloadJsonFieldOnAction(action, key, value)
+  })
+}
+
+function setNodeDialogStateField(index: number, field: DialogStateField, value: unknown) {
+  updateNodeActionAt(index, (action) => {
+    setDialogStateFieldOnAction(action, field, value)
   })
 }
 
@@ -1383,6 +1563,49 @@ function setNodeActionExtraFields(index: number, value: unknown) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.dialog-state-card {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+}
+
+.dialog-state-card__header {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.dialog-state-card__hint {
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+.dialog-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.dialog-state-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dialog-state-type {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  line-height: 18px;
 }
 
 .action-item :deep(.el-form-item) {

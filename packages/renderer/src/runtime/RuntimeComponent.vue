@@ -22,6 +22,7 @@
         :key="child.id"
         :node="child"
         :mode="mode"
+        :runtime-state="runtimeState"
         @trigger-event="$emit('trigger-event', $event)"
         @update-prop="$emit('update-prop', $event)"
       />
@@ -73,10 +74,12 @@ const props = withDefaults(
      * @default true
      */
     includeLayout?: boolean
+    runtimeState?: Record<string, unknown>
   }>(),
   {
     mode: 'runtime',
     includeLayout: true,
+    runtimeState: () => ({}),
   },
 )
 
@@ -87,9 +90,17 @@ const emit = defineEmits<{
       eventType: string
       actions: unknown[]
       event?: Event
+      runtimeState?: Record<string, unknown>
     },
   ]
-  'update-prop': [payload: { componentId: string; path: string; value: unknown }]
+  'update-prop': [
+    payload: {
+      componentId: string
+      path: string
+      value: unknown
+      runtimeState?: Record<string, unknown>
+    },
+  ]
 }>()
 
 // ========== Component Resolution ==========
@@ -130,7 +141,10 @@ const { computedStyle: baseComputedStyle, locked } = useComponentStyle(nodeRef, 
 })
 
 // ========== Data Source ==========
-const { dataSourceProps, refreshData } = useComponentDataSource(nodeRef)
+const { dataSourceProps, refreshData } = useComponentDataSource(
+  nodeRef,
+  computed(() => props.runtimeState),
+)
 
 // ========== Animation State ==========
 const componentRef = ref<HTMLElement | { $el: HTMLElement } | null>(null)
@@ -272,6 +286,7 @@ function handleClick(event?: Event) {
       eventType: 'click',
       actions: node.events.click,
       event,
+      runtimeState: props.runtimeState,
     })
   }
 }
@@ -291,6 +306,7 @@ function handleMouseEnter(event?: Event) {
       eventType: 'hover',
       actions: node.events.hover,
       event,
+      runtimeState: props.runtimeState,
     })
   }
 }
@@ -313,6 +329,7 @@ function handleDoubleClick(event?: Event) {
       eventType: 'doubleClick',
       actions: node.events.doubleClick,
       event,
+      runtimeState: props.runtimeState,
     })
   }
 }
@@ -322,6 +339,7 @@ function handleUpdateModelValue(val: unknown) {
     componentId: props.node.id,
     path: 'props.modelValue',
     value: val,
+    runtimeState: props.runtimeState,
   })
 }
 

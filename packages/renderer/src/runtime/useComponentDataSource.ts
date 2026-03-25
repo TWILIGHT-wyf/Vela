@@ -1,4 +1,4 @@
-import { computed, type Ref } from 'vue'
+import { computed, type ComputedRef, type Ref } from 'vue'
 import { getNodeComponent, type NodeSchema } from '@vela/core'
 import {
   useDataSource,
@@ -16,6 +16,9 @@ import {
 interface DataSourceConfig {
   enabled?: boolean
   dataPath?: string
+  url?: string
+  headers?: Record<string, string>
+  body?: string
   urlField?: string
   posterField?: string
   contentField?: string
@@ -31,12 +34,78 @@ interface DataSourceConfig {
   linksPath?: string
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function resolveTemplatePath(scope: Record<string, unknown>, rawPath: string): unknown {
+  const trimmed = rawPath.trim()
+  if (!trimmed) return ''
+
+  if (trimmed.startsWith('state.')) {
+    return getValueByPath(scope, trimmed.slice('state.'.length))
+  }
+
+  return getValueByPath(scope, trimmed)
+}
+
+function resolveTemplateString(input: string, scope: Record<string, unknown>): string {
+  return input.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, rawPath: string) => {
+    const value = resolveTemplatePath(scope, rawPath)
+    if (value === undefined || value === null) {
+      return ''
+    }
+    if (typeof value === 'string') {
+      return value
+    }
+    return JSON.stringify(value)
+  })
+}
+
+function resolveDataSourceConfig(
+  dataSource: DataSourceConfig | undefined,
+  scope: Record<string, unknown>,
+): DataSourceConfig | undefined {
+  if (!dataSource) {
+    return dataSource
+  }
+
+  const resolved: DataSourceConfig = { ...dataSource }
+
+  if (typeof resolved.url === 'string') {
+    resolved.url = resolveTemplateString(resolved.url, scope)
+  }
+
+  if (typeof resolved.body === 'string') {
+    resolved.body = resolveTemplateString(resolved.body, scope)
+  }
+
+  if (isRecord(resolved.headers)) {
+    resolved.headers = Object.fromEntries(
+      Object.entries(resolved.headers).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? resolveTemplateString(value, scope) : String(value),
+      ]),
+    )
+  }
+
+  return resolved
+}
+
 /**
  * 运行时数据源处理 Hook
  * 负责从 dataSource 配置中获取数据，并根据组件类型映射到 props
  */
-export function useComponentDataSource(component: Ref<NodeSchema>) {
-  const dataSourceRef = computed(() => component.value.dataSource)
+export function useComponentDataSource(
+  component: Ref<NodeSchema>,
+  runtimeState?: Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>,
+) {
+  const dataSourceRef = computed(() =>
+    resolveDataSourceConfig(
+      component.value.dataSource as DataSourceConfig | undefined,
+      runtimeState?.value || {},
+    ),
+  )
   const { data: remoteData, loading, error, fetchData } = useDataSource(dataSourceRef)
 
   const dataSourceProps = computed(() => {

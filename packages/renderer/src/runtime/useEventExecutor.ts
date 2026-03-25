@@ -44,6 +44,7 @@ interface InlineActionRecord extends UnknownRecord {
 export interface EventExecutorContext {
   components: Ref<NodeSchema[]> | ComputedRef<NodeSchema[]>
   pages: Ref<Page[]> | ComputedRef<Page[]>
+  state: Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
   isProjectMode: Ref<boolean> | ComputedRef<boolean>
   router: Router
   onNavigate?: (pageId: string) => void
@@ -129,9 +130,39 @@ function resolveExpression(
   return evaluateSandboxExpression(input.value, scope)
 }
 
+function resolveTemplateExpression(expression: string, scope: UnknownRecord): unknown {
+  try {
+    return evaluateSandboxExpression(expression, scope)
+  } catch (error) {
+    console.warn('[RuntimeEventExecutor] template expression failed', expression, error)
+    return ''
+  }
+}
+
+function resolveTemplateString(input: string, scope: UnknownRecord): unknown {
+  const exactMatch = input.match(/^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/)
+  if (exactMatch) {
+    return resolveTemplateExpression(exactMatch[1], scope)
+  }
+
+  return input.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, expression: string) => {
+    const value = resolveTemplateExpression(expression, scope)
+    if (value === undefined || value === null) {
+      return ''
+    }
+    if (typeof value === 'string') {
+      return value
+    }
+    return JSON.stringify(value)
+  })
+}
+
 function resolveValue(input: unknown, scope: UnknownRecord): unknown {
   if (isExpressionLike(input)) {
     return resolveExpression(input, scope)
+  }
+  if (typeof input === 'string' && input.includes('{{')) {
+    return resolveTemplateString(input, scope)
   }
   if (Array.isArray(input)) {
     return input.map((item) => resolveValue(item, scope))
@@ -291,10 +322,9 @@ function wait(ms: number): Promise<void> {
 }
 
 export function useEventExecutor(context: EventExecutorContext) {
-  const { components, pages, isProjectMode, router, onNavigate } = context
+  const { components, pages, state, isProjectMode, router, onNavigate } = context
 
   const highlightTimers = new Map<string, number>()
-  const runtimeState: UnknownRecord = {}
 
   injectHighlightStyles()
 
@@ -360,9 +390,17 @@ export function useEventExecutor(context: EventExecutorContext) {
     return null
   }
 
-  function createScope(sourceNode?: NodeSchema, event?: Event): UnknownRecord {
+  function resolveRuntimeState(runtimeStateOverride?: UnknownRecord): UnknownRecord {
+    return runtimeStateOverride || (state.value as UnknownRecord)
+  }
+
+  function createScope(
+    sourceNode?: NodeSchema,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): UnknownRecord {
     return {
-      state: runtimeState,
+      state: resolveRuntimeState(runtimeStateOverride),
       component: sourceNode,
       components: components.value,
       pages: pages.value,
@@ -376,12 +414,13 @@ export function useEventExecutor(context: EventExecutorContext) {
     sourceNode: NodeSchema | undefined,
     nodeId: string,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     const resolved = resolveActionInput(actionLike, nodeId)
     if (!resolved) {
       return
     }
-    await executeResolvedAction(resolved, sourceNode, nodeId, event)
+    await executeResolvedAction(resolved, sourceNode, nodeId, event, runtimeStateOverride)
   }
 
   function toActionArray(value: unknown): unknown[] {
@@ -396,14 +435,16 @@ export function useEventExecutor(context: EventExecutorContext) {
     sourceNode: NodeSchema | undefined,
     nodeId: string,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     const callbackActions = toActionArray(callbackRef)
     for (const callbackAction of callbackActions) {
-      await executeActionLike(callbackAction, sourceNode, nodeId, event)
+      await executeActionLike(callbackAction, sourceNode, nodeId, event, runtimeStateOverride)
     }
   }
 
-  function getRuntimeMeta(): RuntimeMetaRecord {
+  function getRuntimeMeta(runtimeStateOverride?: UnknownRecord): RuntimeMetaRecord {
+    const runtimeState = resolveRuntimeState(runtimeStateOverride)
     if (!isRecord(runtimeState.__actionRuntimeMeta)) {
       runtimeState.__actionRuntimeMeta = {
         throttleMap: {},
@@ -507,6 +548,7 @@ export function useEventExecutor(context: EventExecutorContext) {
     sourceNode: NodeSchema | undefined,
     nodeId: string,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     const actionType = toStringValue(action.type).trim()
     if (!actionType) {
@@ -515,45 +557,60 @@ export function useEventExecutor(context: EventExecutorContext) {
 
     switch (actionType) {
       case 'setState':
-        handleSetState(action, sourceNode, event)
+        handleSetState(action, sourceNode, event, runtimeStateOverride)
         break
       case 'navigate':
-        await handleNavigate(action)
+        await handleNavigate(action, runtimeStateOverride)
         break
       case 'openUrl':
-        handleOpenUrl(action, sourceNode, event)
+        handleOpenUrl(action, sourceNode, event, runtimeStateOverride)
         break
       case 'showToast':
-        handleShowToast(action, sourceNode, event)
+        handleShowToast(action, sourceNode, event, runtimeStateOverride)
         break
       case 'runScript':
-        await handleRunScript(action, sourceNode, event)
+        await handleRunScript(action, sourceNode, event, runtimeStateOverride)
         break
       case 'callApi':
-        await handleCallApi(action, sourceNode, event)
+        await handleCallApi(action, sourceNode, event, runtimeStateOverride)
         break
       case 'emit':
-        handleEmit(action, sourceNode, event)
+        handleEmit(action, sourceNode, event, runtimeStateOverride)
         break
       case 'showDialog':
         dispatchRuntimeEvent('vela:dialog:open', {
           dialogId: extractPayload(action).dialogId,
-          title: resolveValue(extractPayload(action).title, createScope(sourceNode, event)),
-          content: resolveValue(extractPayload(action).content, createScope(sourceNode, event)),
-          data: resolveValue(extractPayload(action).data, createScope(sourceNode, event)),
+          title: resolveValue(
+            extractPayload(action).title,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
+          content: resolveValue(
+            extractPayload(action).content,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
+          data: resolveValue(
+            extractPayload(action).data,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
         })
         break
       case 'closeDialog':
         dispatchRuntimeEvent('vela:dialog:close', {
           dialogId: extractPayload(action).dialogId,
-          result: resolveValue(extractPayload(action).result, createScope(sourceNode, event)),
+          result: resolveValue(
+            extractPayload(action).result,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
         })
         break
       case 'callMethod':
         dispatchRuntimeEvent('vela:call-method', {
           targetRef: extractPayload(action).targetRef,
           method: extractPayload(action).method,
-          args: resolveValue(extractPayload(action).args, createScope(sourceNode, event)),
+          args: resolveValue(
+            extractPayload(action).args,
+            createScope(sourceNode, event, runtimeStateOverride),
+          ),
         })
         break
       case 'toggle-visibility':
@@ -579,7 +636,7 @@ export function useEventExecutor(context: EventExecutorContext) {
     }
 
     if (action.next !== undefined) {
-      await executeActionLike(action.next, sourceNode, nodeId, event)
+      await executeActionLike(action.next, sourceNode, nodeId, event, runtimeStateOverride)
     }
   }
 
@@ -588,13 +645,14 @@ export function useEventExecutor(context: EventExecutorContext) {
     sourceNode: NodeSchema | undefined,
     nodeId: string,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     if (isInlineAction(action)) {
-      await executeScript(action.code, createScope(sourceNode, event))
+      await executeScript(action.code, createScope(sourceNode, event, runtimeStateOverride))
       return
     }
 
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     if (action.condition !== undefined && !resolveValue(action.condition, scope)) {
       return
     }
@@ -608,7 +666,7 @@ export function useEventExecutor(context: EventExecutorContext) {
       await wait(delayMs)
     }
 
-    const runtimeMeta = getRuntimeMeta()
+    const runtimeMeta = getRuntimeMeta(runtimeStateOverride)
     const actionKey = resolveActionKey(action, nodeId)
     if (shouldSkipByThrottle(action, actionKey, runtimeMeta)) {
       return
@@ -616,17 +674,35 @@ export function useEventExecutor(context: EventExecutorContext) {
 
     const handlers = isRecord(action.handlers) ? action.handlers : {}
     const runWithHandlers = async () => {
-      await executeActionCallbacks(handlers.loading, sourceNode, nodeId, event)
+      await executeActionCallbacks(
+        handlers.loading,
+        sourceNode,
+        nodeId,
+        event,
+        runtimeStateOverride,
+      )
 
       let actionError: unknown
       try {
-        await executeBuiltInAction(action, sourceNode, nodeId, event)
-        await executeActionCallbacks(handlers.success, sourceNode, nodeId, event)
+        await executeBuiltInAction(action, sourceNode, nodeId, event, runtimeStateOverride)
+        await executeActionCallbacks(
+          handlers.success,
+          sourceNode,
+          nodeId,
+          event,
+          runtimeStateOverride,
+        )
       } catch (error) {
         actionError = error
-        await executeActionCallbacks(handlers.fail, sourceNode, nodeId, event)
+        await executeActionCallbacks(handlers.fail, sourceNode, nodeId, event, runtimeStateOverride)
       } finally {
-        await executeActionCallbacks(handlers.complete, sourceNode, nodeId, event)
+        await executeActionCallbacks(
+          handlers.complete,
+          sourceNode,
+          nodeId,
+          event,
+          runtimeStateOverride,
+        )
       }
 
       if (actionError) {
@@ -652,14 +728,19 @@ export function useEventExecutor(context: EventExecutorContext) {
     return findComponentById(targetId) || sourceNode
   }
 
-  function handleSetState(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+  function handleSetState(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): void {
     const payload = extractPayload(action)
     const path = toStringValue(payload.path ?? action.path ?? payload.stateName, '')
     if (!path) {
       return
     }
 
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     const rawValue = payload.value !== undefined ? payload.value : action.value
     const resolvedValue = resolveValue(rawValue, scope)
     const merge = Boolean(payload.merge)
@@ -676,10 +757,13 @@ export function useEventExecutor(context: EventExecutorContext) {
       return
     }
 
-    setByPath(runtimeState, path, resolvedValue, merge)
+    setByPath(resolveRuntimeState(runtimeStateOverride), path, resolvedValue, merge)
   }
 
-  async function handleNavigate(action: ActionRecord): Promise<void> {
+  async function handleNavigate(
+    action: ActionRecord,
+    runtimeStateOverride?: UnknownRecord,
+  ): Promise<void> {
     const payload = extractPayload(action)
     const pageId = toStringValue(payload.pageId ?? action.pageId ?? action.targetId, '')
     if (pageId && isProjectMode.value) {
@@ -687,7 +771,7 @@ export function useEventExecutor(context: EventExecutorContext) {
       return
     }
 
-    const scope = createScope()
+    const scope = createScope(undefined, undefined, runtimeStateOverride)
     const rawPath = payload.path !== undefined ? payload.path : (action.path ?? action.content)
     const resolvedPath = toStringValue(resolveValue(rawPath, scope), '')
     if (!resolvedPath) {
@@ -727,9 +811,14 @@ export function useEventExecutor(context: EventExecutorContext) {
     window.open(resolvedPath, '_blank')
   }
 
-  function handleOpenUrl(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+  function handleOpenUrl(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): void {
     const payload = extractPayload(action)
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     const rawUrl = payload.url !== undefined ? payload.url : (action.url ?? action.content)
     const url = toStringValue(resolveValue(rawUrl, scope), '')
     if (!url) {
@@ -747,9 +836,14 @@ export function useEventExecutor(context: EventExecutorContext) {
     window.open(url, target || '_blank', features)
   }
 
-  function handleShowToast(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+  function handleShowToast(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): void {
     const payload = extractPayload(action)
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     const rawMessage =
       payload.message !== undefined ? payload.message : (action.message ?? action.content)
     const message = toStringValue(resolveValue(rawMessage, scope), '提示消息')
@@ -779,6 +873,7 @@ export function useEventExecutor(context: EventExecutorContext) {
     action: ActionRecord,
     sourceNode?: NodeSchema,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     const payload = extractPayload(action)
     const rawCode =
@@ -787,20 +882,23 @@ export function useEventExecutor(context: EventExecutorContext) {
     if (!code) {
       return
     }
-    await executeScript(code, createScope(sourceNode, event), { throwOnError: true })
+    await executeScript(code, createScope(sourceNode, event, runtimeStateOverride), {
+      throwOnError: true,
+    })
   }
 
   async function handleCallApi(
     action: ActionRecord,
     sourceNode?: NodeSchema,
     event?: Event,
+    runtimeStateOverride?: UnknownRecord,
   ): Promise<void> {
     if (typeof fetch !== 'function') {
       return
     }
 
     const payload = extractPayload(action)
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     const endpointInput = payload.url !== undefined ? payload.url : (payload.apiId ?? action.url)
     const endpoint = toStringValue(resolveValue(endpointInput, scope), '')
     if (!endpoint) {
@@ -827,7 +925,7 @@ export function useEventExecutor(context: EventExecutorContext) {
 
       const resultPath = toStringValue(payload.resultPath, '')
       if (resultPath) {
-        setByPath(runtimeState, resultPath, result, false)
+        setByPath(resolveRuntimeState(runtimeStateOverride), resultPath, result, false)
       }
     } catch (error) {
       console.warn('[RuntimeEventExecutor] callApi failed:', error)
@@ -835,9 +933,14 @@ export function useEventExecutor(context: EventExecutorContext) {
     }
   }
 
-  function handleEmit(action: ActionRecord, sourceNode?: NodeSchema, event?: Event): void {
+  function handleEmit(
+    action: ActionRecord,
+    sourceNode?: NodeSchema,
+    event?: Event,
+    runtimeStateOverride?: UnknownRecord,
+  ): void {
     const payload = extractPayload(action)
-    const scope = createScope(sourceNode, event)
+    const scope = createScope(sourceNode, event, runtimeStateOverride)
     const eventName = toStringValue(payload.event ?? action.eventName, '')
     if (!eventName || typeof window === 'undefined') {
       return
@@ -1007,24 +1110,35 @@ export function useEventExecutor(context: EventExecutorContext) {
     eventType: string
     actions: unknown[]
     event?: Event
+    runtimeState?: Record<string, unknown>
   }): Promise<void> {
     const sourceNode = findComponentById(payload.componentId)
     for (const actionLike of payload.actions) {
-      await executeActionLike(actionLike, sourceNode, payload.componentId, payload.event)
+      await executeActionLike(
+        actionLike,
+        sourceNode,
+        payload.componentId,
+        payload.event,
+        payload.runtimeState,
+      )
     }
   }
 
-  async function executeAction(actionLike: unknown, sourceNode?: NodeSchema): Promise<void> {
+  async function executeAction(
+    actionLike: unknown,
+    sourceNode?: NodeSchema,
+    runtimeStateOverride?: Record<string, unknown>,
+  ): Promise<void> {
     const fallbackNodeId =
       (isRecord(actionLike) && typeof actionLike.targetId === 'string' && actionLike.targetId) ||
       sourceNode?.id ||
       ''
-    await executeActionLike(actionLike, sourceNode, fallbackNodeId)
+    await executeActionLike(actionLike, sourceNode, fallbackNodeId, undefined, runtimeStateOverride)
   }
 
   return {
     handleComponentEvent,
     executeAction,
-    runtimeState,
+    runtimeState: state,
   }
 }

@@ -21,6 +21,7 @@ export const EventExecutorPlugin: RuntimePlugin = (context: RuntimeContext) => {
   const { handleComponentEvent } = useEventExecutor({
     components: context.components,
     pages: context.pages,
+    state: context.state,
     isProjectMode: context.isProjectMode,
     router: context.router,
     onNavigate: context.onNavigate,
@@ -32,6 +33,7 @@ export const EventExecutorPlugin: RuntimePlugin = (context: RuntimeContext) => {
       eventType: payload.eventType,
       actions: payload.actions,
       event: payload.event,
+      runtimeState: payload.runtimeState,
     })
   })
 
