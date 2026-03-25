@@ -13,6 +13,20 @@ export function createActionExecutorRuntimeSource(options: ActionExecutorRuntime
   return typeof value === 'object' && value !== null
 }
 
+function deepClone(value) {
+  if (value === undefined) {
+    return undefined
+  }
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value)
+    } catch {
+      // fallback to JSON clone below
+    }
+  }
+  return JSON.parse(JSON.stringify(value))
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : []
 }
@@ -210,6 +224,11 @@ function resolveApiDefinition(options, apiId) {
   if (!apiId) {
     return null
   }
+  for (const api of asArray(options.pageApis)) {
+    if (isRecord(api) && typeof api.id === 'string' && api.id === apiId) {
+      return api
+    }
+  }
   for (const api of asArray(options.projectApis)) {
     if (isRecord(api) && typeof api.id === 'string' && api.id === apiId) {
       return api
@@ -307,6 +326,8 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
       break
     }
     case 'showDialog': {
+      const requestId = 'dlg_' + Math.random().toString(36).slice(2, 10)
+      const resultPath = toStringValue(payload.resultPath || action.resultPath)
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
         window.dispatchEvent(
           new CustomEvent('vela:dialog:open', {
@@ -315,9 +336,32 @@ async function executeBuiltInAction(action, scope, options, runtimeState, nodeId
               title: resolveValue(payload.title, scope),
               content: resolveValue(payload.content, scope),
               data: resolveValue(payload.data, scope),
+              requestId,
             },
           }),
         )
+      }
+      if (resultPath && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        const dialogId = toStringValue(payload.dialogId)
+        const closeDetail = await new Promise((resolve) => {
+          const handler = (event) => {
+            const detail = isRecord(event.detail) ? event.detail : {}
+            const detailDialogId = toStringValue(detail.dialogId)
+            const detailRequestId = toStringValue(detail.requestId)
+            if (dialogId && detailDialogId && detailDialogId !== dialogId) {
+              return
+            }
+            if (detailRequestId && detailRequestId !== requestId) {
+              return
+            }
+            window.removeEventListener('vela:dialog:closed', handler)
+            resolve(detail)
+          }
+          window.addEventListener('vela:dialog:closed', handler, { once: false })
+        })
+        if (isRecord(closeDetail)) {
+          setByPath(runtimeState, resultPath, closeDetail.result, false)
+        }
       }
       break
     }
@@ -703,7 +747,11 @@ async function executeAction(actionLike, scope, options, runtimeState, nodeId) {
 }
 
 export function createActionExecutor(options) {
-  const runtimeState = {}
+  const runtimeState = isRecord(options.runtimeState)
+    ? options.runtimeState
+    : isRecord(options.initialState)
+      ? deepClone(options.initialState)
+      : {}
 
   async function onNodeEvent(nodeId, eventName, event) {
     if (!nodeId || !eventName) {

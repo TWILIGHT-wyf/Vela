@@ -111,6 +111,50 @@ function normalizeAlias(value: string | undefined, fallback: string): string {
   return normalized || fallback
 }
 
+function buildVariableDefaultValue(variable: Record<string, unknown>): unknown {
+  if (Object.prototype.hasOwnProperty.call(variable, 'defaultValue')) {
+    return variable.defaultValue
+  }
+
+  switch (variable.type) {
+    case 'string':
+      return ''
+    case 'number':
+      return 0
+    case 'boolean':
+      return false
+    case 'array':
+      return []
+    case 'object': {
+      const output: Record<string, unknown> = {}
+      const properties =
+        variable.properties && typeof variable.properties === 'object'
+          ? (variable.properties as Record<string, Record<string, unknown>>)
+          : {}
+      for (const [key, property] of Object.entries(properties)) {
+        output[key] = buildVariableDefaultValue(property)
+      }
+      return output
+    }
+    default:
+      return null
+  }
+}
+
+function buildPageStateDefaults(page: IRPage): Record<string, unknown> {
+  const pageState = Array.isArray(page.raw.state) ? page.raw.state : []
+  const defaults: Record<string, unknown> = {}
+  for (const variable of pageState) {
+    if (!variable || typeof variable !== 'object' || typeof variable.key !== 'string') {
+      continue
+    }
+    defaults[variable.key] = buildVariableDefaultValue(
+      variable as unknown as Record<string, unknown>,
+    )
+  }
+  return defaults
+}
+
 function toKebabStyleKey(key: string): string {
   return key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
 }
@@ -434,8 +478,11 @@ function buildVuePageSource(
   const hasEvents = descriptor.page.root ? hasNodeEvents(descriptor.page.root) : false
   const runtimeMaps = collectNodeRuntimeMaps(descriptor.page.root)
   const pageActions = descriptor.page.raw.actions ?? []
+  const pageApis = descriptor.page.raw.apis ?? []
   const projectActions = project.raw.logic?.actions ?? []
   const projectApis = project.raw.apis?.definitions ?? []
+  const pageStateDefaults = buildPageStateDefaults(descriptor.page)
+  const isDialogPage = descriptor.page.type === 'dialog'
 
   if (descriptor.page.root) {
     collectVueImports(descriptor.page.root, imports)
@@ -446,8 +493,28 @@ function buildVuePageSource(
     : '    <div class="empty-page">No root node is defined for this page.</div>'
 
   const scriptLines: string[] = []
+  const vueImports = new Set<string>(['reactive'])
+  if (isDialogPage) {
+    vueImports.add('computed')
+  }
+  scriptLines.push(`import { ${Array.from(vueImports).sort().join(', ')} } from 'vue'`)
   if (imports.size > 0) {
     scriptLines.push(`import { ${Array.from(imports).sort().join(', ')} } from '@vela/ui'`)
+  }
+  scriptLines.push('')
+  if (isDialogPage) {
+    scriptLines.push(
+      language === 'ts'
+        ? `const props = defineProps<{ dialogPayload?: Record<string, unknown> }>()`
+        : `const props = defineProps({ dialogPayload: { type: Object, default: () => ({}) } })`,
+    )
+    scriptLines.push(
+      `const initialState = computed(() => ({ ...${JSON.stringify(pageStateDefaults, null, 2)}, ...(props.dialogPayload || {}) }))`,
+    )
+    scriptLines.push('const state = reactive(initialState.value)')
+  } else {
+    scriptLines.push(`const initialState = ${JSON.stringify(pageStateDefaults, null, 2)}`)
+    scriptLines.push('const state = reactive(initialState)')
   }
   if (hasEvents) {
     scriptLines.push("import { useRouter } from 'vue-router'")
@@ -456,6 +523,7 @@ function buildVuePageSource(
     scriptLines.push(`const nodeEvents = ${JSON.stringify(runtimeMaps.nodeEvents, null, 2)}`)
     scriptLines.push(`const nodeActions = ${JSON.stringify(runtimeMaps.nodeActions, null, 2)}`)
     scriptLines.push(`const pageActions = ${JSON.stringify(pageActions, null, 2)}`)
+    scriptLines.push(`const pageApis = ${JSON.stringify(pageApis, null, 2)}`)
     scriptLines.push(`const projectActions = ${JSON.stringify(projectActions, null, 2)}`)
     scriptLines.push(`const projectApis = ${JSON.stringify(projectApis, null, 2)}`)
     scriptLines.push('')
@@ -465,8 +533,10 @@ function buildVuePageSource(
     scriptLines.push('  nodeEvents,')
     scriptLines.push('  nodeActions,')
     scriptLines.push('  pageActions,')
+    scriptLines.push('  pageApis,')
     scriptLines.push('  projectActions,')
     scriptLines.push('  projectApis,')
+    scriptLines.push('  runtimeState: state,')
     scriptLines.push('  router,')
     scriptLines.push('})')
   }
@@ -694,10 +764,178 @@ export default router
 `
 }
 
-function createAppFile(): string {
+function createDialogHostFile(descriptors: VuePageDescriptor[]): string {
+  const dialogDescriptors = descriptors.filter((descriptor) => descriptor.page.type === 'dialog')
+  const imports = dialogDescriptors
+    .map(
+      (descriptor) => `import ${descriptor.componentName} from '../pages/${descriptor.fileName}'`,
+    )
+    .join('\n')
+
+  const registryEntries = dialogDescriptors
+    .map((descriptor) => {
+      const dialogConfig =
+        descriptor.page.raw.type === 'dialog' ? (descriptor.page.raw.dialogConfig ?? {}) : {}
+      const dialogTitle = descriptor.page.raw.title || descriptor.page.name
+      return `  ${JSON.stringify(descriptor.page.id)}: {
+    component: ${descriptor.componentName},
+    title: ${JSON.stringify(dialogTitle)},
+    config: ${JSON.stringify(dialogConfig, null, 2)},
+  },`
+    })
+    .join('\n')
+
   return `<template>
+  <template v-for="entry in activeDialogs" :key="entry.requestId">
+    <el-dialog
+      v-model="entry.visible"
+      :title="entry.title"
+      :width="entry.width"
+      :show-close="entry.closable"
+      :modal="entry.mask"
+      :close-on-click-modal="entry.maskClosable"
+      :destroy-on-close="true"
+      @close="handleDialogClose(entry)"
+      @closed="handleDialogClosed(entry)"
+    >
+      <component :is="entry.component" :dialog-payload="entry.data" />
+    </el-dialog>
+  </template>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+${imports}
+
+type DialogRegistryEntry = {
+  component: unknown
+  title: string
+  config: {
+    width?: string | number
+    height?: string | number
+    closable?: boolean
+    mask?: boolean
+    maskClosable?: boolean
+  }
+}
+
+type ActiveDialogEntry = {
+  dialogId: string
+  requestId: string
+  title: string
+  component: unknown
+  data: Record<string, unknown>
+  result: unknown
+  visible: boolean
+  width?: string | number
+  height?: string | number
+  closable: boolean
+  mask: boolean
+  maskClosable: boolean
+}
+
+const dialogRegistry: Record<string, DialogRegistryEntry> = {
+${registryEntries}
+}
+
+const activeDialogs = ref<ActiveDialogEntry[]>([])
+
+function removeDialog(requestId: string) {
+  activeDialogs.value = activeDialogs.value.filter((entry) => entry.requestId !== requestId)
+}
+
+function openDialog(detail: Record<string, unknown>) {
+  const dialogId = typeof detail.dialogId === 'string' ? detail.dialogId : ''
+  if (!dialogId || !dialogRegistry[dialogId]) return
+
+  const registryEntry = dialogRegistry[dialogId]
+  const requestId =
+    typeof detail.requestId === 'string' && detail.requestId ? detail.requestId : \`dlg_\${Date.now()}\`
+
+  const existingEntry = activeDialogs.value.find((entry) => entry.requestId === requestId)
+  if (existingEntry) {
+    existingEntry.visible = true
+    existingEntry.data = typeof detail.data === 'object' && detail.data !== null ? (detail.data as Record<string, unknown>) : {}
+    existingEntry.result = undefined
+    return
+  }
+
+  activeDialogs.value.push({
+    dialogId,
+    requestId,
+    title: typeof detail.title === 'string' && detail.title ? detail.title : registryEntry.title,
+    component: registryEntry.component,
+    data: typeof detail.data === 'object' && detail.data !== null ? (detail.data as Record<string, unknown>) : {},
+    result: undefined,
+    visible: true,
+    width: registryEntry.config.width,
+    height: registryEntry.config.height,
+    closable: registryEntry.config.closable !== false,
+    mask: registryEntry.config.mask !== false,
+    maskClosable: registryEntry.config.maskClosable !== false,
+  })
+}
+
+function handleDialogClose(entry: ActiveDialogEntry) {
+  entry.visible = false
+}
+
+function handleDialogClosed(entry: ActiveDialogEntry) {
+  window.dispatchEvent(
+    new CustomEvent('vela:dialog:closed', {
+      detail: {
+        dialogId: entry.dialogId,
+        requestId: entry.requestId,
+        data: entry.data,
+        result: entry.result,
+      },
+    }),
+  )
+  removeDialog(entry.requestId)
+}
+
+function onDialogOpen(event: Event) {
+  const customEvent = event as CustomEvent<Record<string, unknown>>
+  openDialog(customEvent.detail || {})
+}
+
+function onDialogClose(event: Event) {
+  const customEvent = event as CustomEvent<Record<string, unknown>>
+  const detail = customEvent.detail || {}
+  const dialogId = typeof detail.dialogId === 'string' ? detail.dialogId : ''
+  const requestId = typeof detail.requestId === 'string' ? detail.requestId : ''
+  const targetEntry = requestId
+    ? activeDialogs.value.find((entry) => entry.requestId === requestId)
+    : [...activeDialogs.value].reverse().find((entry) => entry.dialogId === dialogId)
+  if (!targetEntry) return
+  targetEntry.result = detail.result
+  targetEntry.visible = false
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vela:dialog:open', onDialogOpen)
+  window.addEventListener('vela:dialog:close', onDialogClose)
+}
+</script>
+`
+}
+
+function createAppFile(hasDialogPages: boolean): string {
+  if (!hasDialogPages) {
+    return `<template>
   <router-view />
 </template>
+`
+  }
+
+  return `<template>
+  <router-view />
+  <DialogHost />
+</template>
+
+<script setup lang="ts">
+import DialogHost from './components/DialogHost.vue'
+</script>
 `
 }
 
@@ -789,6 +1027,7 @@ export function emitVueProject(project: IRProject, options: VueEmitterOptions): 
   const diagnostics: CompileDiagnostic[] = []
   const descriptors = createPageDescriptors(project, options, diagnostics)
   const routePages = descriptors.filter((descriptor) => descriptor.routePath)
+  const hasDialogPages = descriptors.some((descriptor) => descriptor.page.type === 'dialog')
 
   if (routePages.length === 0) {
     diagnostics.push(
@@ -812,7 +1051,7 @@ export function emitVueProject(project: IRProject, options: VueEmitterOptions): 
       path: `src/runtime/actionExecutor.${scriptExt}`,
       content: createActionExecutorRuntime(options.language),
     },
-    { path: 'src/App.vue', content: createAppFile() },
+    { path: 'src/App.vue', content: createAppFile(hasDialogPages) },
     { path: 'src/styles/global.css', content: createGlobalStyles() },
   ]
 
@@ -834,6 +1073,13 @@ export function emitVueProject(project: IRProject, options: VueEmitterOptions): 
     files.push({
       path: `src/pages/${descriptor.fileName}`,
       content: descriptor.source,
+    })
+  }
+
+  if (hasDialogPages) {
+    files.push({
+      path: 'src/components/DialogHost.vue',
+      content: createDialogHostFile(descriptors),
     })
   }
 
