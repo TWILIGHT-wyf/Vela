@@ -3,6 +3,8 @@ import type { NodeSchema } from '@vela/core'
 import { generateId } from '@vela/core'
 import { cloneDeep } from 'lodash-es'
 import { ElMessage } from 'element-plus'
+import { useHistoryStore } from '../history'
+import { AddComponentCommand, BatchCommand } from '../commands'
 import type { ComponentIndexContext } from './useComponentIndex'
 import type { ComponentSelectionContext } from './useComponentSelection'
 import type { ComponentTreeContext } from './useComponentTree'
@@ -14,10 +16,9 @@ export function useComponentClipboard(
   indexCtx: ComponentIndexContext,
   selectionCtx: ComponentSelectionContext,
   treeCtx: ComponentTreeContext,
-  deleteComponent: (id: string) => void,
-  syncToProjectStore: () => void,
+  deleteComponents: (ids: string[]) => void,
 ) {
-  const { nodeIndex, indexNode } = indexCtx
+  const { nodeIndex } = indexCtx
   const { selectedId, selectedIds, selectComponents } = selectionCtx
   const { rootNode } = treeCtx
 
@@ -61,7 +62,22 @@ export function useComponentClipboard(
       return
     }
 
-    const nodesToCopy = selectedIds.value
+    const normalizedIds = Array.from(
+      new Set(
+        selectedIds.value.filter((id) => {
+          let parentId = indexCtx.getParentId(id)
+          while (parentId) {
+            if (selectedIds.value.includes(parentId)) {
+              return false
+            }
+            parentId = indexCtx.getParentId(parentId)
+          }
+          return true
+        }),
+      ),
+    )
+
+    const nodesToCopy = normalizedIds
       .map((id) => nodeIndex.get(id))
       .filter((node): node is NodeSchema => node !== undefined)
 
@@ -83,8 +99,21 @@ export function useComponentClipboard(
     copySelectedNodes()
 
     // 再删除
-    const idsToDelete = [...selectedIds.value]
-    idsToDelete.forEach((id) => deleteComponent(id))
+    const idsToDelete = Array.from(
+      new Set(
+        selectedIds.value.filter((id) => {
+          let parentId = indexCtx.getParentId(id)
+          while (parentId) {
+            if (selectedIds.value.includes(parentId)) {
+              return false
+            }
+            parentId = indexCtx.getParentId(parentId)
+          }
+          return true
+        }),
+      ),
+    )
+    deleteComponents(idsToDelete)
 
     ElMessage.success(`已剪切 ${idsToDelete.length} 个组件`)
   }
@@ -104,37 +133,34 @@ export function useComponentClipboard(
     }
 
     // 确定粘贴目标
-    let targetNode: NodeSchema = rootNode.value
-    let targetId = rootNode.value.id
+    let targetParentId: string | null = null
 
     // 如果选中了一个节点，检查它是否可以作为容器
     if (selectedId.value) {
       const selected = nodeIndex.get(selectedId.value)
-      if (selected && (selected.component === 'Container' || selected.componentName === 'Container')) {
-        targetNode = selected
-        targetId = selected.id
+      const canAcceptChildren = Boolean(
+        selected &&
+          (Array.isArray(selected.children) ||
+            selected.component === 'Container' ||
+            selected.componentName === 'Container'),
+      )
+      if (canAcceptChildren && selected) {
+        targetParentId = selected.id
       }
     }
 
-    // 确保目标有 children 数组
-    if (!targetNode.children) {
-      targetNode.children = []
-    }
-
-    // 粘贴节点（使用新 ID）
     const pastedNodes = clipboard.value.map((node) => cloneWithNewIds(node))
-    targetNode.children.push(...pastedNodes)
-
-    // 更新索引
-    for (const node of pastedNodes) {
-      indexNode(node, targetId)
-    }
-
-    // 同步到 project store
-    syncToProjectStore()
+    const addCommands = pastedNodes.map((node) => new AddComponentCommand(targetParentId, node))
+    const historyStore = useHistoryStore()
+    historyStore.executeCommand(
+      new BatchCommand(addCommands, `Paste ${pastedNodes.length} components`),
+      true,
+    )
 
     // 选中粘贴的节点
-    const newIds = pastedNodes.map((n) => n.id)
+    const newIds = addCommands
+      .map((command) => command.getAddedId())
+      .filter((id): id is string => Boolean(id))
     selectComponents(newIds)
 
     ElMessage.success(`已粘贴 ${pastedNodes.length} 个组件`)

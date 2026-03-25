@@ -2,6 +2,8 @@ import { onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { countTracks, type GridNodeGeometry } from '@vela/core'
 import { useComponent } from '@/stores/component'
+import { useHistoryStore } from '@/stores/history'
+import { BatchCommand, UpdateGeometryCommand } from '@/stores/commands'
 import { nodeToPlacement } from '@/utils/gridPlacement'
 
 function clampInt(value: number, min: number, max: number): number {
@@ -31,14 +33,10 @@ export function useEditorShortcuts(
     findParentNode,
     getParentId,
     updateGeometry,
+    normalizeSelectionIds,
     selectComponent,
     clearSelection,
   } = compStore
-
-  const isNodeFreeMovable = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
-    void node
-    return false
-  }
 
   const isNodeGridLayout = (node: NonNullable<(typeof selectedNodes.value)[number]>) => {
     void node
@@ -83,11 +81,12 @@ export function useEditorShortcuts(
     const ctrlKey = isMac ? e.metaKey : e.ctrlKey
 
     if ((options.enableDelete ?? true) && (e.key === 'Delete' || e.key === 'Backspace')) {
-      if (selectedIds.value.length > 1) {
+      const normalizedIds = normalizeSelectionIds([...selectedIds.value])
+      if (normalizedIds.length > 1) {
         e.preventDefault()
-        deleteComponents([...selectedIds.value])
+        deleteComponents(normalizedIds)
       } else {
-        const targetId = selectedId.value ?? selectedIds.value[0]
+        const targetId = normalizedIds[0] ?? selectedId.value ?? selectedIds.value[0]
         if (targetId) {
           e.preventDefault()
           deleteComponent(targetId)
@@ -140,6 +139,8 @@ export function useEditorShortcuts(
         if (gridNodes.length > 0) {
           e.preventDefault()
           const moveStep = e.shiftKey ? 1 : (options.nudgeStep ?? 1)
+          const geometryCommands: UpdateGeometryCommand[] = []
+
           gridNodes.forEach((node) => {
             const geo = resolveGridGeometry(node)
             const colCount = resolveGridColumnCount(node)
@@ -163,14 +164,29 @@ export function useEditorShortcuts(
               rowStart = clampInt(rowStart + dy * moveStep, 1, 4096)
             }
 
-            updateGeometry(node.id, {
+            const nextGeometry = {
               mode: 'grid',
               gridColumnStart: colStart,
               gridColumnEnd: colStart + nextColSpan,
               gridRowStart: rowStart,
               gridRowEnd: rowStart + nextRowSpan,
-            })
+            } satisfies GridNodeGeometry
+
+            if (gridNodes.length === 1) {
+              updateGeometry(node.id, nextGeometry)
+              return
+            }
+
+            geometryCommands.push(new UpdateGeometryCommand(node.id, nextGeometry))
           })
+
+          if (geometryCommands.length > 0) {
+            const historyStore = useHistoryStore()
+            historyStore.executeCommand(
+              new BatchCommand(geometryCommands, `Nudge ${geometryCommands.length} components`),
+              true,
+            )
+          }
           return
         }
         return

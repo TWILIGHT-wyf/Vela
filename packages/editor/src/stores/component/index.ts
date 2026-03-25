@@ -60,6 +60,24 @@ export const useComponent = defineStore('component', () => {
   const styleCtx = useComponentStyle(indexCtx, syncToProjectStore)
   const treeCtx = useComponentTree(indexCtx, selectionCtx, syncToProjectStore)
 
+  function isDescendantOf(id: string, ancestorId: string): boolean {
+    let parentId = indexCtx.getParentId(id)
+    while (parentId) {
+      if (parentId === ancestorId) {
+        return true
+      }
+      parentId = indexCtx.getParentId(parentId)
+    }
+    return false
+  }
+
+  function normalizeSelectionIds(ids: string[]): string[] {
+    const uniqueIds = Array.from(new Set(ids)).filter((id) => indexCtx.nodeIndex.has(id))
+    return uniqueIds.filter(
+      (id) => !uniqueIds.some((candidate) => candidate !== id && isDescendantOf(id, candidate)),
+    )
+  }
+
   // ========== 命令式 Actions ==========
 
   /**
@@ -204,9 +222,21 @@ export const useComponent = defineStore('component', () => {
    * 批量删除组件
    */
   function deleteComponents(ids: string[]) {
-    ids.forEach((id) => {
-      deleteComponent(id)
-    })
+    if (!treeCtx.rootNode.value) return
+
+    const normalizedIds = normalizeSelectionIds(ids)
+    if (normalizedIds.length === 0) return
+    if (normalizedIds.length === 1) {
+      deleteComponent(normalizedIds[0])
+      return
+    }
+
+    const historyStore = useHistoryStore()
+    const batch = new BatchCommand(
+      normalizedIds.map((id) => new DeleteComponentCommand(id)),
+      `Delete ${normalizedIds.length} components`,
+    )
+    historyStore.executeCommand(batch, true)
   }
 
   /**
@@ -258,13 +288,7 @@ export const useComponent = defineStore('component', () => {
 
   // ========== 剪贴板 ==========
 
-  const clipboardCtx = useComponentClipboard(
-    indexCtx,
-    selectionCtx,
-    treeCtx,
-    deleteComponent,
-    syncToProjectStore,
-  )
+  const clipboardCtx = useComponentClipboard(indexCtx, selectionCtx, treeCtx, deleteComponents)
 
   // ========== Computed ==========
 
@@ -381,6 +405,7 @@ export const useComponent = defineStore('component', () => {
     hoveredNode: selectionCtx.hoveredNode,
     getStyleVersion: styleCtx.getStyleVersion,
     nodeCount,
+    normalizeSelectionIds,
 
     // Utilities
     findNodeById: (nodeOrId: NodeSchema | null | string, targetId?: string) => {
