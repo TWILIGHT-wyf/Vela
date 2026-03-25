@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import type { NodeSchema } from '@vela/core'
 import { generateId } from '@vela/core'
+import { getComponentDefinition, resolveComponentAlias } from '@vela/core/contracts'
 import { cloneDeep } from 'lodash-es'
 import { ElMessage } from 'element-plus'
 import { useHistoryStore } from '../history'
@@ -51,6 +52,17 @@ export function useComponentClipboard(
     }
 
     return newNode
+  }
+
+  function canNodeAcceptChildren(node: NodeSchema | null | undefined): boolean {
+    if (!node) return false
+    if (Array.isArray(node.children)) return true
+
+    const componentName = node.component || node.componentName
+    if (!componentName) return false
+
+    const definition = getComponentDefinition(resolveComponentAlias(componentName))
+    return Boolean(definition?.isContainer)
   }
 
   /**
@@ -138,12 +150,7 @@ export function useComponentClipboard(
     // 如果选中了一个节点，检查它是否可以作为容器
     if (selectedId.value) {
       const selected = nodeIndex.get(selectedId.value)
-      const canAcceptChildren = Boolean(
-        selected &&
-          (Array.isArray(selected.children) ||
-            selected.component === 'Container' ||
-            selected.componentName === 'Container'),
-      )
+      const canAcceptChildren = canNodeAcceptChildren(selected)
       if (canAcceptChildren && selected) {
         targetParentId = selected.id
       }
