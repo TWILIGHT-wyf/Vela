@@ -1,0 +1,1 @@
+// Shared Vitest setup placeholder.
