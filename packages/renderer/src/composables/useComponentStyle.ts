@@ -146,8 +146,6 @@ export function useComponentStyle(
 
   // Transform style (rotation, scale)
   const transformStyle = computed<CSSProperties>(() => {
-    const geometry = geometryRef.value
-
     const transforms: string[] = []
     if (rotation.value) transforms.push(`rotate(${rotation.value}deg)`)
 

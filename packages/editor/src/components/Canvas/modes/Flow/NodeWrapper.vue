@@ -707,6 +707,11 @@ const handleDragStart = (e: DragEvent) => {
     return
   }
 
+  if (selectedIds.value.length !== 1 || selectedId.value !== props.nodeId) {
+    selectComponent(props.nodeId)
+    emit('select', props.nodeId)
+  }
+
   isDragging.value = true
   dragCancelled = false
   setHovered(null) // 拖拽时清除 hover 状态

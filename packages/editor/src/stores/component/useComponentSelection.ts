@@ -8,6 +8,42 @@ import type { ComponentIndexContext } from './useComponentIndex'
 export function useComponentSelection(indexCtx: ComponentIndexContext) {
   const { nodeIndex, indexVersion, getParentId } = indexCtx
 
+  function isDescendantOf(id: string, ancestorId: string): boolean {
+    let parentId = getParentId(id)
+    while (parentId) {
+      if (parentId === ancestorId) return true
+      parentId = getParentId(parentId)
+    }
+    return false
+  }
+
+  function normalizeSelection(ids: string[], preferredId?: string | null): string[] {
+    const uniqueIds = Array.from(new Set(ids)).filter((id) => nodeIndex.has(id))
+    let normalizedIds = uniqueIds
+
+    if (preferredId && uniqueIds.includes(preferredId)) {
+      normalizedIds = uniqueIds.filter((id) => {
+        if (id === preferredId) return true
+        return !isDescendantOf(id, preferredId) && !isDescendantOf(preferredId, id)
+      })
+    }
+
+    const result: string[] = []
+    normalizedIds.forEach((id) => {
+      const descendantIndex = result.findIndex((existingId) => isDescendantOf(existingId, id))
+      if (descendantIndex !== -1) {
+        result.splice(descendantIndex, 1, id)
+        return
+      }
+      if (result.some((existingId) => isDescendantOf(id, existingId))) {
+        return
+      }
+      result.push(id)
+    })
+
+    return result
+  }
+
   /**
    * 当前选中的组件 ID（单选或多选的第一个）
    */
@@ -72,8 +108,11 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
    * 多选组件
    */
   function selectComponents(ids: string[]) {
-    selectedIds.value = ids
-    selectedId.value = ids.length > 0 ? ids[0] : null
+    const preferredId = ids[ids.length - 1] ?? null
+    const normalizedIds = normalizeSelection(ids, preferredId)
+    selectedIds.value = normalizedIds
+    selectedId.value =
+      (preferredId && normalizedIds.includes(preferredId) ? preferredId : normalizedIds[0]) ?? null
     hitCycleContext.value = null
   }
 
@@ -92,8 +131,11 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
       return
     }
 
-    selectedIds.value.push(id)
-    selectedId.value = id
+    const normalizedIds = normalizeSelection([...selectedIds.value, id], id)
+    selectedIds.value = normalizedIds
+    selectedId.value = normalizedIds.includes(id)
+      ? id
+      : normalizedIds[normalizedIds.length - 1] || null
   }
 
   /**
@@ -119,7 +161,10 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
     if (selectedId.value === deletedId) {
       selectedId.value = null
     }
-    selectedIds.value = selectedIds.value.filter((sid) => sid !== deletedId)
+    selectedIds.value = normalizeSelection(selectedIds.value.filter((sid) => sid !== deletedId))
+    if (!selectedId.value || !selectedIds.value.includes(selectedId.value)) {
+      selectedId.value = selectedIds.value[selectedIds.value.length - 1] ?? null
+    }
     hitCycleContext.value = null
   }
 
@@ -195,6 +240,7 @@ export function useComponentSelection(indexCtx: ComponentIndexContext) {
     setHovered,
     clearSelection,
     clearDeletedSelection,
+    normalizeSelection,
     isSelected,
   }
 }
