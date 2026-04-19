@@ -14,7 +14,6 @@ import MaterialPanel from '@/components/MaterialPanel/MaterialPanel.vue'
 import SetterPanel from '@/components/SetterPanel/SetterPanel.vue'
 import LogicPanel from '@/components/LogicPanel/LogicPanel.vue'
 import DraggablePanel from '@/components/common/DraggablePanel.vue'
-import AIAssistDialog from '@/components/AIAssist/AIAssistDialog.vue'
 import { RuntimeRenderer } from '@vela/renderer'
 
 // Canvas Components (New Architecture)
@@ -29,7 +28,6 @@ import {
   Grid,
   VideoPlay,
   VideoPause,
-  MagicStick,
   Loading,
   Back,
   Right,
@@ -67,7 +65,6 @@ const showMaterials = ref(true)
 const showSettings = ref(true)
 const showLogic = ref(false)
 const showHeader = ref(true)
-const aiVisible = ref(false)
 
 // --- Initial Positions ---
 const initialLogicX = ref(Math.max(20, window.innerWidth - 780))
@@ -111,10 +108,6 @@ const togglePanel = (panel: 'materials' | 'logic' | 'settings') => {
 
 const toggleHeader = () => {
   showHeader.value = !showHeader.value
-}
-
-const handleOpenAIAssist = () => {
-  aiVisible.value = true
 }
 
 // Reset Logic
@@ -169,7 +162,7 @@ function handleRuntimeNavigate(pageId: string) {
 
       <!-- 2. Layer 50: Floating Header Island -->
       <div v-show="showHeader" class="header-island glass-panel">
-        <AppHeader @open-ai-assist="handleOpenAIAssist" />
+        <AppHeader />
       </div>
 
       <!-- 3. Layer 10: Floating Panels -->
@@ -298,14 +291,6 @@ function handleRuntimeNavigate(pageId: string) {
           </el-tooltip>
 
           <div class="dock-divider vela-dock-divider"></div>
-
-          <!-- Group 4: Smart Actions -->
-          <el-tooltip content="AI 助手" placement="top" :offset="12">
-            <button class="dock-item vela-dock-item ai-dock-btn" @click="handleOpenAIAssist">
-              <el-icon><MagicStick /></el-icon>
-            </button>
-          </el-tooltip>
-
           <div class="dock-divider vela-dock-divider"></div>
 
           <el-tooltip
@@ -325,9 +310,6 @@ function handleRuntimeNavigate(pageId: string) {
           </el-tooltip>
         </div>
       </div>
-
-      <!-- 5. Dialogs -->
-      <AIAssistDialog v-model:visible="aiVisible" />
     </template>
   </div>
 </template>
@@ -404,14 +386,6 @@ function handleRuntimeNavigate(pageId: string) {
   font-size: 16px;
   font-weight: 700;
   line-height: 1;
-}
-
-.ai-dock-btn {
-  color: #8b5cf6;
-}
-
-.ai-dock-btn:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
 }
 
 .run-btn:hover {

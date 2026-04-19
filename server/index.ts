@@ -19,7 +19,7 @@ import mockRouter from './routes/mock.js'
 dotenv.config()
 
 const app = express()
-const PORT = parseInt(process.env.PORT || process.env.PROXY_PORT || '3002', 10)
+const PORT = parseInt(process.env.PORT || process.env.PROXY_PORT || '3001', 10)
 
 // ==================== 中间件 ====================
 app.use(cors())

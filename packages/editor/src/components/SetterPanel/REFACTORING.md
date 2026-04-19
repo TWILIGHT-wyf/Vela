@@ -151,7 +151,7 @@ export type ActionSchema =
 
 ```
 packages/editor/src/components/siderBar/
-├── suggestion/      # AI 建议（仍被 AIAssistDialog 使用）
+├── suggestion/      # 建议与差异处理逻辑
 └── relations/DataBindingPanel.vue  # 数据绑定面板（独立组件）
 ```
 

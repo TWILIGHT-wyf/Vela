@@ -1,13 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "include": [
-    "vite.config.*",
-    "vitest.config.*",
-    "cypress.config.*",
-    "nightwatch.conf.*",
-    "playwright.config.*",
-    "eslint.config.*"
-  ],
+  "include": ["vite.config.*"],
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

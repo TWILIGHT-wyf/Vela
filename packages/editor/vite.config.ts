@@ -42,7 +42,7 @@ const serverPort =
   process.env.PORT ??
   process.env.PROXY_PORT ??
   readServerPortFromEnvFile() ??
-  '3002'
+  '3001'
 
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? `http://127.0.0.1:${serverPort}`
 

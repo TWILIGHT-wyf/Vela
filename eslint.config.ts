@@ -20,7 +20,12 @@ export default defineConfigWithVueTs(
     '**/dist/**',
     '**/dist-ssr/**',
     '**/coverage/**',
-    '**/packages/visual-lib/docs/.vitepress/cache/**',
+    '**/playwright-report/**',
+    '**/test-results/**',
+    '**/.gitnexus/**',
+    '**/.codex/**',
+    '**/packages/ui/docs/.vitepress/cache/**',
+    '**/packages/ui/docs/.vitepress/dist/**',
   ]),
 
   pluginVue.configs['flat/essential'],
@@ -28,12 +33,13 @@ export default defineConfigWithVueTs(
 
   {
     ...pluginVitest.configs.recommended,
-    files: ['src/**/__tests__/*'],
+    files: ['**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    ignores: ['tests/e2e/**'],
   },
 
   {
     ...pluginPlaywright.configs['flat/recommended'],
-    files: ['e2e/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    files: ['tests/e2e/**/*.{test,spec}.{js,ts,jsx,tsx}'],
   },
   {
     rules: {

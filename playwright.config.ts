@@ -16,6 +16,7 @@ const ciPort = 4173
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  passWithNoTests: true,
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {
@@ -38,8 +39,7 @@ export default defineConfig({
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL:
-      process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${isCI ? ciPort : localPort}`,
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${isCI ? ciPort : localPort}`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',

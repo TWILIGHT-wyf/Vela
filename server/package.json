@@ -1,12 +1,14 @@
 {
   "name": "@vela/server",
+  "private": true,
   "version": "1.0.0",
-  "description": "Vela 低代码平台后端服务 - 集成 MongoDB、AI 代理和测试数据源",
+  "description": "Vela backend service with MongoDB persistence, AI proxy, and mock data APIs",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
+    "type-check": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/index.js"
   },
   "dependencies": {
