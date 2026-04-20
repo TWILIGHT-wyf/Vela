@@ -373,10 +373,6 @@ function handleRuntimeNavigate(pageId: string) {
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.dock-item {
-  /* 通用 dock item 样式抽离到 patterns.css 的 .vela-dock-item */
-}
-
 .dock-item.danger-hover:hover {
   color: #ef4444;
   background: var(--surface-danger-soft);

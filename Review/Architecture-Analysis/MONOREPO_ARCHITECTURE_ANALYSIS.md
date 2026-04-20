@@ -69,7 +69,7 @@ packages:
   - 依赖：`core + generator + materials + renderer + ui`
 
 - `@vela/server`
-  - 职责：后端 API、存储、AI 代理等服务能力
+  - 职责：后端 API、存储、Mock 数据等服务能力
 
 可简化为依赖方向：
 

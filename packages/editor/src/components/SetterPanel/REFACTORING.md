@@ -151,7 +151,6 @@ export type ActionSchema =
 
 ```
 packages/editor/src/components/siderBar/
-├── suggestion/      # 建议与差异处理逻辑
 └── relations/DataBindingPanel.vue  # 数据绑定面板（独立组件）
 ```
 
@@ -221,4 +220,3 @@ provideComponentEvents()
 - ✅ 向后兼容现有 NodeSchema 结构
 - ✅ 不影响其他模块
 - ✅ 支持旧版事件配置自动迁移
-- ✅ AI 功能保持不变（suggestion 目录保留）

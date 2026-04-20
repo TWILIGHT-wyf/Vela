@@ -646,8 +646,8 @@ function createPackageJson(projectName: string, options: VueEmitterOptions): str
   }
 
   const devDependencies: Record<string, string> = {
-    vite: '^5.4.0',
-    '@vitejs/plugin-vue': '^5.2.4',
+    vite: '^8.0.8',
+    '@vitejs/plugin-vue': '^6.0.6',
   }
 
   const scripts: Record<string, string> = {
@@ -657,14 +657,14 @@ function createPackageJson(projectName: string, options: VueEmitterOptions): str
   }
 
   if (options.language === 'ts') {
-    devDependencies.typescript = '^5.9.0'
-    devDependencies['vue-tsc'] = '^2.2.12'
+    devDependencies.typescript = '^5.9.3'
+    devDependencies['vue-tsc'] = '^3.2.7'
     scripts['type-check'] = 'vue-tsc --noEmit'
   }
 
   if (options.lint) {
-    devDependencies.eslint = '^9.0.0'
-    devDependencies['@eslint/js'] = '^9.0.0'
+    devDependencies.eslint = '^9.39.2'
+    devDependencies['@eslint/js'] = '^9.39.2'
     devDependencies['eslint-plugin-vue'] = '^10.0.0'
     devDependencies.prettier = '^3.0.0'
     scripts.lint = 'eslint .'

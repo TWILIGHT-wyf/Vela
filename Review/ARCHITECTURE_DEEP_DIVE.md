@@ -38,15 +38,15 @@ webgis/
 
 ### 1.2 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 框架 | Vue 3 + TypeScript |
-| 状态管理 | Pinia (Setup Syntax) |
+| 层级     | 技术                  |
+| -------- | --------------------- |
+| 框架     | Vue 3 + TypeScript    |
+| 状态管理 | Pinia (Setup Syntax)  |
 | 构建工具 | Vite + pnpm workspace |
-| UI 库 | Element Plus |
-| 图表 | ECharts 6 |
-| 后端 | Express + SQLite |
-| 测试 | Vitest + Playwright |
+| UI 库    | Element Plus          |
+| 图表     | ECharts 6             |
+| 后端     | Express + SQLite      |
+| 测试     | Vitest + Playwright   |
 
 ### 1.3 核心数据流
 
@@ -111,10 +111,7 @@ webgis/
 // 5. 处理组件名称冲突（添加 Lc 前缀）
 
 // 冲突处理的保留名称:
-const RESERVED_NAMES = [
-  'Button', 'Input', 'Select', 'Form',
-  'Table', 'Dialog', 'Menu', 'Image'
-]
+const RESERVED_NAMES = ['Button', 'Input', 'Select', 'Form', 'Table', 'Dialog', 'Menu', 'Image']
 ```
 
 #### `App.vue` - 根组件
@@ -138,20 +135,20 @@ const routes = [
     path: '/',
     name: 'Dashboard',
     component: () => import('@/views/dashboard.vue'),
-    meta: { title: '项目工作台' }
+    meta: { title: '项目工作台' },
   },
   {
     path: '/editor/:id?',
     name: 'Editor',
     component: () => import('@/views/editor.vue'),
-    meta: { title: 'Vela Engine' }
+    meta: { title: 'Vela Engine' },
   },
   {
     path: '/preview',
     name: 'Preview',
     component: () => import('@/views/Preview.vue'),
-    meta: { title: '预览' }
-  }
+    meta: { title: '预览' },
+  },
 ]
 ```
 
@@ -164,8 +161,8 @@ const routes = [
 // Store 名: 'project'
 
 interface State {
-  project: ProjectSchema           // 项目配置
-  currentPageId: string            // 当前页面 ID
+  project: ProjectSchema // 项目配置
+  currentPageId: string // 当前页面 ID
   saveStatus: 'saved' | 'saving' | 'unsaved'
   lastSavedTime: number | null
 }
@@ -181,14 +178,16 @@ function saveProject(): void
 function updatePageConfig(config: Partial<PageSchema>): void
 function changePageLayout(pageId: string, layout: LayoutMode): void
 ```
+
 - initProject
 - PageConfig
-	- 为什么要设置width和height
-	- theme
-	- 这里每个页面都要显式设置layout吗，这个存在的意义是什么用于编辑器编辑模式判断吗？
-	- pageId怎么是用的nanoid，我记得core中有写一个id生成工具
+  - 为什么要设置width和height
+  - theme
+  - 这里每个页面都要显式设置layout吗，这个存在的意义是什么用于编辑器编辑模式判断吗？
+  - pageId怎么是用的nanoid，我记得core中有写一个id生成工具
 - saveProject没有保存到数据库中，只保存在localstorage中
 - changePageLayout改变页面布局，page中的node的布局模式也会改变就很不合理
+
 #### 3.3.2 `history.ts` - 历史记录（命令模式）
 
 ```typescript
@@ -196,13 +195,13 @@ function changePageLayout(pageId: string, layout: LayoutMode): void
 // Store 名: 'history'
 
 interface State {
-  undoStack: Command[]     // 撤销栈
-  redoStack: Command[]     // 重做栈
-  isExecuting: boolean     // 防止递归
-  isPaused: boolean        // 批量操作时暂停
+  undoStack: Command[] // 撤销栈
+  redoStack: Command[] // 重做栈
+  isExecuting: boolean // 防止递归
+  isPaused: boolean // 批量操作时暂停
 }
 
-const MAX_HISTORY = 50     // 最大历史记录数
+const MAX_HISTORY = 50 // 最大历史记录数
 
 // Getters
 const canUndo = computed<boolean>()
@@ -215,7 +214,7 @@ function redo(): boolean
 function clear(): void
 function pause(): void
 function resume(): void
-function withoutHistory<T>(fn: () => T): T  // 在暂停状态下执行
+function withoutHistory<T>(fn: () => T): T // 在暂停状态下执行
 ```
 
 #### 3.3.3 `ui.ts` - UI 状态
@@ -226,15 +225,15 @@ function withoutHistory<T>(fn: () => T): T  // 在暂停状态下执行
 
 interface State {
   // 画布配置
-  canvasWidth: number          // 1920
-  canvasHeight: number         // 1080
-  canvasScale: number          // 1
-  canvasOffset: { x: number, y: number }
+  canvasWidth: number // 1920
+  canvasHeight: number // 1080
+  canvasScale: number // 1
+  canvasOffset: { x: number; y: number }
   canvasSettings: {
-    backgroundColor: string    // '#fafafa'
-    gridColor: string          // '#f0f0f0'
-    showGrid: boolean          // true
-    gridSize: number           // 20
+    backgroundColor: string // '#fafafa'
+    gridColor: string // '#f0f0f0'
+    showGrid: boolean // true
+    gridSize: number // 20
   }
 
   // 面板状态
@@ -266,8 +265,8 @@ function toggleSimulationMode(): void
 
 interface ComponentIndexContext {
   // 索引 Maps
-  nodeIndex: Map<string, NodeSchema>    // id → node
-  parentIndex: Map<string, string>      // childId → parentId
+  nodeIndex: Map<string, NodeSchema> // id → node
+  parentIndex: Map<string, string> // childId → parentId
 
   // 方法
   traverse(node: NodeSchema, callback: TraverseCallback, parent?: NodeSchema): void
@@ -298,7 +297,7 @@ interface ComponentSelectionContext {
   // 方法
   selectComponent(id: string): void
   selectComponents(ids: string[]): void
-  toggleSelection(id: string): void      // Ctrl+Click
+  toggleSelection(id: string): void // Ctrl+Click
   setHovered(id: string | null): void
   clearSelection(): void
   isSelected(id: string): boolean
@@ -330,8 +329,8 @@ interface ComponentTreeContext {
   rootNode: Ref<NodeSchema | null>
 
   // 方法
-  loadTree(tree: NodeSchema): void           // 深拷贝加载
-  setTree(tree: NodeSchema): void            // 直接设置（撤销用）
+  loadTree(tree: NodeSchema): void // 深拷贝加载
+  setTree(tree: NodeSchema): void // 直接设置（撤销用）
   flattenTree(node: NodeSchema): NodeSchema[]
 
   // Raw Actions
@@ -469,9 +468,9 @@ class AddComponentCommand implements Command {
 
   constructor(payload: AddComponentPayload) {}
 
-  execute(): void    // 添加组件
-  undo(): void       // 删除刚添加的组件
-  redo(): void       // 重新添加
+  execute(): void // 添加组件
+  undo(): void // 删除刚添加的组件
+  redo(): void // 重新添加
   getAddedId(): string
 }
 
@@ -479,16 +478,16 @@ class AddComponentCommand implements Command {
 class DeleteComponentCommand implements Command {
   type = 'delete-component' as const
 
-  execute(): void    // 保存状态并删除
-  undo(): void       // 恢复到原位置
+  execute(): void // 保存状态并删除
+  undo(): void // 恢复到原位置
 }
 
 // 3. MoveComponentCommand
 class MoveComponentCommand implements Command {
   type = 'move-component' as const
 
-  execute(): void    // 保存旧位置并移动
-  undo(): void       // 恢复到旧位置
+  execute(): void // 保存旧位置并移动
+  undo(): void // 恢复到旧位置
 }
 
 // 4. UpdateStyleCommand（支持合并）
@@ -498,7 +497,7 @@ class UpdateStyleCommand implements Command {
   execute(): void
   undo(): void
 
-  canMerge(other: Command): boolean  // 300ms 内可合并
+  canMerge(other: Command): boolean // 300ms 内可合并
   merge(other: Command): Command
 }
 
@@ -514,8 +513,8 @@ class BatchCommand implements Command {
 
   constructor(commands: Command[]) {}
 
-  execute(): void    // 顺序执行
-  undo(): void       // 逆序撤销
+  execute(): void // 顺序执行
+  undo(): void // 逆序撤销
 }
 ```
 
@@ -541,7 +540,6 @@ export function useEditorShortcuts(options: Options = {}) {
   // Ctrl+V            → 粘贴
   // Ctrl+A            → 全选顶层组件
   // Escape            → 取消选中/关闭菜单
-
   // Mac 使用 metaKey，其他使用 ctrlKey
   // 忽略在 input/textarea 中的输入
 }
@@ -596,7 +594,7 @@ interface DataSourceConfig {
   method?: 'GET' | 'POST'
   headers?: Record<string, string>
   body?: string
-  interval?: number          // 轮询间隔
+  interval?: number // 轮询间隔
 
   // 数据路径映射
   dataPath?: string
@@ -609,7 +607,7 @@ interface DataSourceConfig {
 
 export function useDataSourceAdapter(
   nodeRef: Ref<NodeSchema>,
-  propsRef: Ref<Record<string, unknown>>
+  propsRef: Ref<Record<string, unknown>>,
 ): {
   resolvedProps: ComputedRef<Record<string, unknown>>
   isLoading: Ref<boolean>
@@ -638,7 +636,7 @@ interface UseNodePropsReturn {
 
 export function useNodeProps(
   nodeRef: Ref<NodeSchema | null>,
-  metaProps: PropSchema[]
+  metaProps: PropSchema[],
 ): UseNodePropsReturn
 
 // 使用示例:
@@ -751,15 +749,6 @@ export async function getProject(id: string): Promise<ServerProject | null>
 export async function createProject(payload: ProjectInput): Promise<ServerProject>
 export async function updateProject(id: string, payload: ProjectInput): Promise<ServerProject>
 export async function deleteProject(id: string): Promise<void>
-
-// === AI 建议服务 ===
-// 位置: packages/editor/src/services/suggestService.ts
-
-export async function generateSuggestion(request: SuggestionRequest): Promise<SuggestionResult>
-export function applyDiffs(components: NodeSchema[], diffs: DiffItem[]): {
-  components: NodeSchema[]
-  appliedCount: number
-}
 ```
 
 ---
@@ -787,16 +776,16 @@ packages/core/src/
 // 位置: packages/core/src/types/schema.ts
 
 interface NodeSchema {
-  id: string                              // 唯一标识
-  componentName: string                   // 组件名称
-  props?: Record<string, unknown>         // 组件属性
-  style?: NodeStyle                       // 样式配置
-  children?: NodeSchema[]                 // 子组件
+  id: string // 唯一标识
+  componentName: string // 组件名称
+  props?: Record<string, unknown> // 组件属性
+  style?: NodeStyle // 样式配置
+  children?: NodeSchema[] // 子组件
   events?: Record<string, ActionSchema[]> // 事件绑定
-  dataBindings?: DataBinding[]            // 数据绑定
-  dataSource?: DataSourceConfig           // 数据源配置
-  condition?: Expression                  // 条件渲染
-  loop?: LoopConfig                       // 循环渲染
+  dataBindings?: DataBinding[] // 数据绑定
+  dataSource?: DataSourceConfig // 数据源配置
+  condition?: Expression // 条件渲染
+  loop?: LoopConfig // 循环渲染
   layoutMode?: 'free' | 'flex' | 'grid' | 'flow'
 }
 
@@ -856,21 +845,21 @@ type ActionType =
   | 'toggleVisibility'
   | 'setProps'
   | 'emit'
-  // ... 10+ 种动作类型
+// ... 10+ 种动作类型
 
 // === 数据绑定 ===
 interface DataBinding {
   sourceId: string
   sourceProp: string
   targetProp: string
-  transform?: string           // 表达式转换
+  transform?: string // 表达式转换
 }
 
 // === 物料定义 ===
 interface MaterialDefinition {
   name: string
   category: string
-  defaultSize: { width: number, height: number }
+  defaultSize: { width: number; height: number }
   props: PropSchema[]
   events: EventSchema[]
   slots?: SlotSchema[]
@@ -986,11 +975,7 @@ interface Props {
     v-bind="resolvedProps"
     :style="computedStyle"
   >
-    <RuntimeRenderer
-      v-for="child in schema.children"
-      :key="child.id"
-      :schema="child"
-    />
+    <RuntimeRenderer v-for="child in schema.children" :key="child.id" :schema="child" />
   </component>
 </template>
 ```
@@ -1009,9 +994,7 @@ interface DataBindingEngine {
   sync(): void
 }
 
-export function useDataBindingEngine(
-  rootSchema: Ref<NodeSchema>
-): DataBindingEngine
+export function useDataBindingEngine(rootSchema: Ref<NodeSchema>): DataBindingEngine
 
 // 工作原理:
 // 1. 收集所有组件的 dataBindings
@@ -1045,9 +1028,7 @@ export function useEventExecutor(): EventExecutor
 ```typescript
 // 位置: packages/renderer/src/runtime/useComponentDataSource.ts
 
-export function useComponentDataSource(
-  node: Ref<NodeSchema>
-): {
+export function useComponentDataSource(node: Ref<NodeSchema>): {
   data: Ref<unknown>
   isLoading: Ref<boolean>
   error: Ref<Error | null>
@@ -1119,7 +1100,7 @@ interface MaterialMeta {
   name: string
   category: 'basic' | 'chart' | 'controls' | 'data' | 'advanced'
   icon?: string
-  defaultSize: { width: number, height: number }
+  defaultSize: { width: number; height: number }
   props: PropSchema[]
   events: EventSchema[]
   slots?: SlotSchema[]
@@ -1268,7 +1249,7 @@ interface IRProp {
 }
 
 interface IRDirective {
-  name: string           // v-if, v-for, v-show
+  name: string // v-if, v-for, v-show
   value: string
   arg?: string
   modifiers?: string[]
@@ -1313,10 +1294,7 @@ interface ProjectGeneratorOptions {
 }
 
 export class ProjectGenerator {
-  async generate(
-    project: ProjectSchema,
-    options: ProjectGeneratorOptions
-  ): Promise<void>
+  async generate(project: ProjectSchema, options: ProjectGeneratorOptions): Promise<void>
 
   private generatePackageJson(): string
   private generateViteConfig(): string
@@ -1378,7 +1356,7 @@ import { use } from 'echarts/core'
 import VChart from 'vue-echarts'
 
 interface Props {
-  data: { name: string, value: number }[]
+  data: { name: string; value: number }[]
   title?: string
   xAxisLabel?: string
   yAxisLabel?: string
@@ -1394,14 +1372,16 @@ const option = computed(() => ({
   title: { text: props.title },
   xAxis: {
     type: 'category',
-    data: props.data.map(d => d.name),
+    data: props.data.map((d) => d.name),
   },
   yAxis: { type: 'value' },
-  series: [{
-    type: 'bar',
-    data: props.data.map(d => d.value),
-    itemStyle: { color: props.color },
-  }],
+  series: [
+    {
+      type: 'bar',
+      data: props.data.map((d) => d.value),
+      itemStyle: { color: props.color },
+    },
+  ],
 }))
 </script>
 
@@ -1419,12 +1399,11 @@ const option = computed(() => ({
 ```
 server/
 ├── index.ts        # Express 入口
-├── db.ts           # SQLite 配置
+├── db.ts           # MongoDB 配置
 ├── models/
 │   └── Project.ts  # 项目模型
 ├── routes/
 │   ├── projects.ts # 项目 API
-│   ├── ai.ts       # AI API
 │   └── mock.ts     # Mock 数据
 └── .env            # 环境变量
 ```
@@ -1440,10 +1419,6 @@ GET    /api/projects          // 列表项目
 GET    /api/projects/:id      // 获取项目
 PUT    /api/projects/:id      // 更新项目
 DELETE /api/projects/:id      // 删除项目
-
-// AI 接口
-POST   /api/ai/suggest        // 生成建议
-POST   /api/ai/analyze        // 分析组件
 
 // Mock 数据
 GET    /api/mock/:type        // 获取 mock 数据
@@ -1468,6 +1443,7 @@ GET    /api/mock/:type        // 获取 mock 数据
 ```
 
 **优势**:
+
 - 完整的撤销/重做支持
 - 命令可合并（减少历史记录）
 - 批量操作原子化
@@ -1506,7 +1482,7 @@ function createPropRef<T>(id: string, propName: string, defaultValue: T) {
     },
     set(value) {
       updateProps(id, { [propName]: value })
-    }
+    },
   })
 }
 
@@ -1559,7 +1535,9 @@ function updateStyle(id: string, style: NodeStyle) {
 // 组件中监听特定版本
 watch(
   () => styleVersion.value[props.nodeId],
-  () => { /* 仅此组件重渲染 */ }
+  () => {
+    /* 仅此组件重渲染 */
+  },
 )
 ```
 
@@ -1592,12 +1570,12 @@ pnpm type-check             # 类型检查
 
 ### 关键文件清单
 
-| 文件 | 用途 |
-|------|------|
-| `packages/editor/src/main.ts` | 应用入口 |
-| `packages/editor/src/stores/component/index.ts` | 组件状态管理 |
-| `packages/editor/src/stores/commands/component-commands.ts` | 命令实现 |
-| `packages/core/src/types/schema.ts` | NodeSchema 定义 |
-| `packages/renderer/src/runtime/RuntimeRenderer.vue` | 运行时渲染 |
-| `packages/materials/src/registry.ts` | 物料注册表 |
-| `packages/generator/src/generators/vue3-generator.ts` | Vue 代码生成 |
+| 文件                                                        | 用途            |
+| ----------------------------------------------------------- | --------------- |
+| `packages/editor/src/main.ts`                               | 应用入口        |
+| `packages/editor/src/stores/component/index.ts`             | 组件状态管理    |
+| `packages/editor/src/stores/commands/component-commands.ts` | 命令实现        |
+| `packages/core/src/types/schema.ts`                         | NodeSchema 定义 |
+| `packages/renderer/src/runtime/RuntimeRenderer.vue`         | 运行时渲染      |
+| `packages/materials/src/registry.ts`                        | 物料注册表      |
+| `packages/generator/src/generators/vue3-generator.ts`       | Vue 代码生成    |

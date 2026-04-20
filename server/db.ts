@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 
-// 确保环境变量已加载
 dotenv.config()
 
 const MONGO_URI =
@@ -10,9 +9,9 @@ const MONGO_URI =
 export async function connectDB() {
   try {
     await mongoose.connect(MONGO_URI)
-    console.log('✅ MongoDB 连接成功')
+    console.log('MongoDB 连接成功')
   } catch (error) {
-    console.error('❌ MongoDB 连接失败:', error)
-    // 不退出进程，让 AI 代理和测试接口继续可用
+    console.error('MongoDB 连接失败:', error)
+    // Keep the process alive so non-database endpoints can still respond.
   }
 }

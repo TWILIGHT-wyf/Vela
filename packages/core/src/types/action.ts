@@ -8,16 +8,16 @@ import type { Expression, ValueOrExpression } from './expression'
  * 内置动作类型
  */
 export type BuiltInActionType =
-  | 'setState'    // 修改状态
-  | 'callApi'     // 调用 API
-  | 'navigate'    // 路由跳转
-  | 'openUrl'     // 打开链接
-  | 'showToast'   // 显示提示
-  | 'showDialog'  // 显示弹窗
+  | 'setState' // 修改状态
+  | 'callApi' // 调用 API
+  | 'navigate' // 路由跳转
+  | 'openUrl' // 打开链接
+  | 'showToast' // 显示提示
+  | 'showDialog' // 显示弹窗
   | 'closeDialog' // 关闭弹窗
-  | 'callMethod'  // 调用组件方法
-  | 'runScript'   // 执行脚本
-  | 'emit'        // 触发事件
+  | 'callMethod' // 调用组件方法
+  | 'runScript' // 执行脚本
+  | 'emit' // 触发事件
 
 // ============================================================================
 // 类型化 Payload
@@ -101,6 +101,12 @@ export interface ShowDialogPayload {
   content?: string | Expression
   /** 传递给弹窗的数据 */
   data?: Record<string, unknown | Expression>
+  /** 弹窗关闭后的结果写回路径 */
+  resultPath?: string
+  /** 是否等待弹窗关闭后再继续后续动作 */
+  waitForClose?: boolean
+  /** 弹窗关闭后的回调动作 */
+  onClose?: ActionCallbackRef
   /** 确认按钮文字 */
   confirmText?: string
   /** 取消按钮文字 */
@@ -416,7 +422,7 @@ export function extractActionIds(actions?: AnyActionSchema[]): Set<string> {
   if (!actions || actions.length === 0) {
     return new Set<string>()
   }
-  return new Set(actions.map(action => action.id))
+  return new Set(actions.map((action) => action.id))
 }
 
 // ============================================================================
@@ -429,7 +435,7 @@ export function extractActionIds(actions?: AnyActionSchema[]): Set<string> {
 export function createSetStateAction(
   id: string,
   path: string,
-  value: unknown | Expression
+  value: unknown | Expression,
 ): ActionSchema<'setState'> {
   return {
     id,
@@ -444,7 +450,7 @@ export function createSetStateAction(
 export function createCallApiAction(
   id: string,
   apiId: string,
-  options?: Partial<Omit<CallApiPayload, 'apiId'>>
+  options?: Partial<Omit<CallApiPayload, 'apiId'>>,
 ): ActionSchema<'callApi'> {
   return {
     id,
@@ -459,7 +465,7 @@ export function createCallApiAction(
 export function createNavigateAction(
   id: string,
   path: string,
-  options?: Partial<Omit<NavigatePayload, 'path'>>
+  options?: Partial<Omit<NavigatePayload, 'path'>>,
 ): ActionSchema<'navigate'> {
   return {
     id,
@@ -474,7 +480,7 @@ export function createNavigateAction(
 export function createShowToastAction(
   id: string,
   message: string | Expression,
-  type: ShowToastPayload['type'] = 'info'
+  type: ShowToastPayload['type'] = 'info',
 ): ActionSchema<'showToast'> {
   return {
     id,
@@ -489,7 +495,7 @@ export function createShowToastAction(
 export function createShowDialogAction(
   id: string,
   dialogId: string,
-  options?: Partial<Omit<ShowDialogPayload, 'dialogId'>>
+  options?: Partial<Omit<ShowDialogPayload, 'dialogId'>>,
 ): ActionSchema<'showDialog'> {
   return {
     id,
@@ -504,7 +510,7 @@ export function createShowDialogAction(
 export function createOpenUrlAction(
   id: string,
   url: string | Expression,
-  options?: Partial<Omit<OpenUrlPayload, 'url'>>
+  options?: Partial<Omit<OpenUrlPayload, 'url'>>,
 ): ActionSchema<'openUrl'> {
   return {
     id,
@@ -518,7 +524,7 @@ export function createOpenUrlAction(
  */
 export function createCloseDialogAction(
   id: string,
-  options?: CloseDialogPayload
+  options?: CloseDialogPayload,
 ): ActionSchema<'closeDialog'> {
   return {
     id,
@@ -534,7 +540,7 @@ export function createCallMethodAction(
   id: string,
   targetRef: string,
   method: string,
-  args?: Array<unknown | Expression>
+  args?: Array<unknown | Expression>,
 ): ActionSchema<'callMethod'> {
   return {
     id,
@@ -549,7 +555,7 @@ export function createCallMethodAction(
 export function createRunScriptAction(
   id: string,
   code: string,
-  async: boolean = false
+  async: boolean = false,
 ): ActionSchema<'runScript'> {
   return {
     id,
@@ -564,7 +570,7 @@ export function createRunScriptAction(
 export function createEmitAction(
   id: string,
   event: string,
-  data?: unknown | Expression
+  data?: unknown | Expression,
 ): ActionSchema<'emit'> {
   return {
     id,
@@ -576,27 +582,14 @@ export function createEmitAction(
 /**
  * 创建具名动作引用
  */
-export function createActionRef(
-  id: string
-): GlobalScopedActionRef
-export function createActionRef(
-  id: string,
-  scope: 'global'
-): GlobalScopedActionRef
-export function createActionRef(
-  id: string,
-  scope: 'page',
-  pageId: string
-): PageScopedActionRef
-export function createActionRef(
-  id: string,
-  scope: 'node',
-  nodeId: string
-): NodeScopedActionRef
+export function createActionRef(id: string): GlobalScopedActionRef
+export function createActionRef(id: string, scope: 'global'): GlobalScopedActionRef
+export function createActionRef(id: string, scope: 'page', pageId: string): PageScopedActionRef
+export function createActionRef(id: string, scope: 'node', nodeId: string): NodeScopedActionRef
 export function createActionRef(
   id: string,
   scope: ActionRefScope = 'global',
-  scopeId?: string
+  scopeId?: string,
 ): ScopedActionRef {
   if (scope === 'page') {
     if (!scopeId) {
@@ -618,7 +611,7 @@ export function createActionRef(
  */
 export function createInlineAction(
   code: string,
-  language: InlineActionCode['language'] = 'js'
+  language: InlineActionCode['language'] = 'js',
 ): InlineActionCode {
   return { type: 'inline', code, language }
 }
@@ -696,7 +689,7 @@ export function getActionRefId(ref: ActionLinkRef): string {
  */
 export function validateActionLinkRef(
   ref: ActionLinkRef,
-  context: ActionRefValidationContext = {}
+  context: ActionRefValidationContext = {},
 ): ActionRefValidationIssue[] {
   const globalActionIds = toIdSet(context.globalActionIds)
   const pageActionIds = toIdSet(context.pageActionIds)
@@ -709,11 +702,13 @@ export function validateActionLinkRef(
     if (nodeActionIds.has(ref) || pageActionIds.has(ref) || globalActionIds.has(ref)) {
       return []
     }
-    return [{
-      code: 'unresolved-action',
-      ref,
-      message: `Cannot resolve action reference "${ref}" from node/page/global scopes`,
-    }]
+    return [
+      {
+        code: 'unresolved-action',
+        ref,
+        message: `Cannot resolve action reference "${ref}" from node/page/global scopes`,
+      },
+    ]
   }
 
   const actionId = ref.id
@@ -722,22 +717,26 @@ export function validateActionLinkRef(
     if (pageActionIds.size > 0 && pageActionIds.has(actionId)) {
       return []
     }
-    return [{
-      code: 'missing-page-action',
-      ref,
-      message: `Page action "${actionId}" is not defined`,
-    }]
+    return [
+      {
+        code: 'missing-page-action',
+        ref,
+        message: `Page action "${actionId}" is not defined`,
+      },
+    ]
   }
 
   if (ref.scope === 'node') {
     if (nodeActionIds.size > 0 && nodeActionIds.has(actionId)) {
       return []
     }
-    return [{
-      code: 'missing-node-action',
-      ref,
-      message: `Node action "${actionId}" is not defined`,
-    }]
+    return [
+      {
+        code: 'missing-node-action',
+        ref,
+        message: `Node action "${actionId}" is not defined`,
+      },
+    ]
   }
 
   if (globalActionIds.size > 0 && globalActionIds.has(actionId)) {
@@ -746,11 +745,13 @@ export function validateActionLinkRef(
   if (globalActionIds.size === 0) {
     return []
   }
-  return [{
-    code: 'missing-global-action',
-    ref,
-    message: `Global action "${actionId}" is not defined`,
-  }]
+  return [
+    {
+      code: 'missing-global-action',
+      ref,
+      message: `Global action "${actionId}" is not defined`,
+    },
+  ]
 }
 
 /**
@@ -758,7 +759,7 @@ export function validateActionLinkRef(
  */
 export function validateActionLinkRefs(
   refs: ActionLinkRef[],
-  context: ActionRefValidationContext = {}
+  context: ActionRefValidationContext = {},
 ): ActionRefValidationIssue[] {
   const issues: ActionRefValidationIssue[] = []
   for (const ref of refs) {
