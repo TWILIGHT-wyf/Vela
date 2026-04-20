@@ -269,7 +269,7 @@ import {
   Loading,
   DocumentRemove,
 } from '@element-plus/icons-vue'
-import type { ProjectSchema } from '@vela/core'
+import { getPageRoot, type ProjectSchema } from '@vela/core'
 
 // 引入 highlight.js
 import hljs from 'highlight.js/lib/core'
@@ -307,7 +307,7 @@ const runtimePages = computed(() =>
     route: page.type === 'page' ? page.path : undefined,
     path: page.type === 'page' ? page.path : undefined,
     actions: page.actions || [],
-    children: page.children,
+    children: getPageRoot(page),
     dialogConfig: page.type === 'dialog' ? page.dialogConfig : undefined,
     state: page.state,
   })),

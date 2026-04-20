@@ -1,16 +1,27 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { nanoid } from 'nanoid'
 import type {
+  ApiSchema,
+  DialogPage,
   ProjectSchema,
   PageSchema,
   NodeSchema,
   PageConfig,
   PageType,
-  DialogPage,
+  VariableSchema,
 } from '@vela/core'
-import { countTracks, createDialogPage, createFragmentPage, createRoutePage } from '@vela/core'
-import type { ApiSchema, VariableSchema } from '@vela/core/types/data'
+import {
+  countTracks,
+  createDialogPage,
+  createFragmentPage,
+  createRoutePage,
+  ensurePageRoot,
+  generatePageId,
+  generateProjectId,
+  getPageRoot,
+  normalizeProjectSchema,
+  setPageRoot,
+} from '@vela/core'
 
 const STORAGE_KEY = 'vela_project'
 export type SaveStatus = 'saved' | 'saving' | 'unsaved'
@@ -158,6 +169,8 @@ function toRoutePath(name: string, path?: string): string {
 }
 
 function enrichPageDefaults(page: PageSchema): PageSchema {
+  const root = ensurePageRoot(page)
+
   page.config = {
     defaultLayoutMode: 'grid',
     ...(page.config || {}),
@@ -165,22 +178,21 @@ function enrichPageDefaults(page: PageSchema): PageSchema {
   page.state = page.state || []
   page.apis = page.apis || []
 
-  if (page.children) {
-    page.children.props = page.children.props || {}
-    page.children.style = {
-      width: '100%',
-      height: '100%',
-      position: 'relative',
-      ...(page.children.style || {}),
-    }
-    page.children.container = createGridContainer(page.children.container)
+  root.props = root.props || {}
+  root.style = {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    ...(root.style || {}),
   }
+  root.container = createGridContainer(root.container)
+  setPageRoot(page, root)
 
   return page
 }
 
 function createManagedPage(name: string, options: AddPageOptions = {}): PageSchema {
-  const pageId = nanoid()
+  const pageId = generatePageId()
   const type = options.type || 'page'
 
   switch (type) {
@@ -197,7 +209,7 @@ function createManagedPage(name: string, options: AddPageOptions = {}): PageSche
 export const useProjectStore = defineStore('project', () => {
   // State
   const project = ref<ProjectSchema>({
-    id: `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    id: generateProjectId(),
     version: '2.0.0',
     name: 'Untitled Project',
     description: 'Created with Vela Editor',
@@ -222,7 +234,7 @@ export const useProjectStore = defineStore('project', () => {
   // Actions
   function initProject(schema?: ProjectSchema) {
     if (schema) {
-      project.value = schema
+      project.value = normalizeProjectSchema(schema)
       normalizePageLayouts()
       if (project.value.pages.length > 0) {
         currentPageId.value = project.value.pages[0].id
@@ -233,7 +245,7 @@ export const useProjectStore = defineStore('project', () => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
-        project.value = JSON.parse(saved)
+        project.value = normalizeProjectSchema(JSON.parse(saved) as ProjectSchema)
         normalizePageLayouts()
         if (project.value.pages.length > 0) {
           currentPageId.value = project.value.pages[0].id
@@ -255,13 +267,12 @@ export const useProjectStore = defineStore('project', () => {
     if (!Array.isArray(project.value.pages)) return
     for (const page of project.value.pages) {
       if (!page.config) page.config = {}
-      if (page.children) {
-        const normalizedContainer: NodeSchema['container'] = createGridContainer(
-          page.children.container,
-        )
-        page.children.container = ensureEditableRootGridContainer(
+      const root = getPageRoot(page)
+      if (root) {
+        const normalizedContainer: NodeSchema['container'] = createGridContainer(root.container)
+        root.container = ensureEditableRootGridContainer(
           normalizedContainer,
-          Array.isArray(page.children.children) ? page.children.children.length : 0,
+          Array.isArray(root.children) ? root.children.length : 0,
         )
       }
     }
@@ -273,16 +284,16 @@ export const useProjectStore = defineStore('project', () => {
       path: '/',
     })
 
-    if (defaultPage.children) {
-      defaultPage.children.id = 'root'
-      defaultPage.children.style = {
-        ...(defaultPage.children.style || {}),
-        backgroundColor: '#ffffff',
-      }
+    const defaultRoot = ensurePageRoot(defaultPage)
+    defaultRoot.id = 'root'
+    defaultRoot.style = {
+      ...(defaultRoot.style || {}),
+      backgroundColor: '#ffffff',
     }
+    setPageRoot(defaultPage, defaultRoot)
 
     project.value = {
-      id: `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateProjectId(),
       version: '2.0.0',
       name: 'My Awesome Dashboard',
       config: {
@@ -413,11 +424,7 @@ export const useProjectStore = defineStore('project', () => {
     saveStatus.value = 'unsaved'
   }
 
-  function updateCurrentPageMeta(meta: {
-    name?: string
-    title?: string
-    description?: string
-  }) {
+  function updateCurrentPageMeta(meta: { name?: string; title?: string; description?: string }) {
     if (!currentPage.value) return
 
     if (meta.name !== undefined) {

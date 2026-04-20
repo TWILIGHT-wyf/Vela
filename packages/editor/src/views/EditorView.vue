@@ -7,6 +7,7 @@ import { useProjectStore } from '@/stores/project'
 import { useComponent } from '@/stores/component'
 import { useHistoryStore } from '@/stores/history'
 import { useRuntimePlugins } from '@/composables/useRuntimePlugins'
+import { ensurePageRoot } from '@vela/core'
 
 // Components
 import AppHeader from '@/components/shell/AppHeader.vue'
@@ -120,9 +121,10 @@ async function handleReset() {
     })
 
     const currentPage = projectStore.currentPage
-    if (currentPage && currentPage.children) {
-      currentPage.children.children = []
-      componentStore.loadTree(currentPage.children)
+    if (currentPage) {
+      const pageRoot = ensurePageRoot(currentPage)
+      pageRoot.children = []
+      componentStore.loadTree(pageRoot)
       resetHistory()
     }
     ElMessage.success('画布已清空')

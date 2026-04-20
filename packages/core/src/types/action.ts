@@ -384,6 +384,39 @@ export type BuiltInActionSchema = {
  */
 export type AnyActionSchema = BuiltInActionSchema | ActionSchema
 
+export function getActionPayload<T extends string = string>(
+  action: Pick<
+    ActionSchema<T>,
+    'payload' | 'targetId' | 'url' | 'path' | 'value' | 'args' | 'message'
+  >,
+): Record<string, unknown> {
+  const payload =
+    action.payload && typeof action.payload === 'object'
+      ? { ...(action.payload as Record<string, unknown>) }
+      : {}
+
+  if (action.targetId !== undefined && payload.targetRef === undefined) {
+    payload.targetRef = action.targetId
+  }
+  if (action.url !== undefined && payload.url === undefined) {
+    payload.url = action.url
+  }
+  if (action.path !== undefined && payload.path === undefined) {
+    payload.path = action.path
+  }
+  if (action.value !== undefined && payload.value === undefined) {
+    payload.value = action.value
+  }
+  if (action.args !== undefined && payload.args === undefined) {
+    payload.args = action.args
+  }
+  if (action.message !== undefined && payload.message === undefined) {
+    payload.message = action.message
+  }
+
+  return payload
+}
+
 /**
  * 动作引用校验错误码
  */

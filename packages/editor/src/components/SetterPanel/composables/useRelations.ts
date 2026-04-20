@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import type { NodeSchema } from '@vela/core'
+import { getNodeComponent } from '@vela/core'
 import { getComponentDefinition, resolveComponentAlias } from '@vela/core/contracts'
 import { useComponent } from '@/stores/component'
 import { storeToRefs } from 'pinia'
@@ -22,7 +23,7 @@ type AllowDropType = 'prev' | 'inner' | 'next'
 type DropType = 'before' | 'inner' | 'after'
 
 function resolveNodeLabel(node: NodeSchema): string {
-  const componentName = node.component || node.componentName || 'Unknown'
+  const componentName = getNodeComponent(node) || 'Unknown'
   const title =
     typeof node.props?.title === 'string'
       ? node.props.title
@@ -42,7 +43,7 @@ function isContainerNode(node: NodeSchema | null | undefined): boolean {
   if (node.component === 'Page') return true
   if (node.container?.mode === 'grid') return true
 
-  const componentName = node.component || node.componentName
+  const componentName = getNodeComponent(node)
   if (!componentName) {
     return Array.isArray(node.children)
   }
@@ -55,7 +56,7 @@ function buildTreeNode(node: NodeSchema): TreeNodeData {
   return {
     id: node.id,
     label: resolveNodeLabel(node),
-    type: node.component || node.componentName || '',
+    type: getNodeComponent(node),
     isContainer: isContainerNode(node),
     children: node.children?.map(buildTreeNode) || [],
   }
@@ -180,11 +181,7 @@ export function useTreeOperations() {
     return rootNode.value ? node.data.id !== rootNode.value.id : false
   }
 
-  function handleNodeDrop(
-    draggingNode: TreeNodeLike,
-    dropNode: TreeNodeLike,
-    dropType: DropType,
-  ) {
+  function handleNodeDrop(draggingNode: TreeNodeLike, dropNode: TreeNodeLike, dropType: DropType) {
     if (!rootNode.value) return
 
     const draggingId = draggingNode.data.id
@@ -221,9 +218,9 @@ export function useTreeOperations() {
     const currentParentId = componentStore.getParentId(draggingId)
     const currentIndex =
       currentParentId && componentStore.findNodeById(rootNode.value, currentParentId)?.children
-        ? componentStore
+        ? (componentStore
             .findNodeById(rootNode.value, currentParentId)
-            ?.children?.findIndex((child) => child.id === draggingId) ?? -1
+            ?.children?.findIndex((child) => child.id === draggingId) ?? -1)
         : -1
 
     if (currentParentId === newParentId && currentIndex === newIndex) {

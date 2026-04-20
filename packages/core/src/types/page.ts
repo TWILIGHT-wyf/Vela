@@ -14,6 +14,7 @@ import {
 } from './action'
 import type { ExpressionInput } from './expression'
 import type { LayoutMode, PageCanvasConfig } from './layout'
+import { generatePageRootId } from '../utils/id'
 
 // ============================================================================
 // 页面生命周期 (框架无关)
@@ -392,6 +393,43 @@ export interface LayoutSchema {
   children: NodeSchema
 }
 
+function createPageRootNode(
+  page: Pick<PageSchema, 'id' | 'type'>,
+  existingRoot?: NodeSchema,
+): NodeSchema {
+  const componentMap: Record<PageType, string> = {
+    page: 'Page',
+    fragment: 'Fragment',
+    dialog: 'Dialog',
+    component: 'Container',
+  }
+
+  return {
+    id: existingRoot?.id || generatePageRootId(page.id),
+    component: existingRoot?.component || componentMap[page.type],
+    props: existingRoot?.props || {},
+    style: existingRoot?.style,
+    container: existingRoot?.container || { mode: 'grid', columns: '1fr', rows: '1fr' },
+    children: existingRoot?.children || [],
+    ...existingRoot,
+  }
+}
+
+export function getPageRoot(page: Pick<PageSchema, 'children'>): NodeSchema | undefined {
+  return page.children
+}
+
+export function setPageRoot<T extends PageSchema>(page: T, root: NodeSchema): T {
+  page.children = root
+  return page
+}
+
+export function ensurePageRoot<T extends PageSchema>(page: T): NodeSchema {
+  const nextRoot = createPageRootNode(page, page.children)
+  page.children = nextRoot
+  return nextRoot
+}
+
 // ============================================================================
 // 工厂函数
 // ============================================================================
@@ -400,43 +438,35 @@ export interface LayoutSchema {
  * 创建路由页面
  */
 export function createRoutePage(id: string, path: string, name: string = '新页面'): RoutePage {
-  return {
+  const page: RoutePage = {
     id,
     name,
     type: 'page',
     path,
     title: name,
-    children: {
-      id: `${id}_root`,
-      component: 'Page',
-      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
-      children: [],
-    },
   }
+  ensurePageRoot(page)
+  return page
 }
 
 /**
  * 创建片段页面
  */
 export function createFragmentPage(id: string, name: string = '片段'): FragmentPage {
-  return {
+  const page: FragmentPage = {
     id,
     name,
     type: 'fragment',
-    children: {
-      id: `${id}_root`,
-      component: 'Fragment',
-      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
-      children: [],
-    },
   }
+  ensurePageRoot(page)
+  return page
 }
 
 /**
  * 创建弹窗页面
  */
 export function createDialogPage(id: string, name: string = '弹窗'): DialogPage {
-  return {
+  const page: DialogPage = {
     id,
     name,
     type: 'dialog',
@@ -446,32 +476,24 @@ export function createDialogPage(id: string, name: string = '弹窗'): DialogPag
       mask: true,
       maskClosable: true,
     },
-    children: {
-      id: `${id}_root`,
-      component: 'Dialog',
-      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
-      children: [],
-    },
   }
+  ensurePageRoot(page)
+  return page
 }
 
 /**
  * 创建组件页面
  */
 export function createComponentPage(id: string, name: string = '组件'): ComponentPage {
-  return {
+  const page: ComponentPage = {
     id,
     name,
     type: 'component',
     propsSchema: [],
     emitsSchema: [],
-    children: {
-      id: `${id}_root`,
-      component: 'Container',
-      container: { mode: 'grid', columns: '1fr', rows: '1fr' },
-      children: [],
-    },
   }
+  ensurePageRoot(page)
+  return page
 }
 
 /**
@@ -582,10 +604,11 @@ export function validatePageActionRefs(
   globalActionIds?: Iterable<string>,
 ): PageActionValidationResult {
   const pageActionIds = extractActionIds(page.actions)
+  const pageRoot = getPageRoot(page)
 
   return {
     pageIssues: validatePageEventActionRefs(page, globalActionIds),
-    nodeIssues: validateNodeEventActionRefs(page.children, {
+    nodeIssues: validateNodeEventActionRefs(pageRoot, {
       globalActionIds,
       pageActionIds,
     }),

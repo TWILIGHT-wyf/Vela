@@ -214,7 +214,7 @@ import {
   type NodeSchema,
   type NodeStyle,
 } from '@vela/core'
-import type { UseCanvasDropReturn } from './useCanvasDrop'
+import type { UseCanvasDropReturn } from './composables/useCanvasDrop'
 
 interface Props {
   nodeId: string

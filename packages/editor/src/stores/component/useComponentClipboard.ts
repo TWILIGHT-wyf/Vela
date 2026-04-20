@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import type { NodeSchema } from '@vela/core'
-import { generateId } from '@vela/core'
+import { generateNodeId, getNodeComponent } from '@vela/core'
 import { getComponentDefinition, resolveComponentAlias } from '@vela/core/contracts'
 import { cloneDeep } from 'lodash-es'
 import { ElMessage } from 'element-plus'
@@ -37,7 +37,7 @@ export function useComponentClipboard(
    * 生成新的唯一 ID
    */
   function generateNewId(prefix: string = 'node'): string {
-    return generateId(prefix)
+    return generateNodeId(prefix)
   }
 
   /**
@@ -58,7 +58,7 @@ export function useComponentClipboard(
     if (!node) return false
     if (Array.isArray(node.children)) return true
 
-    const componentName = node.component || node.componentName
+    const componentName = getNodeComponent(node)
     if (!componentName) return false
 
     const definition = getComponentDefinition(resolveComponentAlias(componentName))

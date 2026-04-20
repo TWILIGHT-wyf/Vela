@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, watch } from 'vue'
-import type { NodeGeometry, NodeSchema, NodeStyle } from '@vela/core'
+import {
+  getPageRoot,
+  setPageRoot,
+  type NodeGeometry,
+  type NodeSchema,
+  type NodeStyle,
+} from '@vela/core'
 import { ElMessage } from 'element-plus'
 import { cloneDeep } from 'lodash-es'
 import { useProjectStore } from '../project'
@@ -48,7 +54,7 @@ export const useComponent = defineStore('component', () => {
   function syncToProjectStore() {
     const currentPage = projectStore.currentPage
     if (currentPage && treeCtx.rootNode.value) {
-      currentPage.children = cloneDeep(treeCtx.rootNode.value)
+      setPageRoot(currentPage, cloneDeep(treeCtx.rootNode.value))
       projectStore.saveStatus = 'unsaved'
     }
   }
@@ -361,8 +367,9 @@ export const useComponent = defineStore('component', () => {
   watch(
     () => projectStore.currentPage,
     (newPage) => {
-      if (newPage && newPage.children) {
-        treeCtx.loadTree(newPage.children)
+      const pageRoot = newPage ? getPageRoot(newPage) : undefined
+      if (newPage && pageRoot) {
+        treeCtx.loadTree(pageRoot)
         console.log(`[ComponentStore] Loaded tree for page: ${newPage.name}`)
       } else {
         treeCtx.rootNode.value = null

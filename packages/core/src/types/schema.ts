@@ -427,6 +427,43 @@ export function getNodeComponent(node: Pick<NodeSchema, 'component' | 'component
   return node.component || node.componentName || ''
 }
 
+type LegacyNodeCompat = {
+  condition?: ValueOrExpression<boolean>
+  loop?: {
+    data?: unknown
+    itemArg?: string
+    indexArg?: string
+  }
+  slotName?: string
+}
+
+export function getNodeRenderIf(
+  node: Pick<NodeSchema, 'renderIf'> & LegacyNodeCompat,
+): NodeSchema['renderIf'] {
+  return node.renderIf ?? node.condition
+}
+
+export function getNodeRepeat(
+  node: Pick<NodeSchema, 'repeat'> & LegacyNodeCompat,
+): NodeSchema['repeat'] {
+  if (node.repeat) {
+    return node.repeat
+  }
+  if (!node.loop?.data) {
+    return undefined
+  }
+
+  return {
+    source: node.loop.data as ValueOrExpression<unknown[]>,
+    itemAlias: node.loop.itemArg,
+    indexAlias: node.loop.indexArg,
+  }
+}
+
+export function getNodeSlot(node: Pick<NodeSchema, 'slot'> & LegacyNodeCompat): string | undefined {
+  return node.slot ?? node.slotName
+}
+
 /**
  * @deprecated Use getNodeComponent instead
  */

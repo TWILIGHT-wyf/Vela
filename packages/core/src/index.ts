@@ -1,7 +1,14 @@
 // @vela/core 对外入口
 export * from './types'
 export * from './contracts'
-export { generateId } from './utils/id'
+export {
+  generateId,
+  generateNodeId,
+  generatePageId,
+  generatePageRootId,
+  generateProjectId,
+  generateStableId,
+} from './utils/id'
 export { countTracks } from './utils/grid'
 export { normalizeGridContainerFields, syncRowsTemplate } from './utils/gridNormalize'
 export {

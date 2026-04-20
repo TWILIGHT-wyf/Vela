@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import {
+  getNodeComponent,
   normalizeGridContainerFields,
   syncRowsTemplate,
   type GridContainerLayout,
@@ -47,7 +48,7 @@ export function useComponentTree(
       if (node.container?.mode === 'grid') {
         return true
       }
-      const componentName = node.component || node.componentName
+      const componentName = getNodeComponent(node)
       if (!componentName) return Array.isArray(node.children)
       const definition = getComponentDefinition(resolveComponentAlias(componentName))
       if (definition?.isContainer) return true

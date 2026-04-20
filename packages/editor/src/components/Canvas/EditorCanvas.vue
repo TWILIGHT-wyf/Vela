@@ -11,7 +11,6 @@
         class="simulation-page canvas-stage"
         :class="{
           'show-bounds': uiStore.canvasSettings.showCanvasBounds,
-          'is-grid-mode': rootLayoutMode === 'grid',
           'is-root-drag-over': showRootDropHint,
         }"
         :style="pageStyle"
@@ -99,8 +98,8 @@ import UniversalRenderer from '@/components/Canvas/UniversalRenderer.vue'
 import NodeWrapper from './NodeWrapper.vue'
 import CanvasDropIndicator from './CanvasDropIndicator.vue'
 import ContextMenu from './ContextMenu.vue'
-import SelectionLayer from '@/components/Canvas/selection/SelectionLayer.vue'
-import { useCanvasDrop } from './useCanvasDrop'
+import SelectionLayer from '@/components/Canvas/SelectionLayer.vue'
+import { useCanvasDrop } from './composables/useCanvasDrop'
 import { useEditorShortcuts } from '@/composables/useEditorShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
 

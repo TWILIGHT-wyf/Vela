@@ -16,7 +16,7 @@
         v-bind="resolvedProps"
         :style="innerStyle"
         :data-id="node.id"
-        :data-component="node.component"
+        :data-component="componentName"
         class="universal-node-content"
       >
         <!-- Recursive Children -->
@@ -37,10 +37,10 @@
         v-else
         class="universal-node-content node-unresolved"
         :data-id="node.id"
-        :data-component="node.component"
+        :data-component="componentName"
         :style="innerStyle"
       >
-        <div class="unresolved-label">{{ node.component }} (未找到)</div>
+        <div class="unresolved-label">{{ componentName }} (未找到)</div>
         <!-- Still render children -->
         <template v-if="node.children && node.children.length">
           <UniversalRenderer
@@ -60,6 +60,7 @@
 <script setup lang="ts">
 import { computed, toRef, type Component, type CSSProperties } from 'vue'
 import type { GridTrack, NodeSchema, GridContainerLayout } from '@vela/core'
+import { getNodeComponent } from '@vela/core'
 import { getComponent, hasComponent } from '@vela/materials'
 import { useDataSourceAdapter } from '@/composables/useDataSourceAdapter'
 import { useComponent } from '@/stores/component'
@@ -75,7 +76,7 @@ const props = defineProps<{
   parentLayoutMode?: 'grid'
 }>()
 
-const componentName = computed(() => props.node.component || props.node.componentName || '')
+const componentName = computed(() => getNodeComponent(props.node))
 
 // Component Resolution
 const isResolved = computed(() => {

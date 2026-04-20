@@ -1,6 +1,10 @@
 import type { PageSchema, LayoutSchema } from './page'
 import type { VariableSchema, ApiSchema } from './data'
 import type { ActionRef, AnyActionSchema } from './action'
+import { getActionPayload } from './action'
+import { ensurePageRoot, getPageRoot } from './page'
+import { getNodeComponent, getNodeRenderIf, getNodeRepeat, getNodeSlot } from './schema'
+import { generateProjectId as generateStableProjectId } from '../utils/id'
 
 // ============================================================================
 // 项目元数据
@@ -334,9 +338,131 @@ export interface ProjectSchema {
 /**
  * 生成项目 ID
  */
-export function generateProjectId(): string {
-  return `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+function normalizeActionPayload<T extends Record<string, unknown>>(action: T): T {
+  const payload = getActionPayload(action as unknown as Parameters<typeof getActionPayload>[0])
+
+  if (Object.keys(payload).length === 0) {
+    return action
+  }
+
+  return {
+    ...action,
+    payload,
+  }
 }
+
+function normalizeActionList(actions?: AnyActionSchema[]): AnyActionSchema[] | undefined {
+  if (!Array.isArray(actions)) return actions
+  return actions.map(
+    (action) =>
+      normalizeActionPayload(
+        action as unknown as Record<string, unknown>,
+      ) as unknown as AnyActionSchema,
+  )
+}
+
+type NormalizableAction = AnyActionSchema | string
+
+function normalizeActionRecord(
+  events?: Record<string, NormalizableAction[]>,
+): Record<string, NormalizableAction[]> | undefined {
+  if (!events) return events
+  return Object.fromEntries(
+    Object.entries(events).map(([eventName, actions]) => [
+      eventName,
+      Array.isArray(actions)
+        ? actions.map((action) =>
+            action && typeof action === 'object' && !Array.isArray(action)
+              ? (normalizeActionPayload(
+                  action as unknown as Record<string, unknown>,
+                ) as unknown as AnyActionSchema)
+              : action,
+          )
+        : actions,
+    ]),
+  )
+}
+
+function normalizeNodeSchema(node: PageSchema['children']): PageSchema['children'] {
+  if (!node) return node
+
+  const legacyNode = node as typeof node & {
+    condition?: typeof node.renderIf
+    loop?: {
+      data?: unknown
+      itemArg?: string
+      indexArg?: string
+    }
+    slotName?: string
+    animation?: (typeof node.animation & { class?: string }) | undefined
+  }
+
+  return {
+    ...node,
+    component: getNodeComponent(node),
+    renderIf: getNodeRenderIf(legacyNode),
+    repeat: getNodeRepeat(legacyNode),
+    slot: getNodeSlot(legacyNode),
+    actions: normalizeActionList(node.actions) as AnyActionSchema[] | undefined,
+    events: normalizeActionRecord(node.events as Record<string, NormalizableAction[]>) as
+      | typeof node.events
+      | undefined,
+    animation: legacyNode.animation
+      ? {
+          ...legacyNode.animation,
+          className: legacyNode.animation.className || legacyNode.animation.class,
+        }
+      : legacyNode.animation,
+    children: node.children?.map((child) => normalizeNodeSchema(child)!).filter(Boolean),
+    slots: node.slots
+      ? Object.fromEntries(
+          Object.entries(node.slots).map(([slotName, children]) => [
+            slotName,
+            children.map((child) => normalizeNodeSchema(child)!).filter(Boolean),
+          ]),
+        )
+      : node.slots,
+  }
+}
+
+export function normalizeProjectSchema(project: ProjectSchema): ProjectSchema {
+  return {
+    ...project,
+    data: {
+      ...(project.data || {}),
+      globalState: project.data?.globalState || project.globalState || [],
+    },
+    apis: {
+      ...(project.apis || {}),
+      definitions: project.apis?.definitions || project.globalApis || [],
+    },
+    logic: project.logic
+      ? {
+          ...project.logic,
+          actions: normalizeActionList(project.logic.actions),
+        }
+      : project.logic,
+    pages: Array.isArray(project.pages)
+      ? project.pages.map((page) => {
+          const normalizedPage: PageSchema = {
+            ...page,
+            actions: normalizeActionList(page.actions) as AnyActionSchema[] | undefined,
+            events: normalizeActionRecord(page.events as Record<string, NormalizableAction[]>) as
+              | typeof page.events
+              | undefined,
+          }
+          const normalizedRoot = normalizeNodeSchema(getPageRoot(page))
+          if (normalizedRoot) {
+            normalizedPage.children = normalizedRoot
+          }
+          ensurePageRoot(normalizedPage)
+          return normalizedPage
+        })
+      : [],
+  }
+}
+
+export const generateProjectId = generateStableProjectId
 
 /**
  * 创建默认项目配置

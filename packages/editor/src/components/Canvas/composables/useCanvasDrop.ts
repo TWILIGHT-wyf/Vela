@@ -1,7 +1,7 @@
 import { ref, computed, readonly, nextTick, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import type { GridContainerLayout, NodeSchema } from '@vela/core'
-import { countTracks } from '@vela/core'
+import { countTracks, generateNodeId, getNodeComponent } from '@vela/core'
 import {
   COMPONENT_REGISTRY,
   getComponentDefinition,
@@ -16,7 +16,7 @@ import {
   placementToGeometry,
   type GridPlacement,
 } from '@/utils/gridPlacement'
-import type { CanvasDropData, DropIndicatorState, DropPosition } from './types'
+import type { CanvasDropData, DropIndicatorState, DropPosition } from '../types'
 
 /**
  * 容器类型组件列表
@@ -73,7 +73,7 @@ export function isContainerComponentName(name: string): boolean {
 }
 
 function isContainerNode(node: NodeSchema): boolean {
-  const name = node.component || node.componentName || ''
+  const name = getNodeComponent(node)
   return isContainerComponentName(name)
 }
 
@@ -86,7 +86,7 @@ export function inferDropDirectionForParent(node: NodeSchema | null | undefined)
   const style = node.style || {}
   const display = String(style.display || '').toLowerCase()
   const flexDirection = String(style.flexDirection || '').toLowerCase()
-  const name = String(node.component || node.componentName || '').toLowerCase()
+  const name = getNodeComponent(node).toLowerCase()
 
   if (display === 'flex') {
     return flexDirection.startsWith('column') ? 'column' : 'row'
@@ -896,7 +896,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
           : resolvedPlacement
 
       const newComponent: NodeSchema = {
-        id: `comp_${crypto.randomUUID()}`,
+        id: generateNodeId(componentName),
         component: componentName,
         props: dropData.props ?? {},
         style: { ...(dropData.style || {}) },
@@ -1029,7 +1029,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
       )
 
       const newComponent: NodeSchema = {
-        id: `comp_${crypto.randomUUID()}`,
+        id: generateNodeId(componentName),
         component: componentName,
         props: dropData.props ?? {},
         style: { ...(dropData.style || {}) },
