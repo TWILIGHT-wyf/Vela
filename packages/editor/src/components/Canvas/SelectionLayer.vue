@@ -1,6 +1,7 @@
 <template>
   <div class="selection-layer">
-    <!-- Free/coordinate overlays removed in grid-only editor -->
+    <!-- Grid-only editor placeholder. Keep this layer so future canvas-wide overlays
+         can mount without changing the viewport/component structure again. -->
   </div>
 </template>
 

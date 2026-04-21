@@ -404,6 +404,7 @@ export const useComponent = defineStore('component', () => {
     selectedIds: selectionCtx.selectedIds,
     hoveredId: selectionCtx.hoveredId,
     styleVersion: styleCtx.styleVersion,
+    interactionDrafts: styleCtx.interactionDrafts,
     parentIndex: indexCtx.parentIndex,
 
     // Getters
@@ -411,6 +412,9 @@ export const useComponent = defineStore('component', () => {
     selectedNodes: selectionCtx.selectedNodes,
     hoveredNode: selectionCtx.hoveredNode,
     getStyleVersion: styleCtx.getStyleVersion,
+    getInteractionDraft: styleCtx.getInteractionDraft,
+    getResolvedStyle: styleCtx.getResolvedStyle,
+    getResolvedGeometry: styleCtx.getResolvedGeometry,
     nodeCount,
     normalizeSelectionIds,
 
@@ -480,6 +484,9 @@ export const useComponent = defineStore('component', () => {
     updateEvents,
     updateContainerLayout,
     updateGridTemplate,
+    previewStyle: styleCtx.previewStyle,
+    previewGeometry: styleCtx.previewGeometry,
+    clearInteractionDraft: styleCtx.clearInteractionDraft,
     deleteComponent,
     deleteComponents,
     moveComponent,

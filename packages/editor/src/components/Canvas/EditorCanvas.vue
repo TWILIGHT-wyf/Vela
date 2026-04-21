@@ -547,8 +547,7 @@ const handleRootDrop = (e: DragEvent) => {
 
 /* 选中状态：容器和特殊节点保留 wrapper 边框 */
 .simulation-page :deep(.editor-node-wrapper.is-selected.is-container),
-.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty),
-.simulation-page :deep(.editor-node-wrapper.is-selected.is-free-parent) {
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty) {
   outline: 2px solid #0d99ff !important;
   outline-offset: 0px;
   box-shadow:
@@ -558,8 +557,7 @@ const handleRootDrop = (e: DragEvent) => {
 
 /* 选中状态悬停 */
 .simulation-page :deep(.editor-node-wrapper.is-selected.is-container:hover),
-.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty:hover),
-.simulation-page :deep(.editor-node-wrapper.is-selected.is-free-parent:hover) {
+.simulation-page :deep(.editor-node-wrapper.is-selected.is-empty:hover) {
   box-shadow:
     0 0 0 2px rgba(13, 153, 255, 0.2),
     inset 0 0 0 1px rgba(13, 153, 255, 0.1);

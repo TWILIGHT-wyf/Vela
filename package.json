@@ -21,7 +21,6 @@
     "test:e2e": "pnpm exec playwright test",
     "test:e2e:editor": "pnpm exec playwright test tests/e2e/editor-user-operations.spec.ts",
     "test:e2e:grid-layout": "pnpm exec playwright test tests/e2e/grid-layout-composition.spec.ts",
-    "prepare": "husky install"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

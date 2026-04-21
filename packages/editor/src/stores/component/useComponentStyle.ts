@@ -23,11 +23,17 @@ import type { ComponentIndexContext } from './useComponentIndex'
 export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProjectStore: () => void) {
   const { nodeIndex, parentIndex } = indexCtx
 
+  type InteractionDraft = {
+    style?: Partial<NodeStyle>
+    geometry?: Partial<NodeGeometry>
+  }
+
   /**
    * 节点样式版本号：id -> version
    * 用于触发特定节点的响应式更新，避免全树重渲染
    */
   const styleVersion = ref<Record<string, number>>({})
+  const interactionDrafts = ref<Record<string, InteractionDraft>>({})
 
   /**
    * 获取节点样式的版本号（用于触发响应式更新）
@@ -44,6 +50,111 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
       ...styleVersion.value,
       [id]: (styleVersion.value[id] || 0) + 1,
     }
+  }
+
+  function applyStylePatch(
+    baseStyle: Partial<NodeStyle> | undefined,
+    patch: Partial<NodeStyle> | undefined,
+  ): NodeStyle {
+    const nextStyle: Record<string, unknown> = {
+      ...(baseStyle || {}),
+      ...(patch || {}),
+    }
+
+    if (patch) {
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) {
+          delete nextStyle[key]
+        }
+      }
+    }
+
+    return nextStyle as NodeStyle
+  }
+
+  function resolveBaseGeometry(baseGeometry?: Partial<NodeGeometry>): NodeGeometry {
+    return {
+      mode: 'grid',
+      gridColumnStart: 1,
+      gridColumnEnd: 4,
+      gridRowStart: 1,
+      gridRowEnd: 3,
+      ...(baseGeometry || {}),
+    } as NodeGeometry
+  }
+
+  function getInteractionDraft(id: string): InteractionDraft | null {
+    return interactionDrafts.value[id] || null
+  }
+
+  function getResolvedStyle(id: string, baseStyle?: Partial<NodeStyle>): NodeStyle {
+    const draft = interactionDrafts.value[id]?.style
+    if (!draft) return applyStylePatch(baseStyle, undefined)
+    return applyStylePatch(baseStyle, draft)
+  }
+
+  function getResolvedGeometry(
+    id: string,
+    baseGeometry?: Partial<NodeGeometry>,
+  ): NodeGeometry | undefined {
+    const draft = interactionDrafts.value[id]?.geometry
+    if (!draft) {
+      return baseGeometry ? resolveBaseGeometry(baseGeometry) : undefined
+    }
+    return {
+      ...resolveBaseGeometry(baseGeometry),
+      ...draft,
+    } as NodeGeometry
+  }
+
+  function updateInteractionDraft(id: string, draftPatch: InteractionDraft) {
+    const currentDraft = interactionDrafts.value[id] || {}
+    const nextDraft: InteractionDraft = {
+      style: draftPatch.style ? { ...(currentDraft.style || {}), ...draftPatch.style } : currentDraft.style,
+      geometry: draftPatch.geometry
+        ? { ...(currentDraft.geometry || {}), ...draftPatch.geometry }
+        : currentDraft.geometry,
+    }
+
+    interactionDrafts.value = {
+      ...interactionDrafts.value,
+      [id]: nextDraft,
+    }
+    incrementVersion(id)
+  }
+
+  function previewStyle(id: string, style: Partial<NodeStyle>) {
+    updateInteractionDraft(id, { style })
+  }
+
+  function previewGeometry(id: string, geometry: Partial<NodeGeometry>) {
+    updateInteractionDraft(id, { geometry })
+  }
+
+  function clearInteractionDraft(id: string, kind?: keyof InteractionDraft) {
+    const currentDraft = interactionDrafts.value[id]
+    if (!currentDraft) return
+
+    if (!kind) {
+      const { [id]: _removed, ...rest } = interactionDrafts.value
+      interactionDrafts.value = rest
+      incrementVersion(id)
+      return
+    }
+
+    const nextDraft: InteractionDraft = { ...currentDraft }
+    delete nextDraft[kind]
+
+    if (!nextDraft.style && !nextDraft.geometry) {
+      const { [id]: _removed, ...rest } = interactionDrafts.value
+      interactionDrafts.value = rest
+    } else {
+      interactionDrafts.value = {
+        ...interactionDrafts.value,
+        [id]: nextDraft,
+      }
+    }
+    incrementVersion(id)
   }
 
   function ensureParentGridRowsForNode(id: string) {
@@ -73,18 +184,7 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     const node = nodeIndex.get(id)
     if (!node) return
 
-    const nextStyle: Record<string, unknown> = {
-      ...(node.style || {}),
-      ...style,
-    }
-
-    for (const [key, value] of Object.entries(style)) {
-      if (value === undefined) {
-        delete nextStyle[key]
-      }
-    }
-
-    node.style = nextStyle as NodeStyle
+    node.style = applyStylePatch(node.style, style)
 
     incrementVersion(id)
     syncToProjectStore()
@@ -142,13 +242,7 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     if (!node) return
 
     const nextGeometry = {
-      ...(node.geometry || {
-        mode: 'grid',
-        gridColumnStart: 1,
-        gridColumnEnd: 4,
-        gridRowStart: 1,
-        gridRowEnd: 3,
-      }),
+      ...resolveBaseGeometry(node.geometry),
       ...geometry,
     } as NodeGeometry
     node.geometry = nextGeometry
@@ -376,9 +470,13 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
   return {
     // State
     styleVersion,
+    interactionDrafts,
 
     // Getters
     getStyleVersion,
+    getInteractionDraft,
+    getResolvedStyle,
+    getResolvedGeometry,
 
     // Raw Actions
     updateStyleRaw,
@@ -389,6 +487,9 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     updateContainerLayoutRaw,
     updateGridTemplateRaw,
     updateResponsiveStyleRaw,
+    previewStyle,
+    previewGeometry,
+    clearInteractionDraft,
 
     // Ref Factories
     createPropRef,

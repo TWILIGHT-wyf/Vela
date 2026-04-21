@@ -77,10 +77,10 @@ function isContainerNode(node: NodeSchema): boolean {
   return isContainerComponentName(name)
 }
 
-type FlowDirection = 'row' | 'column'
+type DropAxis = 'row' | 'column'
 type EditorLayoutMode = 'grid'
 
-export function inferDropDirectionForParent(node: NodeSchema | null | undefined): FlowDirection {
+export function inferDropDirectionForParent(node: NodeSchema | null | undefined): DropAxis {
   if (!node) return 'column'
 
   const style = node.style || {}
@@ -467,7 +467,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
     mouseY: number,
     rect: DOMRect,
     node: NodeSchema,
-    direction: FlowDirection,
+    direction: DropAxis,
     isAltPressed: boolean = false,
     isShiftPressed: boolean = false,
   ): DropPosition {
@@ -557,7 +557,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
 
       // 计算父节点 ID
       let targetParentId: string | null = null
-      let direction: FlowDirection = 'column'
+      let direction: DropAxis = 'column'
       const rootNode = getRootNode()
       if (rootNode) {
         const parent = componentStore.findParentNode(rootNode, node.id)
