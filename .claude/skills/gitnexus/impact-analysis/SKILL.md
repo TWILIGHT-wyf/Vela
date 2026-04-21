@@ -6,7 +6,6 @@ description: Analyze blast radius before making code changes
 # Impact Analysis with GitNexus
 
 ## When to Use
-
 - "Is it safe to change this function?"
 - "What will break if I modify X?"
 - "Show me the blast radius"
@@ -38,25 +37,24 @@ description: Analyze blast radius before making code changes
 
 ## Understanding Output
 
-| Depth | Risk Level       | Meaning                  |
-| ----- | ---------------- | ------------------------ |
-| d=1   | **WILL BREAK**   | Direct callers/importers |
-| d=2   | LIKELY AFFECTED  | Indirect dependencies    |
-| d=3   | MAY NEED TESTING | Transitive effects       |
+| Depth | Risk Level | Meaning |
+|-------|-----------|---------|
+| d=1 | **WILL BREAK** | Direct callers/importers |
+| d=2 | LIKELY AFFECTED | Indirect dependencies |
+| d=3 | MAY NEED TESTING | Transitive effects |
 
 ## Risk Assessment
 
-| Affected                       | Risk     |
-| ------------------------------ | -------- |
-| <5 symbols, few processes      | LOW      |
-| 5-15 symbols, 2-5 processes    | MEDIUM   |
-| >15 symbols or many processes  | HIGH     |
+| Affected | Risk |
+|----------|------|
+| <5 symbols, few processes | LOW |
+| 5-15 symbols, 2-5 processes | MEDIUM |
+| >15 symbols or many processes | HIGH |
 | Critical path (auth, payments) | CRITICAL |
 
 ## Tools
 
 **gitnexus_impact** — the primary tool for symbol blast radius:
-
 ```
 gitnexus_impact({
   target: "validateUser",
@@ -74,7 +72,6 @@ gitnexus_impact({
 ```
 
 **gitnexus_detect_changes** — git-diff based impact analysis:
-
 ```
 gitnexus_detect_changes({scope: "staged"})
 

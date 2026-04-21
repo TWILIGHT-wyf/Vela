@@ -115,13 +115,10 @@ function createGridContainer(container?: NodeSchema['container']): NodeSchema['c
   }
 }
 
-function ensureEditableRootGridContainer(
-  container: NodeSchema['container'],
+function shouldStabilizePageRootColumns(
+  container: Extract<NodeSchema['container'], { mode: 'grid' }>,
   childCount: number,
-): NodeSchema['container'] {
-  if (container?.mode !== 'grid') return container
-  if (container.templateMode === 'autoFit') return container
-
+) {
   const columnCount = Math.max(1, countTracks(container.columns || '1fr'))
   const normalizedColumns = String(container.columns || '').trim()
   const normalizedRows = String(container.rows || '').trim()
@@ -130,19 +127,69 @@ function ensureEditableRootGridContainer(
     (normalizedRows.length === 0 || normalizedRows === '1fr') &&
     (container.gap === undefined || Number(container.gap) === DEFAULT_GRID_GAP)
 
-  if (columnCount > 1) return container
-  if (childCount > 0 && !isLegacySingleColumnPreset) return container
+  return (
+    container.templateMode === 'autoFit' ||
+    columnCount <= 1 ||
+    (childCount === 0 && isLegacySingleColumnPreset)
+  )
+}
 
+function normalizePageRootGridContainer(
+  container: NodeSchema['container'],
+  childCount: number,
+): NodeSchema['container'] {
+  if (container?.mode !== 'grid') return container
+
+  const normalizedRows = String(container.rows || '').trim()
+  const shouldUseStableRootColumns = shouldStabilizePageRootColumns(container, childCount)
+
+  // The editor root is always a stable manual 12-column page grid.
+  // autoFit remains available for nested containers only.
   return {
     ...container,
     templateMode: 'manual',
-    columns: buildDefaultColumnsTemplate(),
-    columnTracks: buildDefaultColumnTracks(),
-    rows: container.rows || '1fr',
-    rowTracks: container.rowTracks === 'auto' ? 'auto' : container.rowTracks,
+    columns: shouldUseStableRootColumns
+      ? buildDefaultColumnsTemplate()
+      : container.columns || buildDefaultColumnsTemplate(),
+    columnTracks: shouldUseStableRootColumns
+      ? buildDefaultColumnTracks()
+      : Array.isArray(container.columnTracks) && container.columnTracks.length > 0
+        ? container.columnTracks
+        : buildDefaultColumnTracks(),
+    rows: normalizedRows && normalizedRows !== '1fr' ? container.rows : 'auto',
+    rowTracks: 'auto',
     gap: container.gap ?? DEFAULT_GRID_GAP,
     gapX: container.gapX ?? container.gap ?? DEFAULT_GRID_GAP,
     gapY: container.gapY ?? container.gap ?? DEFAULT_GRID_GAP,
+  }
+}
+
+function clearLegacyRootPlacements(root: NodeSchema, originalContainer: NodeSchema['container']) {
+  if (originalContainer?.mode !== 'grid') return
+  if (
+    !shouldStabilizePageRootColumns(
+      originalContainer,
+      Array.isArray(root.children) ? root.children.length : 0,
+    )
+  ) {
+    return
+  }
+
+  for (const child of root.children || []) {
+    const geometrySpan =
+      child.geometry?.mode === 'grid'
+        ? child.geometry.gridColumnEnd - child.geometry.gridColumnStart
+        : null
+    const layoutSpan =
+      child.layoutItem?.mode === 'grid' ? child.layoutItem.placement.colSpan || null : null
+    const currentSpan = geometrySpan ?? layoutSpan ?? null
+
+    if (currentSpan !== null && currentSpan > 1) {
+      continue
+    }
+
+    delete child.geometry
+    delete child.layoutItem
   }
 }
 
@@ -185,7 +232,7 @@ function enrichPageDefaults(page: PageSchema): PageSchema {
     position: 'relative',
     ...(root.style || {}),
   }
-  root.container = createGridContainer(root.container)
+  root.container = normalizePageRootGridContainer(createGridContainer(root.container), 0)
   setPageRoot(page, root)
 
   return page
@@ -269,9 +316,9 @@ export const useProjectStore = defineStore('project', () => {
       if (!page.config) page.config = {}
       const root = getPageRoot(page)
       if (root) {
-        const normalizedContainer: NodeSchema['container'] = createGridContainer(root.container)
-        root.container = ensureEditableRootGridContainer(
-          normalizedContainer,
+        clearLegacyRootPlacements(root, root.container)
+        root.container = normalizePageRootGridContainer(
+          createGridContainer(root.container),
           Array.isArray(root.children) ? root.children.length : 0,
         )
       }

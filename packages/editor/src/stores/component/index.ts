@@ -359,6 +359,16 @@ export const useComponent = defineStore('component', () => {
     return styleCtx.createStyleRefs(id, styleConfigs, updateStyle)
   }
 
+  function loadTree(tree: NodeSchema) {
+    styleCtx.clearAllInteractionDrafts()
+    treeCtx.loadTree(tree)
+  }
+
+  function setTree(tree: NodeSchema) {
+    styleCtx.clearAllInteractionDrafts()
+    treeCtx.setTree(tree)
+  }
+
   // ========== Watchers ==========
 
   /**
@@ -369,7 +379,7 @@ export const useComponent = defineStore('component', () => {
     (newPage) => {
       const pageRoot = newPage ? getPageRoot(newPage) : undefined
       if (newPage && pageRoot) {
-        treeCtx.loadTree(pageRoot)
+        loadTree(pageRoot)
         console.log(`[ComponentStore] Loaded tree for page: ${newPage.name}`)
       } else {
         treeCtx.rootNode.value = null
@@ -473,8 +483,8 @@ export const useComponent = defineStore('component', () => {
     traverse: indexCtx.traverse,
 
     // Actions
-    loadTree: treeCtx.loadTree,
-    setTree: treeCtx.setTree,
+    loadTree,
+    setTree,
     flattenTree: treeCtx.flattenTree,
     addComponent,
     updateProps,
@@ -487,6 +497,7 @@ export const useComponent = defineStore('component', () => {
     previewStyle: styleCtx.previewStyle,
     previewGeometry: styleCtx.previewGeometry,
     clearInteractionDraft: styleCtx.clearInteractionDraft,
+    clearAllInteractionDrafts: styleCtx.clearAllInteractionDrafts,
     deleteComponent,
     deleteComponents,
     moveComponent,

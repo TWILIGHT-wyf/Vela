@@ -14,6 +14,7 @@ import {
   resolveGridPlacements,
   writePlacementToNode,
 } from '@/utils/gridPlacement'
+import { isPageRootNode, resolveEditorGridSpan } from '@/utils/pageGridStrategy'
 import type { ComponentIndexContext } from './useComponentIndex'
 import type { ComponentSelectionContext } from './useComponentSelection'
 
@@ -81,16 +82,22 @@ export function useComponentTree(
           explicit: hasExplicitPlacement,
           placement: hasExplicitPlacement
             ? nodeToPlacement(child, colCount)
-            : {
-                colStart: 1,
-                colSpan: isContainerNode(child)
-                  ? templateMode === 'autoFit'
-                    ? 1
-                    : Math.min(6, colCount)
-                  : 3,
-                rowStart: index + 1,
-                rowSpan: isContainerNode(child) ? 2 : 2,
-              },
+            : (() => {
+                // Keep root children section-like when legacy pages are normalized in the editor.
+                const span = resolveEditorGridSpan({
+                  colCount,
+                  isContainer: isContainerNode(child),
+                  isPageRoot: isPageRootNode(parent, rootNode.value),
+                  templateMode,
+                })
+
+                return {
+                  colStart: 1,
+                  colSpan: span.colSpan,
+                  rowStart: index + 1,
+                  rowSpan: span.rowSpan,
+                }
+              })(),
         }
       }),
       colCount,
@@ -143,8 +150,8 @@ export function useComponentTree(
    * 设置组件树（不深拷贝，用于撤销/重做）
    */
   function setTree(tree: NodeSchema) {
-    normalizeGridHierarchy(tree)
     rootNode.value = tree
+    normalizeGridHierarchy(rootNode.value)
     rebuildIndex(rootNode.value)
   }
 

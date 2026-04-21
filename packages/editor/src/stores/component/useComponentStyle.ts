@@ -157,6 +157,12 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     incrementVersion(id)
   }
 
+  function clearAllInteractionDrafts() {
+    if (Object.keys(interactionDrafts.value).length === 0) return
+    interactionDrafts.value = {}
+    styleVersion.value = { ...styleVersion.value }
+  }
+
   function ensureParentGridRowsForNode(id: string) {
     const parentId = parentIndex.get(id)
     if (!parentId) return
@@ -490,6 +496,7 @@ export function useComponentStyle(indexCtx: ComponentIndexContext, syncToProject
     previewStyle,
     previewGeometry,
     clearInteractionDraft,
+    clearAllInteractionDrafts,
 
     // Ref Factories
     createPropRef,

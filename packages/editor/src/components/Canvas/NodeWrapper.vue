@@ -8,7 +8,7 @@
     :data-label="componentLabel"
     :data-node-id="nodeId"
     :data-component-id="nodeId"
-    :draggable="!isResizing && !isSpacingAdjusting && !suppressNativeDrag"
+    :draggable="!isResizing && !suppressNativeDrag"
     @click.stop="handleClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
@@ -32,27 +32,6 @@
 
     <NodeResizeHandles v-if="showGridResizeHandles" @start="handleGridResizeStart" />
 
-    <NodeSpacingOverlay
-      kind="margin"
-      :values="marginPx"
-      :min-hit-size="MIN_MARGIN_HIT_SIZE"
-      :show="showMarginOverlays"
-      :active-side="activeMarginSide"
-      :show-label="showMarginLabel"
-      :format-label="formatMarginLabel"
-      @start="handleMarginDragStart"
-    />
-
-    <NodeSpacingOverlay
-      kind="padding"
-      :values="paddingPx"
-      :min-hit-size="MIN_PADDING_HIT_SIZE"
-      :show="showPaddingOverlays"
-      :active-side="activePaddingSide"
-      :show-label="showPaddingLabel"
-      :format-label="formatPaddingLabel"
-      @start="handlePaddingDragStart"
-    />
   </div>
 </template>
 
@@ -63,14 +42,12 @@ import { useComponent } from '@/stores/component'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasContext } from '@/components/Canvas/composables/useCanvasContext'
 import NodeResizeHandles, { type GridResizeHandle } from './NodeResizeHandles.vue'
-import NodeSpacingOverlay, { type BoxSpacingSide } from './NodeSpacingOverlay.vue'
 import {
   countTracks,
   type GridContainerLayout,
   type GridItemLayout,
   type GridNodeGeometry,
   type NodeSchema,
-  type NodeStyle,
 } from '@vela/core'
 import type { UseCanvasDropReturn } from './composables/useCanvasDrop'
 
@@ -108,9 +85,7 @@ const {
   toggleSelection,
   findNodeById,
   setHovered,
-  updateStyle,
   updateGeometry,
-  previewStyle,
   previewGeometry,
   clearInteractionDraft,
   getResolvedStyle,
@@ -122,17 +97,13 @@ const wrapperRef = ref<HTMLDivElement | null>(null)
 const isDragging = ref(false)
 const isDragOver = ref(false)
 const isResizing = ref(false)
-const isSpacingAdjusting = ref(false)
 const suppressNativeDrag = ref(false)
-const activeSpacingKind = ref<'margin' | 'padding' | null>(null)
-const activeSpacingSide = ref<BoxSpacingSide | null>(null)
-let cleanupActiveSpacingAdjust: (() => void) | null = null
-const isFreeParent = computed(() => false)
+let cleanupActiveResize: (() => void) | null = null
 
 const applyWrapperDraggableState = () => {
   const wrapper = wrapperRef.value
   if (!wrapper) return
-  wrapper.draggable = !isResizing.value && !isSpacingAdjusting.value && !suppressNativeDrag.value
+  wrapper.draggable = !isResizing.value && !suppressNativeDrag.value
 }
 
 const setNativeDragSuppressed = (value: boolean) => {
@@ -169,21 +140,7 @@ const isDragFeedbackActive = computed(() => {
   const indicatorVisible = Boolean(canvasDrop?.indicator.value?.visible)
   return dragging || indicatorVisible || isDragOver.value
 })
-
-const shouldAllowSpacingAdjust = computed(() => {
-  return props.parentLayoutMode === 'grid'
-})
-
-// ========== Box Model Overlays (Margin + Padding) ==========
-
-type SpacingValues = Record<'top' | 'right' | 'bottom' | 'left', number>
 type ContentSelectionRect = { left: number; top: number; width: number; height: number }
-
-const parseComputedLength = (value: string | undefined): number => {
-  if (!value) return 0
-  const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
 
 const getWrapperContentEl = (): HTMLElement | null => {
   const wrapper = wrapperRef.value
@@ -249,179 +206,32 @@ const contentSelectionOutlineStyle = computed<CSSProperties | null>(() => {
   }
 })
 
-const getRenderedSpacingValues = (): { margin: SpacingValues; padding: SpacingValues } | null => {
-  const wrapper = wrapperRef.value
-  if (!wrapper) return null
-
-  const wrapperComputedStyle = window.getComputedStyle(wrapper)
-  const content = getWrapperContentEl()
-  const contentComputedStyle = content ? window.getComputedStyle(content) : null
-
-  return {
-    margin: {
-      top: parseComputedLength(wrapperComputedStyle.marginTop),
-      right: parseComputedLength(wrapperComputedStyle.marginRight),
-      bottom: parseComputedLength(wrapperComputedStyle.marginBottom),
-      left: parseComputedLength(wrapperComputedStyle.marginLeft),
-    },
-    padding: {
-      top: parseComputedLength(contentComputedStyle?.paddingTop),
-      right: parseComputedLength(contentComputedStyle?.paddingRight),
-      bottom: parseComputedLength(contentComputedStyle?.paddingBottom),
-      left: parseComputedLength(contentComputedStyle?.paddingLeft),
-    },
-  }
-}
-
-const spacingSnapshot = computed(() => {
-  // Track style mutations to refresh overlay values after style updates.
-  void componentStore.styleVersion[props.nodeId]
-
-  // Reading computed styles is expensive. Only do it for active targets to keep
-  // canvas interactions stable when switching selection/hover rapidly.
-  if (isSelected.value || isHovered.value || isSpacingAdjusting.value) {
-    const renderedSpacing = getRenderedSpacingValues()
-    if (renderedSpacing) return renderedSpacing
-  }
-
-  // Fallback before mount: derive from schema style.
-  const style = resolvedStyle.value
-  return {
-    margin: {
-      top: resolveSpacingNumber(style, 'top'),
-      right: resolveSpacingNumber(style, 'right'),
-      bottom: resolveSpacingNumber(style, 'bottom'),
-      left: resolveSpacingNumber(style, 'left'),
-    },
-    padding: {
-      top: resolvePaddingNumber(style, 'top'),
-      right: resolvePaddingNumber(style, 'right'),
-      bottom: resolvePaddingNumber(style, 'bottom'),
-      left: resolvePaddingNumber(style, 'left'),
-    },
-  }
-})
-
-/** Resolved pixel values for each margin side */
-const marginPx = computed(() => spacingSnapshot.value.margin)
-
-/** Show margin overlays: any layout mode, selected or hovered */
-const showMarginOverlays = computed(() => {
-  if (!shouldAllowSpacingAdjust.value) return false
-  if (isDragFeedbackActive.value) return false
-  if (selectedIds.value.length > 0) return isSelected.value
-  return isHovered.value
-})
-
-const paddingStyleKeyMap: Record<BoxSpacingSide, keyof NodeStyle> = {
-  top: 'paddingTop',
-  right: 'paddingRight',
-  bottom: 'paddingBottom',
-  left: 'paddingLeft',
-}
-
-const parsePaddingShorthand = (val: string): [string, string, string, string] | null => {
-  const parts = val.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]]
-  if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]]
-  if (parts.length === 3) return [parts[0], parts[1], parts[2], parts[1]]
-  if (parts.length === 4) return [parts[0], parts[1], parts[2], parts[3]]
-  return null
-}
-
-const resolvePaddingNumber = (style: NodeStyle, side: BoxSpacingSide): number => {
-  const sideKey = paddingStyleKeyMap[side]
-  const specific = parseSpacingNumber(style[sideKey])
-  if (specific !== null) return specific
-
-  if (typeof style.padding === 'string') {
-    const shorthand = parsePaddingShorthand(style.padding)
-    if (shorthand) {
-      const sideIndex = side === 'top' ? 0 : side === 'right' ? 1 : side === 'bottom' ? 2 : 3
-      const parsed = parseSpacingNumber(shorthand[sideIndex])
-      if (parsed !== null) return parsed
-    }
-  }
-
-  const common = parseSpacingNumber(style.padding)
-  if (common !== null) return common
-  return 0
-}
-
-/** Resolved pixel values for each padding side */
-const paddingPx = computed(() => spacingSnapshot.value.padding)
-
-/** Show padding overlays: any mode, selected only (always show to allow dragging from zero) */
-const showPaddingOverlays = computed(() => {
-  if (!shouldAllowSpacingAdjust.value) return false
-  if (isDragFeedbackActive.value) return false
-  return isSelected.value
-})
-
-const MIN_MARGIN_HIT_SIZE = 14
-const MIN_PADDING_HIT_SIZE = 6
-
-const showMarginLabel = (side: BoxSpacingSide): boolean => {
-  const val = marginPx.value[side]
-  if (isSelected.value) return true
-  return val > 0 || (isSpacingAdjusting.value && activeSpacingKind.value === 'margin')
-}
-
-const showPaddingLabel = (side: BoxSpacingSide): boolean => {
-  if (isSelected.value) return true
-  const val = paddingPx.value[side]
-  return val > 0 || (isSpacingAdjusting.value && activeSpacingKind.value === 'padding')
-}
-
-const formatSpacingLabel = (kind: 'margin' | 'padding', side: BoxSpacingSide): string => {
-  const value = kind === 'margin' ? marginPx.value[side] : paddingPx.value[side]
-  return `${kind === 'margin' ? 'M' : 'P'}:${Math.round(value)}px`
-}
-
-const formatMarginLabel = (side: BoxSpacingSide) => formatSpacingLabel('margin', side)
-const formatPaddingLabel = (side: BoxSpacingSide) => formatSpacingLabel('padding', side)
-const activeMarginSide = computed(() =>
-  activeSpacingKind.value === 'margin' ? activeSpacingSide.value : null,
-)
-const activePaddingSide = computed(() =>
-  activeSpacingKind.value === 'padding' ? activeSpacingSide.value : null,
-)
-
-const resetSpacingAdjustState = () => {
-  isSpacingAdjusting.value = false
-  activeSpacingKind.value = null
-  activeSpacingSide.value = null
-}
-
-const stopSpacingAdjustIfNeeded = () => {
-  if (cleanupActiveSpacingAdjust) {
-    cleanupActiveSpacingAdjust()
-    cleanupActiveSpacingAdjust = null
-    return
-  }
-  resetSpacingAdjustState()
+const stopResizeIfNeeded = () => {
+  if (!cleanupActiveResize) return
+  cleanupActiveResize()
+  cleanupActiveResize = null
 }
 
 watch(
   () => selectedId.value,
   (nextSelectedId) => {
-    if (nextSelectedId !== props.nodeId && isSpacingAdjusting.value) {
-      stopSpacingAdjustIfNeeded()
+    if (nextSelectedId !== props.nodeId && isResizing.value) {
+      stopResizeIfNeeded()
     }
   },
 )
 
 onBeforeUnmount(() => {
-  stopSpacingAdjustIfNeeded()
+  stopResizeIfNeeded()
   setNativeDragSuppressed(false)
 })
 
-/** 判断是否为容器组件 */
+/** 閸掋倖鏌囬弰顖氭儊娑撳搫顔愰崳銊х矋娴?*/
 const isContainer = computed(() => {
   return canvasDrop?.isContainerNode(currentNode.value as NodeSchema) || false
 })
 
-/** 判断是否为空容器 */
+/** 閸掋倖鏌囬弰顖氭儊娑撹櫣鈹栫€圭懓娅?*/
 const isEmpty = computed(() => {
   if (!isContainer.value || !currentNode.value) return false
   return !currentNode.value.children || currentNode.value.children.length === 0
@@ -537,7 +347,7 @@ const wrapperStyle = computed<CSSProperties>(() => {
 
 // ========== Hover Handlers (Exclusive) ==========
 const handleMouseEnter = (e: MouseEvent) => {
-  // 阻止事件冒泡，确保只有最内层组件触发悬停
+  // 闂冪粯顒涙禍瀣╂閸愭帗鍦洪敍宀€鈥樻穱婵嗗涧閺堝娓堕崘鍛湴缂佸嫪娆㈢憴锕€褰傞幃顒€浠?
   e.stopPropagation()
   const dragging = isDragging.value
   if (!dragging) {
@@ -546,16 +356,15 @@ const handleMouseEnter = (e: MouseEvent) => {
 }
 
 const handleMouseLeave = (e: MouseEvent) => {
-  // 检查是否真的离开了元素
   const relatedTarget = e.relatedTarget as HTMLElement | null
   const currentTarget = e.currentTarget as HTMLElement
 
-  // 如果移动到子元素，不清除 hover
+  // 婵″倹鐏夌粔璇插З閸掓澘鐡欓崗鍐閿涘奔绗夊〒鍛存珟 hover
   if (relatedTarget && currentTarget.contains(relatedTarget)) {
     return
   }
 
-  // 只有当前 hover 的是自己时才清除
+  // 閸欘亝婀佽ぐ鎾冲 hover 閻ㄥ嫭妲搁懛顏勭箒閺冭埖澧犲〒鍛存珟
   if (hoveredId.value === props.nodeId) {
     setHovered(null)
   }
@@ -570,10 +379,6 @@ const handleDragStart = (e: DragEvent) => {
     return
   }
   if (!e.dataTransfer || !currentNode.value) return
-  if (isSpacingAdjusting.value) {
-    e.preventDefault()
-    return
-  }
 
   if (selectedIds.value.length !== 1 || selectedId.value !== props.nodeId) {
     selectComponent(props.nodeId)
@@ -582,9 +387,8 @@ const handleDragStart = (e: DragEvent) => {
 
   isDragging.value = true
   dragCancelled = false
-  setHovered(null) // 拖拽时清除 hover 状态
-
-  // 设置拖拽数据
+  setHovered(null) // 閹锋牗瀚块弮鑸电闂?hover 閻樿埖鈧?
+  // 鐠佸墽鐤嗛幏鏍ㄥ閺佺増宓?
   const dragData = {
     nodeId: props.nodeId,
     component: currentNode.value.component,
@@ -592,15 +396,13 @@ const handleDragStart = (e: DragEvent) => {
   e.dataTransfer.setData('application/x-vela', JSON.stringify(dragData))
   e.dataTransfer.effectAllowed = 'move'
 
-  // 通知 canvasDrop 当前正在拖拽的组件
   canvasDrop?.setDraggingId(props.nodeId)
 
-  // 设置拖拽图像
+  // 鐠佸墽鐤嗛幏鏍ㄥ閸ユ儳鍎?
   if (wrapperRef.value) {
     e.dataTransfer.setDragImage(wrapperRef.value, 10, 10)
   }
 
-  // Escape 键取消拖拽
   const onKeyDown = (ev: KeyboardEvent) => {
     if (ev.key === 'Escape') {
       dragCancelled = true
@@ -610,7 +412,7 @@ const handleDragStart = (e: DragEvent) => {
   }
   window.addEventListener('keydown', onKeyDown)
 
-  // 拖拽结束时清理监听器
+  // 閹锋牗瀚跨紒鎾存将閺冭埖绔婚悶鍡欐磧閸氼剙娅?
   const cleanup = () => {
     window.removeEventListener('keydown', onKeyDown)
     window.removeEventListener('dragend', cleanup)
@@ -634,8 +436,6 @@ const handleDragOver = (e: DragEvent) => {
 }
 
 const handleDragLeave = (e: DragEvent) => {
-  if (isFreeParent.value) return
-  // 检查是否真的离开了
   const relatedTarget = e.relatedTarget as HTMLElement | null
   const currentTarget = e.currentTarget as HTMLElement
   if (relatedTarget && currentTarget.contains(relatedTarget)) {
@@ -648,34 +448,11 @@ const handleDragLeave = (e: DragEvent) => {
 const handleDrop = (e: DragEvent) => {
   isDragOver.value = false
   if (!canvasDrop || !currentNode.value) return
-  // 如果拖拽被取消，不执行放置
   if (dragCancelled) {
     dragCancelled = false
     return
   }
   canvasDrop.handleDrop(e)
-}
-
-const marginStyleKeyMap: Record<BoxSpacingSide, keyof NodeStyle> = {
-  top: 'marginTop',
-  right: 'marginRight',
-  bottom: 'marginBottom',
-  left: 'marginLeft',
-}
-
-/**
- * Parse a CSS length value (px or unitless number) into a number.
- * Returns null for non-absolute values (%, em, rem, etc.).
- */
-const parseAbsoluteLength = (val: unknown): number | null => {
-  if (typeof val === 'number' && Number.isFinite(val)) return val
-  if (typeof val === 'string') {
-    const trimmed = val.trim()
-    if (!trimmed) return null
-    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number.parseFloat(trimmed)
-    if (/^-?\d+(\.\d+)?px$/.test(trimmed)) return Number.parseFloat(trimmed)
-  }
-  return null
 }
 
 const clampNumber = (value: number, min: number, max: number): number => {
@@ -843,38 +620,6 @@ const layoutItemToGeometry = (
         ? layoutItem.fixedHeight
         : undefined,
   }
-}
-
-const parseSpacingNumber = parseAbsoluteLength
-
-const parseMarginShorthand = (val: string): [string, string, string, string] | null => {
-  const parts = val.trim().split(/\s+/).filter(Boolean)
-
-  if (parts.length === 1) return [parts[0], parts[0], parts[0], parts[0]]
-  if (parts.length === 2) return [parts[0], parts[1], parts[0], parts[1]]
-  if (parts.length === 3) return [parts[0], parts[1], parts[2], parts[1]]
-  if (parts.length === 4) return [parts[0], parts[1], parts[2], parts[3]]
-  return null
-}
-
-const resolveSpacingNumber = (style: NodeStyle, side: BoxSpacingSide): number => {
-  const sideKey = marginStyleKeyMap[side]
-  const specific = parseSpacingNumber(style[sideKey])
-  if (specific !== null) return specific
-
-  if (typeof style.margin === 'string') {
-    const shorthand = parseMarginShorthand(style.margin)
-    if (shorthand) {
-      const sideIndex = side === 'top' ? 0 : side === 'right' ? 1 : side === 'bottom' ? 2 : 3
-      const parsed = parseSpacingNumber(shorthand[sideIndex])
-      if (parsed !== null) return parsed
-    }
-  }
-
-  const common = parseSpacingNumber(style.margin)
-  if (common !== null) return common
-
-  return 0
 }
 
 const handleGridResizeStart = (handle: GridResizeHandle, e: MouseEvent) => {
@@ -1087,210 +832,16 @@ const handleGridSpanResize = (handle: GridResizeHandle, e: MouseEvent) => {
     window.removeEventListener('mouseup', onMouseUp)
     window.removeEventListener('keydown', onKeyDown)
     setNativeDragSuppressed(false)
-  }
-
-  const onMouseUp = () => cleanup()
-  const onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.key === 'Escape') {
-      cancelled = true
-      cleanup()
+    if (cleanupActiveResize === cancelResize) {
+      cleanupActiveResize = null
     }
   }
 
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
-  window.addEventListener('keydown', onKeyDown)
-}
-
-/** Margin 调整范围配置 */
-const MARGIN_RANGE = { min: -500, max: 1000 }
-
-const handleMarginDragStart = (side: BoxSpacingSide, e: MouseEvent) => {
-  if (!shouldAllowSpacingAdjust.value) return
-  if (!currentNode.value) return
-
-  setNativeDragSuppressed(true)
-  stopSpacingAdjustIfNeeded()
-  selectComponent(props.nodeId)
-  isSpacingAdjusting.value = true
-  activeSpacingKind.value = 'margin'
-  activeSpacingSide.value = side
-  setHovered(null)
-
-  const startX = e.clientX
-  const startY = e.clientY
-  const baseMargin = marginPx.value[side]
-  const styleKey = marginStyleKeyMap[side]
-
-  let rafId = 0
-  let pendingMargin: number | undefined
-  let cancelled = false
-
-  const flushMarginUpdate = () => {
-    rafId = 0
-    if (cancelled || pendingMargin === undefined) return
-
-    const patch = { [styleKey]: Math.round(pendingMargin) } as Partial<NodeStyle>
-    patch.margin = undefined
-    previewStyle(props.nodeId, patch)
-  }
-
-  const prevCursor = document.body.style.cursor
-  const prevUserSelect = document.body.style.userSelect
-  document.body.style.userSelect = 'none'
-  document.body.style.cursor = side === 'top' || side === 'bottom' ? 'ns-resize' : 'ew-resize'
-
-  const onMouseMove = (ev: MouseEvent) => {
-    if (cancelled) return
-
-    // Compensate for canvas zoom: mouse pixels → stage pixels
-    const s = canvasScale.value || 1
-    const dx = (ev.clientX - startX) / s
-    const dy = (ev.clientY - startY) / s
-
-    let next = baseMargin
-    if (side === 'top') next = baseMargin + dy
-    if (side === 'bottom') next = baseMargin + dy
-    if (side === 'left') next = baseMargin - dx
-    if (side === 'right') next = baseMargin + dx
-
-    pendingMargin = Math.min(MARGIN_RANGE.max, Math.max(MARGIN_RANGE.min, next))
-
-    if (rafId === 0) {
-      rafId = requestAnimationFrame(flushMarginUpdate)
-    }
-  }
-
-  const cleanup = () => {
-    if (rafId !== 0) {
-      cancelAnimationFrame(rafId)
-      if (!cancelled) {
-        flushMarginUpdate()
-      }
-    }
-
-    if (cancelled) {
-      clearInteractionDraft(props.nodeId, 'style')
-    } else if (pendingMargin !== undefined) {
-      const patch = { [styleKey]: Math.round(pendingMargin) } as Partial<NodeStyle>
-      patch.margin = undefined
-      updateStyle(props.nodeId, patch)
-      clearInteractionDraft(props.nodeId, 'style')
-    }
-
-    document.body.style.cursor = prevCursor
-    document.body.style.userSelect = prevUserSelect
-    resetSpacingAdjustState()
-    if (cleanupActiveSpacingAdjust === cleanup) {
-      cleanupActiveSpacingAdjust = null
-    }
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', onMouseUp)
-    window.removeEventListener('keydown', onKeyDown)
-    setNativeDragSuppressed(false)
-  }
-
-  const onMouseUp = () => {
+  const cancelResize = () => {
+    cancelled = true
     cleanup()
   }
 
-  const onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.key === 'Escape') {
-      cancelled = true
-      cleanup()
-    }
-  }
-
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
-  window.addEventListener('keydown', onKeyDown)
-  cleanupActiveSpacingAdjust = cleanup
-}
-
-/** Padding range: 0 to 500px */
-const PADDING_RANGE = { min: 0, max: 500 }
-
-const handlePaddingDragStart = (side: BoxSpacingSide, e: MouseEvent) => {
-  if (!shouldAllowSpacingAdjust.value) return
-  if (!currentNode.value) return
-
-  setNativeDragSuppressed(true)
-  stopSpacingAdjustIfNeeded()
-  selectComponent(props.nodeId)
-  isSpacingAdjusting.value = true
-  activeSpacingKind.value = 'padding'
-  activeSpacingSide.value = side
-  setHovered(null)
-
-  const startX = e.clientX
-  const startY = e.clientY
-  const baseVal = paddingPx.value[side]
-  const styleKey = paddingStyleKeyMap[side]
-
-  let rafId = 0
-  let pendingVal: number | undefined
-  let cancelled = false
-
-  const flushUpdate = () => {
-    rafId = 0
-    if (cancelled || pendingVal === undefined) return
-    const patch = { [styleKey]: Math.round(pendingVal) } as Partial<NodeStyle>
-    patch.padding = undefined
-    previewStyle(props.nodeId, patch)
-  }
-
-  const prevCursor = document.body.style.cursor
-  const prevUserSelect = document.body.style.userSelect
-  document.body.style.userSelect = 'none'
-  document.body.style.cursor = side === 'top' || side === 'bottom' ? 'ns-resize' : 'ew-resize'
-
-  const onMouseMove = (ev: MouseEvent) => {
-    if (cancelled) return
-    const s = canvasScale.value || 1
-    const dx = (ev.clientX - startX) / s
-    const dy = (ev.clientY - startY) / s
-
-    // Dragging inward (toward content center) increases padding
-    let next = baseVal
-    if (side === 'top') next = baseVal + dy
-    if (side === 'bottom') next = baseVal - dy
-    if (side === 'left') next = baseVal + dx
-    if (side === 'right') next = baseVal - dx
-
-    pendingVal = Math.min(PADDING_RANGE.max, Math.max(PADDING_RANGE.min, next))
-
-    if (rafId === 0) {
-      rafId = requestAnimationFrame(flushUpdate)
-    }
-  }
-
-  const cleanup = () => {
-    if (rafId !== 0) {
-      cancelAnimationFrame(rafId)
-      if (!cancelled) flushUpdate()
-    }
-
-    if (cancelled) {
-      clearInteractionDraft(props.nodeId, 'style')
-    } else if (pendingVal !== undefined) {
-      const patch = { [styleKey]: Math.round(pendingVal) } as Partial<NodeStyle>
-      patch.padding = undefined
-      updateStyle(props.nodeId, patch)
-      clearInteractionDraft(props.nodeId, 'style')
-    }
-
-    document.body.style.cursor = prevCursor
-    document.body.style.userSelect = prevUserSelect
-    resetSpacingAdjustState()
-    if (cleanupActiveSpacingAdjust === cleanup) {
-      cleanupActiveSpacingAdjust = null
-    }
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', onMouseUp)
-    window.removeEventListener('keydown', onKeyDown)
-    setNativeDragSuppressed(false)
-  }
-
   const onMouseUp = () => cleanup()
   const onKeyDown = (ev: KeyboardEvent) => {
     if (ev.key === 'Escape') {
@@ -1302,8 +853,9 @@ const handlePaddingDragStart = (side: BoxSpacingSide, e: MouseEvent) => {
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('keydown', onKeyDown)
-  cleanupActiveSpacingAdjust = cleanup
+  cleanupActiveResize = cancelResize
 }
+
 
 // ========== Event Handlers ==========
 const handleClick = (e: MouseEvent) => {
@@ -1335,9 +887,9 @@ const handleClick = (e: MouseEvent) => {
   position: relative;
   cursor: pointer;
   box-sizing: border-box;
-  max-width: 100%; /* 核心修复：防止撑破画布 */
-  min-width: 20px; /* 防止过小无法选中 */
-  /* 移除 overflow: hidden，避免裁剪图表等组件的标题、轴名称等内容 */
+  max-width: 100%; /* 閺嶇绺炬穱顔碱槻閿涙岸妲诲銏℃嫼閻鏁剧敮?*/
+  min-width: 20px; /* 闂冨弶顒涙潻鍥х毈閺冪姵纭堕柅澶夎厬 */
+  /* 缁夊娅?overflow: hidden閿涘矂浼╅崗宥堫梿閸擃亜娴樼悰銊х搼缂佸嫪娆㈤惃鍕垼妫版ǜ鈧浇閰遍崥宥囆炵粵澶婂敶鐎?*/
   overflow: visible;
   transition:
     box-shadow 0.15s ease,
@@ -1413,7 +965,7 @@ const handleClick = (e: MouseEvent) => {
     inset 0 0 0 9999px rgba(64, 158, 255, 0.1) !important;
 }
 
-/* ========== Empty Container State (极简设计) ========== */
+/* ========== Empty Container State (閺嬩胶鐣濈拋鎹愵吀) ========== */
 .editor-node-wrapper.is-empty {
   min-height: 60px;
   background-color: #fafafa;
@@ -1426,31 +978,31 @@ const handleClick = (e: MouseEvent) => {
 /* Empty container hint is only shown when selected (or drag-over),
    to avoid polluting normal canvas display. */
 .editor-node-wrapper.is-empty.is-selected:not(.is-drag-over)::before {
-  content: '拖入组件';
+  content: '閹锋牕鍙嗙紒鍕';
   font-size: 12px;
   color: #c0c4cc;
   pointer-events: none;
 }
 
-/* Empty + Hover (无拖拽): 轻微高亮，但不改变文字 */
+/* Empty + Hover (閺冪姵瀚嬮幏?: 鏉炶浜曟妯瑰瘨閿涘奔绲炬稉宥嗘暭閸欐ɑ鏋冪€?*/
 .editor-node-wrapper.is-empty.is-hovered:not(.is-selected):not(.is-drag-over) {
   background-color: #f5f7fa;
   box-shadow: inset 0 0 0 1px rgba(64, 158, 255, 0.2);
 }
 
-/* Empty + Drag Over: 明显高亮 + 提示释放 */
+/* Empty + Drag Over: 閺勫孩妯夋妯瑰瘨 + 閹绘劗銇氶柌濠冩杹 */
 .editor-node-wrapper.is-empty.is-drag-over:not(.is-selected) {
   background-color: #ecf5ff;
   box-shadow: inset 0 0 0 2px rgba(64, 158, 255, 0.5);
 }
 
 .editor-node-wrapper.is-empty.is-drag-over:not(.is-selected)::before {
-  content: '释放以添加到 ' attr(data-label);
+  content: '闁插﹥鏂佹禒銉﹀潑閸旂姴鍩?' attr(data-label);
   color: #409eff;
   font-weight: 500;
 }
 
-/* Empty + Selected: 保持选中框，隐藏提示文字 */
+/* Empty + Selected: 娣囨繃瀵旈柅澶夎厬濡楀棴绱濋梾鎰閹绘劗銇氶弬鍥х摟 */
 .editor-node-wrapper.is-empty.is-selected {
   background-color: #fafcff;
 }

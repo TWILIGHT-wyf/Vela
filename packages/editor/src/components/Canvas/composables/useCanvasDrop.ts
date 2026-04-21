@@ -16,6 +16,7 @@ import {
   placementToGeometry,
   type GridPlacement,
 } from '@/utils/gridPlacement'
+import { isPageRootNode, resolveEditorGridSpan } from '@/utils/pageGridStrategy'
 import type { CanvasDropData, DropIndicatorState, DropPosition } from '../types'
 
 /**
@@ -56,7 +57,6 @@ for (const meta of materialList) {
  * 防止过深嵌套导致性能问题
  */
 const MAX_NESTING_DEPTH = 10
-const DEFAULT_GRID_ITEM_SPAN = { colSpan: 3, rowSpan: 2 }
 const DEFAULT_GRID_CONTAINER_SPAN = { colSpan: 6, rowSpan: 4 }
 
 /**
@@ -314,28 +314,29 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
   }
 
   function resolveDefaultGridSpan(
-    columnCount: number,
+    parent: NodeSchema,
     isContainerComponent: boolean,
   ): { colSpan: number; rowSpan: number } {
-    if (!isContainerComponent) {
-      return {
-        colSpan: Math.min(DEFAULT_GRID_ITEM_SPAN.colSpan, Math.max(1, columnCount)),
-        rowSpan: DEFAULT_GRID_ITEM_SPAN.rowSpan,
-      }
-    }
+    const columnCount = resolveGridColumnCount(parent)
+    const gridContainer =
+      parent.container?.mode === 'grid' ? (parent.container as GridContainerLayout) : undefined
 
-    return {
-      colSpan: Math.max(1, Math.min(columnCount, Math.ceil(columnCount / 2))),
-      rowSpan: DEFAULT_GRID_CONTAINER_SPAN.rowSpan,
-    }
+    // The page root behaves like a section canvas, while nested containers stay flexible.
+    return resolveEditorGridSpan({
+      colCount: columnCount,
+      isContainer: isContainerComponent,
+      isPageRoot: isPageRootNode(parent, getRootNode()),
+      templateMode: gridContainer?.templateMode,
+    })
   }
 
   function resolveMovingNodeSpan(
     node: NodeSchema,
-    colCount: number,
+    parent: NodeSchema,
   ): { colSpan: number; rowSpan: number } {
+    const colCount = resolveGridColumnCount(parent)
     const isContainerComponent = isContainerNode(node)
-    const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+    const defaultSpan = resolveDefaultGridSpan(parent, isContainerComponent)
     const placement = nodeToPlacement(node, colCount, {
       colStart: 1,
       rowStart: 1,
@@ -778,7 +779,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
       }
 
       const colCount = resolveGridColumnCount(newParentNode)
-      const movingSpan = resolveMovingNodeSpan(movingNode, colCount)
+      const movingSpan = resolveMovingNodeSpan(movingNode, newParentNode)
       const targetNode = componentStore.findNodeById(rootNode, targetId)
       const desiredFromTarget = resolveDesiredPlacementFromTarget(
         targetNode || newParentNode,
@@ -857,7 +858,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
         componentStore.updateContainerLayout(gridParentNode.id, 'grid')
       }
       const colCount = resolveGridColumnCount(gridParentNode)
-      const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+      const defaultSpan = resolveDefaultGridSpan(gridParentNode, isContainerComponent)
       const targetNode = componentStore.findNodeById(rootNode, targetId)
       const desiredFromTarget = resolveDesiredPlacementFromTarget(
         targetNode || gridParentNode,
@@ -968,7 +969,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
 
     if (rootLayoutMode === 'grid' && rootNode) {
       const colCount = resolveGridColumnCount(rootNode)
-      const defaultSpan = resolveDefaultGridSpan(colCount, isContainerComponent)
+      const defaultSpan = resolveDefaultGridSpan(rootNode, isContainerComponent)
       const target = e.currentTarget as HTMLElement | null
       const rootRect = target?.getBoundingClientRect() || null
 
@@ -976,7 +977,7 @@ export function useCanvasDrop(viewportRef?: Ref<HTMLElement | null>) {
         const movingNode = componentStore.findNodeById(rootNode, dropData.nodeId)
         if (!movingNode) return false
 
-        const movingSpan = resolveMovingNodeSpan(movingNode, colCount)
+        const movingSpan = resolveMovingNodeSpan(movingNode, rootNode)
         const desired = buildGridPointerPlacement(
           rootNode,
           rootRect,

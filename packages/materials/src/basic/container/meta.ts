@@ -45,7 +45,7 @@ const meta: MaterialMeta = {
       name: 'padding',
       label: '内边距',
       setter: 'StringSetter',
-      defaultValue: '12px',
+      defaultValue: '0',
       group: '容器',
     },
     backgroundColor: {
@@ -76,14 +76,14 @@ const meta: MaterialMeta = {
       name: 'width',
       label: '宽度',
       setter: 'StringSetter',
-      defaultValue: '320px',
+      defaultValue: '',
       group: '尺寸',
     },
     height: {
       name: 'height',
       label: '高度',
       setter: 'StringSetter',
-      defaultValue: '220px',
+      defaultValue: '',
       group: '尺寸',
     },
     minHeight: {

@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
   tag: 'div',
   role: '',
   ariaLabel: '',
-  padding: '12px',
+  padding: '0px',
   backgroundColor: 'transparent',
   overflow: 'visible',
 })
@@ -76,13 +76,16 @@ function toCssLength(value: CSSLength | undefined): string | undefined {
 }
 
 const baseStyle = computed<CSSProperties>(() => {
-  // When canvas style already carries padding/paddingTop... overrides,
-  // disable prop-level default padding to prevent double padding.
+  // The page editor owns box-model adjustments. Material defaults stay neutral
+  // so overlays, hit targets, and section-style stretching remain predictable.
   const incoming = attrs.style as CSSProperties | CSSProperties[] | string | undefined
   const usePropPadding = !hasPaddingStyleOverride(incoming)
   const p = toCssLength(props.padding)
   return {
+    display: 'block',
     boxSizing: 'border-box',
+    minWidth: 0,
+    minHeight: 0,
     paddingTop: usePropPadding ? p : undefined,
     paddingRight: usePropPadding ? p : undefined,
     paddingBottom: usePropPadding ? p : undefined,
