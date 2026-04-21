@@ -59,7 +59,7 @@ Never commit secrets. Start from `.env.example`; keep local secrets in `.env` an
 
 # GitNexus MCP
 
-This project is indexed by GitNexus as **webgis** (2446 symbols, 5254 relationships, 162 execution flows).
+This project is indexed by GitNexus as **webgis** (2073 symbols, 4414 relationships, 138 execution flows).
 
 GitNexus provides a knowledge graph over this codebase — call chains, blast radius, execution flows, and semantic search.
 
